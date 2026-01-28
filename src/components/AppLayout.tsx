@@ -13,7 +13,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <header className="sticky top-0 z-20 flex h-12 items-center gap-2 border-b bg-background/35 px-3 backdrop-blur-xl">
             <SidebarTrigger />
             <div className="flex-1">
-              <span className="text-sm font-semibold tracking-wide">Invictus</span>
+              <div className="flex items-center gap-3">
+                <span className="invictus-monogram grid h-7 w-7 place-items-center rounded-full text-[11px] font-semibold text-primary-foreground">
+                  I
+                </span>
+                <div className="leading-tight">
+                  <div className="text-sm font-semibold tracking-wide">Invictus</div>
+                  <div className="text-[10px] tracking-[0.25em] text-muted-foreground">FRATERNIDADE</div>
+                </div>
+              </div>
             </div>
           </header>
 

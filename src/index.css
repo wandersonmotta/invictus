@@ -118,3 +118,49 @@ All colors MUST be HSL.
     background-attachment: fixed;
   }
 }
+
+@layer base {
+  :root {
+    --gold-soft: 42 90% 60%;
+    --gold-hot: 44 95% 52%;
+    --glass: 0.55;
+  }
+  .dark {
+    --gold-soft: 42 92% 62%;
+    --gold-hot: 44 98% 54%;
+    --glass: 0.52;
+  }
+}
+
+@layer components {
+  /* Premium glass surface + frame (clean executive + impact) */
+  .invictus-surface {
+    background: linear-gradient(
+        180deg,
+        hsl(var(--card) / var(--glass)) 0%,
+        hsl(var(--card) / calc(var(--glass) - 0.08)) 100%
+      );
+    backdrop-filter: blur(18px);
+  }
+
+  .invictus-frame {
+    box-shadow:
+      0 0 0 1px hsl(var(--border) / 0.55),
+      0 18px 60px -28px hsl(var(--foreground) / 0.25),
+      0 0 0 1px hsl(var(--primary) / 0.10) inset,
+      0 0 40px -28px hsl(var(--primary) / 0.55);
+  }
+
+  .invictus-gold-line {
+    background: linear-gradient(90deg, transparent, hsl(var(--gold-hot) / 0.9), transparent);
+  }
+
+  .invictus-monogram {
+    background:
+      radial-gradient(80% 80% at 30% 25%, hsl(var(--gold-soft) / 0.95), transparent 65%),
+      linear-gradient(135deg, hsl(var(--gold-hot) / 0.95), hsl(var(--gold-soft) / 0.75));
+    box-shadow:
+      0 10px 35px -18px hsl(var(--primary) / 0.8),
+      0 0 0 1px hsl(var(--primary) / 0.35) inset;
+  }
+}

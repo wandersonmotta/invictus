@@ -10,15 +10,15 @@ const Index = () => {
 
       <section className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <div className="aspect-[16/10] w-full rounded-lg border bg-card" />
+          <div className="invictus-surface invictus-frame aspect-[16/10] w-full rounded-lg border border-border/70" />
         </div>
 
         <aside className="space-y-4">
-          <div className="rounded-lg border bg-card p-4">
+          <div className="invictus-surface invictus-frame rounded-lg border border-border/70 p-4">
             <h2 className="text-sm font-medium">Raio</h2>
             <p className="mt-1 text-sm text-muted-foreground">Vamos adicionar o seletor 5–50km e filtros aqui.</p>
           </div>
-          <div className="rounded-lg border bg-card p-4">
+          <div className="invictus-surface invictus-frame rounded-lg border border-border/70 p-4">
             <h2 className="text-sm font-medium">Resultados</h2>
             <p className="mt-1 text-sm text-muted-foreground">Lista de membros próximos (cards) — em breve.</p>
           </div>

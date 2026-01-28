@@ -1,101 +1,76 @@
 
-Objetivo
-- Substituir o “I” (monograma) por uma logo em PNG (que você vai enviar) e colocar o texto “FRATERNIDADE” ao lado, mantendo a estética “Monograma + molduras” e luxo impactante.
-- Aplicar a mesma identidade também na Sidebar (topo) e trocar o favicon pelo mesmo PNG.
-- Implementar um efeito premium no texto “FRATERNIDADE”: o dourado “acende” exatamente na região onde o mouse passa.
+Objetivo (o que você pediu)
+- Criar uma tela inicial “Home” que será a primeira coisa que o usuário vê (antes do mapa).
+- Manter a aba “Mapa” e a tela do mapa exatamente como está hoje (mesmo layout e conteúdo), só mudando para uma rota própria.
+- Na Home vamos deixar blocos prontos para vocês alimentarem com informações “full time”: bem-vindo, avisos, eventos, destaques, etc. (por enquanto como placeholders, mas já com estrutura bonita).
 
-O que falta para eu executar
-- Você ainda vai enviar o PNG final da logo (arquivo separado). Assim que chegar, eu consigo:
-  1) copiar para o projeto (assets/public),
-  2) plugar no header + sidebar,
-  3) gerar/atualizar o favicon.
+Decisão confirmada
+- Home será em “/” (raiz).
+- O Mapa deixa de ser “/” e passa a ser “/mapa”.
 
-Exploração (estado atual)
-- Header atual (src/components/AppLayout.tsx):
-  - Renderiza um círculo “I” com classe invictus-monogram
-  - Textos: “Invictus” e “FRATERNIDADE”
-- Sidebar atual (src/components/AppSidebar.tsx):
-  - Mostra “Invictus” em SidebarGroupLabel
-  - Linha dourada decorativa ao final
-- index.html:
-  - Não tem <link rel="icon"...>; hoje provavelmente usa o public/favicon.ico padrão do Vite
+Mudanças previstas (frontend)
+1) Rotas (src/App.tsx)
+- Criar uma nova página `Home` e renderizá-la em `path="/"`.
+- Mover o componente atual do mapa (hoje `Index`) para `path="/mapa"`.
+- Manter as demais rotas (`/buscar`, `/mensagens`, `/perfil`, `/admin`) exatamente como estão.
+- Ajustar importações necessárias.
 
-Decisões já confirmadas (a partir das suas respostas)
-- Usar outro PNG (você vai enviar)
-- Aplicar em: topo (header), sidebar e favicon
-- Tamanho: médio (presença premium sem exagero)
-- Texto: manter somente “FRATERNIDADE” e criar efeito dourado “onde o mouse está em cima”
+2) Sidebar / Menu (src/components/AppSidebar.tsx)
+- Adicionar um item “Home” apontando para `/` (novo primeiro item).
+- Alterar o item “Mapa” para apontar para `/mapa` (sem mudar o título “Mapa” nem o ícone atual, a não ser que você queira).
+- Conferir o comportamento “ativo” do item do menu:
+  - Hoje o código compara `currentPath === path`. Isso funciona bem para rotas simples.
+  - Garantir que “Home” só fique ativo quando estiver exatamente em “/”.
+  - Garantir que “Mapa” fique ativo quando estiver em “/mapa”.
 
-Abordagem de implementação (quando o PNG chegar)
-1) Adicionar o arquivo de logo ao projeto
-- Criar pasta src/assets (não existe hoje) e copiar o PNG para lá, por exemplo:
-  - src/assets/invictus-logo.png
-- Motivo: em componentes React, importar via ES module dá melhor bundling e cache-busting.
+3) Página Home (novo arquivo, ex.: src/pages/Home.tsx)
+Conteúdo proposto (placeholder, mas já com cara “premium” e pronto para receber dados):
+- Header:
+  - Título grande “Home” ou “Bem-vindo”
+  - Subtítulo curto: “Últimas atualizações, avisos e eventos da Fraternidade.”
+- Grade de cards (usando os componentes existentes e o estilo “invictus-surface invictus-frame” que vocês já usam):
+  - Card 1: “Bem-vindo”
+    - Texto curto e editável futuramente
+  - Card 2: “Acontecendo agora”
+    - Lista de 2–4 itens fake/placeholder (para vocês trocarem depois)
+  - Card 3: “Próximos eventos”
+    - Placeholder com data/local (mock)
+  - Card 4: “Avisos”
+    - Placeholder (ex.: “Atualização importante…”, “Reunião…”, etc.)
+- Observação: vamos montar a estrutura para depois plugar com dados do backend quando vocês quiserem atualizar em tempo real.
 
-2) Trocar o monograma do header pela logo PNG + texto “FRATERNIDADE” (AppLayout)
-- Em src/components/AppLayout.tsx:
-  - Substituir o <span className="invictus-monogram ...">I</span> por:
-    - <img src={logo} ... /> (logo importada de src/assets)
-  - Remover o texto “Invictus” do header
-  - Manter apenas “FRATERNIDADE” ao lado da logo
-  - Ajustar espaçamento para “tamanho médio”:
-    - Header height continua h-12
-    - Logo com altura ~36px (equivalente visual ao “médio”)
-    - Largura auto (preserva proporção)
-  - Garantir que fique bonito em sidebar colapsada/expandida e em mobile.
+4) Ajuste do “Return to Home” no 404 (src/pages/NotFound.tsx)
+- Hoje o 404 tem um link que aponta para “/”.
+- Como “/” agora é a Home, isso continua correto; apenas vamos trocar o texto de “Return to Home” para “Voltar para Home” (opcional) para ficar consistente com o app em PT-BR.
 
-3) Efeito premium no texto “FRATERNIDADE” (dourado no ponto do mouse)
-- Criar um pequeno componente reutilizável, por exemplo:
-  - src/components/GoldHoverText.tsx
-- Como funciona (técnico, mas robusto e leve):
-  - Renderiza um <span> com:
-    - text color base (muted-foreground)
-    - background em “radial-gradient” dourado cujo centro acompanha o mouse (CSS var)
-    - background-clip: text e color: transparent para mostrar o gradiente dentro do texto
-  - Eventos:
-    - onMouseMove: calcula a posição X dentro do elemento (0–100%) e seta style={{ "--x": "42%" }}
-    - onMouseLeave: volta para um “x” neutro (ex: 50%) e reduz o brilho
-- Resultado: o dourado “aparece” exatamente onde o mouse está passando, como você pediu (não apenas um hover genérico).
+O que NÃO vai mudar (garantias)
+- A tela do Mapa (atual Index) não será redesenhada nem “mexida”; ela só será acessada via `/mapa`.
+- A aba “Mapa” continua existindo no menu lateral.
+- Nenhuma outra tela (Buscar, Mensagens, Perfil, Admin) muda de conteúdo.
 
-4) Aplicar logo no topo da Sidebar (AppSidebar)
-- Em src/components/AppSidebar.tsx:
-  - Substituir “Invictus” no SidebarGroupLabel por um bloco “brand”:
-    - Logo (mesma importação do asset)
-    - Texto opcional “FRATERNIDADE” (somente quando não estiver colapsada)
-  - Garantir que no modo colapsado:
-    - Mostre só o ícone/logo centralizado e com bom padding
-- Manter a linha dourada e os estados ativos atuais (já estão bons: ring-primary/25).
+Critérios de aceitação (como você valida no Preview)
+- Ao abrir o app, a primeira tela exibida é a Home (com os cards “bem-vindo / acontecendo / eventos / avisos”).
+- Ao clicar em “Mapa” no menu, abre exatamente o mesmo conteúdo que existia antes (agora em `/mapa`).
+- Rotas existentes continuam funcionando.
+- No 404, o botão/link de voltar leva para a Home.
 
-5) Atualizar favicon com a mesma logo
-- Copiar o PNG para public/ (para ser servido direto), por exemplo:
-  - public/favicon.png
-- Atualizar index.html adicionando:
-  - <link rel="icon" href="/favicon.png" type="image/png" />
-- Observação: favicon pode precisar de um PNG quadrado para ficar perfeito. Se sua logo for muito “wide”, eu posso:
-  - criar um favicon separado recortando para um ícone (ex: círculo dourado com “I” ou símbolo do brasão), se você preferir.
-  - Caso você queira exatamente a logo “wide” como favicon, ainda funciona, mas pode ficar pequeno/ilegível na aba.
+Próximos incrementos (para quando você quiser)
+- Transformar os blocos da Home em conteúdo dinâmico (avisos/eventos) alimentado pelo backend (com permissões por usuário).
+- Adicionar destaque de “Evento do dia” e um carrossel de cards.
+- (Quando tivermos login) redirecionar automaticamente o usuário logado para Home e controlar acesso a certas abas.
 
-6) Ajustes finos de “impacto premium”
-- Aplicar um micro “halo” na logo (sem exagerar):
-  - drop-shadow suave dourado no img (apenas no header/sidebar)
-- Garantir contraste e legibilidade:
-  - “FRATERNIDADE” com tracking alto (já existe) + efeito dourado no hover
-- Checar que não cria transparências ruins em menus/dropdowns (manter fundos sólidos onde precisa).
+Checklist técnico (para implementação)
+- [ ] Criar `src/pages/Home.tsx`
+- [ ] Atualizar `src/App.tsx` (rotas + imports)
+- [ ] Atualizar `src/components/AppSidebar.tsx` (navItems: Home + Mapa em /mapa)
+- [ ] Ajustar `src/pages/NotFound.tsx` (texto do link, opcional)
+- [ ] Testar navegação: /, /mapa, /buscar, /mensagens, /perfil, /admin, rota inexistente
 
-Critérios de aceitação (o que você vai validar)
-- No / (Mapa), ao abrir o Preview, o topo mostra:
-  - logo PNG + “FRATERNIDADE” apenas (sem “Invictus”)
-- Ao passar o mouse sobre “FRATERNIDADE”, o dourado “segue” o mouse no texto (efeito localizado).
-- Sidebar:
-  - topo exibe logo; texto aparece somente quando não colapsada
-- Favicon:
-  - aparece como a nova logo (ou variação escolhida) na aba do navegador
+Sequência de entrega
+1) Implementar Home + rotas
+2) Ajustar Sidebar (Home e Mapa)
+3) Revisar layout e responsividade da Home
+4) Teste end-to-end de navegação
 
-Riscos e mitigação
-- PNG muito grande/pesado:
-  - Otimizar (sem perder qualidade) e limitar dimensões via CSS
-- Favicon ilegível por ser retangular:
-  - Propor um favicon “ícone” alternativo (quadrado) se necessário
-
-Próximo passo
-- Você enviar o PNG final da logo (arquivo separado). Assim que eu receber, eu implemento exatamente os passos acima (header + sidebar + favicon + efeito “gold follow” no FRATERNIDADE).
+Impacto/risco
+- Mudança de URL do mapa: o endereço antigo “/” deixa de ser “Mapa” e vira “Home”. Se alguém tiver salvo “/” esperando ver o mapa, agora verá a Home (é exatamente o comportamento desejado para “tela inicial”). O mapa passa a ser “/mapa”.

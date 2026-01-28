@@ -40,7 +40,7 @@ export function AppSidebar() {
           <SidebarGroupLabel className={collapsed ? "py-3" : "py-3"}>
             <div className={collapsed ? "flex items-center justify-center" : "flex items-center gap-3"}>
               {!collapsed && (
-                <GoldHoverText className="text-[10px] font-semibold tracking-[0.35em]">FRATERNIDADE</GoldHoverText>
+                <GoldHoverText className="text-[10px] font-semibold tracking-[0.35em]">MEMBRO</GoldHoverText>
               )}
             </div>
           </SidebarGroupLabel>

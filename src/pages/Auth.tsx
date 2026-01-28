@@ -106,7 +106,7 @@ export default function AuthPage() {
   };
 
   return (
-    <main className="min-h-svh grid place-items-center p-4">
+    <main className="min-h-svh grid place-items-center p-4 sm:p-6">
       <Card className="invictus-surface invictus-frame w-full max-w-md border-border/70">
         <CardHeader className="space-y-3">
           <div className="flex items-center gap-3">
@@ -118,7 +118,7 @@ export default function AuthPage() {
               style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary) / 0.25))" }}
             />
             <div>
-              <CardTitle>Invictus</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Invictus</CardTitle>
               <CardDescription>Acesso exclusivo para membros</CardDescription>
             </div>
           </div>
@@ -130,7 +130,7 @@ export default function AuthPage() {
             onValueChange={(v) => setMode(v as "login" | "signup")}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid h-11 w-full grid-cols-2">
               <TabsTrigger value="login">Entrar</TabsTrigger>
               <TabsTrigger value="signup">Criar conta</TabsTrigger>
             </TabsList>
@@ -158,7 +158,7 @@ export default function AuthPage() {
                   )}
                 </div>
 
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full h-11">
                   Entrar
                 </Button>
 
@@ -192,7 +192,7 @@ export default function AuthPage() {
                   )}
                 </div>
 
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full h-11">
                   Criar conta
                 </Button>
 
@@ -206,7 +206,7 @@ export default function AuthPage() {
       </Card>
 
       <Dialog open={resetOpen} onOpenChange={(o) => (resetLoading ? null : setResetOpen(o))}>
-        <DialogContent className="invictus-surface invictus-frame border-border/70">
+          <DialogContent className="invictus-surface invictus-frame border-border/70">
           <DialogHeader>
             <DialogTitle>Recuperar acesso</DialogTitle>
             <DialogDescription>Informe seu e-mail para receber um link de redefinição de senha.</DialogDescription>
@@ -222,10 +222,16 @@ export default function AuthPage() {
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setResetOpen(false)} disabled={resetLoading}>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11"
+                onClick={() => setResetOpen(false)}
+                disabled={resetLoading}
+              >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={resetLoading}>
+              <Button type="submit" className="h-11" disabled={resetLoading}>
                 {resetLoading ? "Enviando…" : "Enviar link"}
               </Button>
             </DialogFooter>

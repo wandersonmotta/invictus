@@ -2,10 +2,10 @@
 
 const Index = () => {
   return (
-    <main className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold">Mapa</h1>
-        <p className="text-sm text-muted-foreground">Perto de mim (raio) com geolocalização — placeholder.</p>
+    <main className="invictus-page">
+      <header className="invictus-page-header">
+        <h1 className="invictus-h1">Mapa</h1>
+        <p className="invictus-lead">Perto de mim (raio) com geolocalização — placeholder.</p>
       </header>
 
       <section className="grid gap-4 lg:grid-cols-3">

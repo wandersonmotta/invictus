@@ -2,10 +2,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 const Home = () => {
   return (
-    <main className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold">Bem-vindo</h1>
-        <p className="text-sm text-muted-foreground">
+    <main className="invictus-page">
+      <header className="invictus-page-header">
+        <h1 className="invictus-h1">Bem-vindo</h1>
+        <p className="invictus-lead">
           Últimas atualizações, avisos e eventos da Fraternidade.
         </p>
       </header>

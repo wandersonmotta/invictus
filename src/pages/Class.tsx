@@ -58,10 +58,10 @@ export default function ClassPage() {
   }, [trainings]);
 
   return (
-    <main className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold">Class</h1>
-        <p className="text-sm text-muted-foreground">Treinamentos gravados — organizado por categorias.</p>
+    <main className="space-y-6 sm:space-y-8">
+      <header className="invictus-page-header">
+        <h1 className="invictus-h1">Class</h1>
+        <p className="invictus-lead">Treinamentos gravados — organizado por categorias.</p>
       </header>
 
       {(categories ?? []).length === 0 ? (
@@ -85,14 +85,14 @@ export default function ClassPage() {
                   </Card>
                 ) : (
                   <div className="-mx-4 px-4 overflow-x-auto">
-                    <div className="flex gap-4 min-w-max pb-2">
+                    <div className="flex gap-4 min-w-max pb-3">
                       {items.map((t) => (
                         <a
                           key={t.id}
                           href={t.youtube_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="group block"
+                          className="group block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           title={t.title}
                         >
                           <div className="w-[168px] sm:w-[188px]">

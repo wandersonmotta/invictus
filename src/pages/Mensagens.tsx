@@ -10,13 +10,13 @@ export default function Mensagens() {
       </header>
 
       <Tabs defaultValue="inbox">
-        <TabsList>
+        <TabsList className="bg-muted/40 backdrop-blur-xl">
           <TabsTrigger value="inbox">Inbox</TabsTrigger>
           <TabsTrigger value="requests">Solicitações</TabsTrigger>
         </TabsList>
 
         <TabsContent value="inbox">
-          <Card>
+          <Card className="bg-card/50 backdrop-blur-xl border-border/70 shadow-[0_0_0_1px_hsl(var(--border)/0.4)]">
             <CardHeader>
               <CardTitle>Inbox</CardTitle>
             </CardHeader>
@@ -27,7 +27,7 @@ export default function Mensagens() {
         </TabsContent>
 
         <TabsContent value="requests">
-          <Card>
+          <Card className="bg-card/50 backdrop-blur-xl border-border/70 shadow-[0_0_0_1px_hsl(var(--border)/0.4)]">
             <CardHeader>
               <CardTitle>Solicitações</CardTitle>
             </CardHeader>

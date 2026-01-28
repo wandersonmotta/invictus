@@ -1,0 +1,63 @@
+import * as React from "react";
+
+type GoldHoverTextProps = {
+  children: React.ReactNode;
+  className?: string;
+  /** Intensidade do brilho (0–1). Default: 1 */
+  intensity?: number;
+};
+
+/**
+ * Texto premium com "dourado seguindo o mouse".
+ * Usa tokens HSL do design system (primary / gold-soft / gold-hot).
+ */
+export function GoldHoverText({ children, className, intensity = 1 }: GoldHoverTextProps) {
+  const ref = React.useRef<HTMLSpanElement | null>(null);
+  const [active, setActive] = React.useState(false);
+  const [pos, setPos] = React.useState({ x: 50, y: 50 });
+
+  const updateFromEvent = (e: React.MouseEvent<HTMLSpanElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setPos({ x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) });
+  };
+
+  return (
+    <span
+      ref={ref}
+      onMouseEnter={(e) => {
+        setActive(true);
+        updateFromEvent(e);
+      }}
+      onMouseMove={updateFromEvent}
+      onMouseLeave={() => {
+        setActive(false);
+        setPos({ x: 50, y: 50 });
+      }}
+      className={className}
+      style={
+        {
+          // fallback base
+          color: "hsl(var(--muted-foreground))",
+          // gradient dentro do texto
+          backgroundImage: `radial-gradient(120px 70px at ${pos.x}% ${pos.y}%, hsl(var(--gold-hot) / ${
+            0.95 * intensity
+          }) 0%, hsl(var(--gold-soft) / ${0.6 * intensity}) 40%, hsl(var(--foreground) / 0) 70%)`,
+          backgroundClip: "text",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          transition: "filter 160ms ease, opacity 160ms ease",
+          opacity: active ? 1 : 0.92,
+          filter: active
+            ? `drop-shadow(0 0 12px hsl(var(--primary) / ${0.35 * intensity}))`
+            : "none",
+        } as React.CSSProperties
+      }
+    >
+      {children}
+    </span>
+  );
+}

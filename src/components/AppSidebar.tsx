@@ -2,6 +2,7 @@ import { useLocation } from "react-router-dom";
 import { MapPin, Search, MessageCircle, User, Shield } from "lucide-react";
 
 import { NavLink } from "@/components/NavLink";
+import { GoldHoverText } from "@/components/GoldHoverText";
 import {
   Sidebar,
   SidebarContent,
@@ -13,6 +14,8 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useSidebar } from "@/components/ui/sidebar";
+
+import logo from "@/assets/invictus-logo.png";
 
 const navItems = [
   { title: "Mapa", url: "/", icon: MapPin },
@@ -34,7 +37,20 @@ export function AppSidebar() {
     <Sidebar className={collapsed ? "w-14" : "w-64"} collapsible="icon" variant="inset">
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Invictus</SidebarGroupLabel>
+          <SidebarGroupLabel className={collapsed ? "py-3" : "py-3"}>
+            <div className={collapsed ? "flex items-center justify-center" : "flex items-center gap-3"}>
+              <img
+                src={logo}
+                alt="Logo da Fraternidade Invictus"
+                className={collapsed ? "h-7 w-auto" : "h-8 w-auto"}
+                draggable={false}
+                style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary) / 0.22))" }}
+              />
+              {!collapsed && (
+                <GoldHoverText className="text-[10px] font-semibold tracking-[0.35em]">FRATERNIDADE</GoldHoverText>
+              )}
+            </div>
+          </SidebarGroupLabel>
 
           <SidebarGroupContent>
             <SidebarMenu>

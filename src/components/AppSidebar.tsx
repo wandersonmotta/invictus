@@ -45,7 +45,7 @@ export function AppSidebar() {
                       to={item.url}
                       end={item.url === "/"}
                       className="flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
-                      activeClassName="bg-sidebar-accent/80 text-primary ring-1 ring-primary/20"
+                      activeClassName="bg-sidebar-accent/80 text-primary ring-1 ring-primary/25"
                       aria-current={isActive(item.url) ? "page" : undefined}
                     >
                       <item.icon className="h-4 w-4" />
@@ -55,6 +55,8 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
+
+            {!collapsed && <div className="invictus-gold-line mt-3 h-px w-full opacity-70" />}
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

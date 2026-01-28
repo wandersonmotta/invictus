@@ -1,110 +1,101 @@
 
-## Por que ainda não “criei”?
-Porque eu estava aguardando as decisões de produto (escopo, entrada por convite + aprovação, como “conectar”, e como o mapa funciona). Agora você já definiu: **MVP completo (D)**, **cadastro só com código + aprovação**, **DM estilo Instagram com “solicitações”**, e **mapa com “perto de mim”**. Com isso, já dá para implementar com clareza (e sem retrabalho).
+Objetivo
+- Substituir o “I” (monograma) por uma logo em PNG (que você vai enviar) e colocar o texto “FRATERNIDADE” ao lado, mantendo a estética “Monograma + molduras” e luxo impactante.
+- Aplicar a mesma identidade também na Sidebar (topo) e trocar o favicon pelo mesmo PNG.
+- Implementar um efeito premium no texto “FRATERNIDADE”: o dourado “acende” exatamente na região onde o mouse passa.
 
----
+O que falta para eu executar
+- Você ainda vai enviar o PNG final da logo (arquivo separado). Assim que chegar, eu consigo:
+  1) copiar para o projeto (assets/public),
+  2) plugar no header + sidebar,
+  3) gerar/atualizar o favicon.
 
-## Plano de implementação — Invictus (dark + gold + glass, alto padrão)
+Exploração (estado atual)
+- Header atual (src/components/AppLayout.tsx):
+  - Renderiza um círculo “I” com classe invictus-monogram
+  - Textos: “Invictus” e “FRATERNIDADE”
+- Sidebar atual (src/components/AppSidebar.tsx):
+  - Mostra “Invictus” em SidebarGroupLabel
+  - Linha dourada decorativa ao final
+- index.html:
+  - Não tem <link rel="icon"...>; hoje provavelmente usa o public/favicon.ico padrão do Vite
 
-### 1) Fundamento do produto (branding + layout)
-- Definir identidade “Invictus / Fraternidade”: tipografia, tons **dark** com **dourado** e efeito **glassmorphism** (cards translúcidos, blur, bordas sutis).
-- Criar estrutura base de navegação:
-  - **Home/Mapa**
-  - **Buscar**
-  - **Mensagens**
-  - **Perfil**
-  - **Admin (apenas para admins)**
+Decisões já confirmadas (a partir das suas respostas)
+- Usar outro PNG (você vai enviar)
+- Aplicar em: topo (header), sidebar e favicon
+- Tamanho: médio (presença premium sem exagero)
+- Texto: manter somente “FRATERNIDADE” e criar efeito dourado “onde o mouse está em cima”
 
-### 2) Acesso restrito: código + aprovação (fraternidade fechada)
-**Experiência do usuário**
-- Tela “Entrar no Invictus”:
-  - Campo para **código de convite**
-  - Cadastro (email/senha) ou login
-- Após cadastro com código: status **“Em análise”** até aprovação.
-- Quando aprovado: acesso total ao app.
+Abordagem de implementação (quando o PNG chegar)
+1) Adicionar o arquivo de logo ao projeto
+- Criar pasta src/assets (não existe hoje) e copiar o PNG para lá, por exemplo:
+  - src/assets/invictus-logo.png
+- Motivo: em componentes React, importar via ES module dá melhor bundling e cache-busting.
 
-**Regras**
-- Só consegue se cadastrar quem tiver **código válido**.
-- Mesmo com código, a conta entra como **pendente** até um admin aprovar.
+2) Trocar o monograma do header pela logo PNG + texto “FRATERNIDADE” (AppLayout)
+- Em src/components/AppLayout.tsx:
+  - Substituir o <span className="invictus-monogram ...">I</span> por:
+    - <img src={logo} ... /> (logo importada de src/assets)
+  - Remover o texto “Invictus” do header
+  - Manter apenas “FRATERNIDADE” ao lado da logo
+  - Ajustar espaçamento para “tamanho médio”:
+    - Header height continua h-12
+    - Logo com altura ~36px (equivalente visual ao “médio”)
+    - Largura auto (preserva proporção)
+  - Garantir que fique bonito em sidebar colapsada/expandida e em mobile.
 
-### 3) Perfis de membros (o coração do networking)
-- Perfil com:
-  - Nome / foto
-  - Bio curta (executivo)
-  - **Expertises** (tags: design, vídeo, dev, marketing etc.)
-  - Área de atuação / setor
-  - Região (cidade/estado) e opção de visibilidade
-- Edição de perfil guiada (onboarding rápido após aprovação).
+3) Efeito premium no texto “FRATERNIDADE” (dourado no ponto do mouse)
+- Criar um pequeno componente reutilizável, por exemplo:
+  - src/components/GoldHoverText.tsx
+- Como funciona (técnico, mas robusto e leve):
+  - Renderiza um <span> com:
+    - text color base (muted-foreground)
+    - background em “radial-gradient” dourado cujo centro acompanha o mouse (CSS var)
+    - background-clip: text e color: transparent para mostrar o gradiente dentro do texto
+  - Eventos:
+    - onMouseMove: calcula a posição X dentro do elemento (0–100%) e seta style={{ "--x": "42%" }}
+    - onMouseLeave: volta para um “x” neutro (ex: 50%) e reduz o brilho
+- Resultado: o dourado “aparece” exatamente onde o mouse está passando, como você pediu (não apenas um hover genérico).
 
-### 4) Mapa “Perto de mim” (raio, sem expor ponto exato)
-- Mapa inicial mostrando:
-  - Pessoas dentro de um **raio configurável** (ex.: 5–50km)
-  - Pin/cluster sem revelar localização precisa
-- Ações no mapa:
-  - Clicar em um membro → abrir card com resumo + botão **“Ver perfil”** + **“Enviar mensagem”**
-- Filtros integrados ao mapa:
-  - Expertise (tags)
-  - Região
-  - “Somente aprovados” (padrão)
+4) Aplicar logo no topo da Sidebar (AppSidebar)
+- Em src/components/AppSidebar.tsx:
+  - Substituir “Invictus” no SidebarGroupLabel por um bloco “brand”:
+    - Logo (mesma importação do asset)
+    - Texto opcional “FRATERNIDADE” (somente quando não estiver colapsada)
+  - Garantir que no modo colapsado:
+    - Mostre só o ícone/logo centralizado e com bom padding
+- Manter a linha dourada e os estados ativos atuais (já estão bons: ring-primary/25).
 
-### 5) Busca (diretório premium)
-- Tela de busca com:
-  - Barra de pesquisa
-  - Filtros por expertise, região, setor
-  - Cards premium (avatar, nome, headline, tags)
-- CTA direto: **Enviar mensagem** ou **Ver perfil**.
+5) Atualizar favicon com a mesma logo
+- Copiar o PNG para public/ (para ser servido direto), por exemplo:
+  - public/favicon.png
+- Atualizar index.html adicionando:
+  - <link rel="icon" href="/favicon.png" type="image/png" />
+- Observação: favicon pode precisar de um PNG quadrado para ficar perfeito. Se sua logo for muito “wide”, eu posso:
+  - criar um favicon separado recortando para um ícone (ex: círculo dourado com “I” ou símbolo do brasão), se você preferir.
+  - Caso você queira exatamente a logo “wide” como favicon, ainda funciona, mas pode ficar pequeno/ilegível na aba.
 
-### 6) Networking e DM (modelo “Instagram”: solicitações + chat)
-**Fluxo de mensagens**
-- Se você ainda não tem relacionamento com a pessoa:
-  - Ao enviar DM → cai em **Solicitações de conversa** do destinatário.
-  - Destinatário pode **aceitar** (vira conversa normal) ou **recusar/bloquear**.
-- Se já existe relacionamento (ex.: “se seguem”/conexão aprovada):
-  - Mensagens vão direto para a **Caixa de entrada** normal.
+6) Ajustes finos de “impacto premium”
+- Aplicar um micro “halo” na logo (sem exagerar):
+  - drop-shadow suave dourado no img (apenas no header/sidebar)
+- Garantir contraste e legibilidade:
+  - “FRATERNIDADE” com tracking alto (já existe) + efeito dourado no hover
+- Checar que não cria transparências ruins em menus/dropdowns (manter fundos sólidos onde precisa).
 
-**Telas**
-- Mensagens:
-  - Aba **Inbox**
-  - Aba **Solicitações**
-- Conversa:
-  - UI limpa, dark/gold, com envio de texto (começar simples: texto; depois anexos).
+Critérios de aceitação (o que você vai validar)
+- No / (Mapa), ao abrir o Preview, o topo mostra:
+  - logo PNG + “FRATERNIDADE” apenas (sem “Invictus”)
+- Ao passar o mouse sobre “FRATERNIDADE”, o dourado “segue” o mouse no texto (efeito localizado).
+- Sidebar:
+  - topo exibe logo; texto aparece somente quando não colapsada
+- Favicon:
+  - aparece como a nova logo (ou variação escolhida) na aba do navegador
 
-**Como definir “quem já se segue”**
-- Implementar um sistema simples de relacionamento:
-  - Opção A (recomendado para começar): **Follow** (seguir/ser seguido)
-  - Regras: “DM direto” apenas quando **ambos** se seguem (seguimento recíproco) — fica intuitivo e parecido com redes sociais.
+Riscos e mitigação
+- PNG muito grande/pesado:
+  - Otimizar (sem perder qualidade) e limitar dimensões via CSS
+- Favicon ilegível por ser retangular:
+  - Propor um favicon “ícone” alternativo (quadrado) se necessário
 
-### 7) Painel Admin (aprovação e gestão da fraternidade)
-- Tela Admin com:
-  - Lista de **cadastros pendentes**
-  - Aprovar / Rejeitar
-  - Gestão de **códigos de convite** (criar, expirar, limitar usos)
-- Segurança:
-  - Sistema de **roles em tabela separada** (admin/moderator/user), com checagem no backend (sem depender do client).
-
-### 8) Segurança, validações e qualidade
-- Validação de todos os formulários (cadastro, código, perfil, envio de mensagem) com mensagens claras.
-- Regras para evitar abuso:
-  - Limites básicos (tamanho de bio, tags, mensagens, tentativas de código).
-- Privacidade do mapa:
-  - Apenas “perto de mim” por raio, sem armazenar/mostrar endereço exato.
-- Estados do sistema bem definidos:
-  - Não logado → Auth
-  - Logado mas pendente → “Aguardando aprovação”
-  - Aprovado → app completo
-
-### 9) Polimento “alto padrão”
-- Microinterações: transições suaves, hover states em dourado, sombras leves, glass cards.
-- Responsivo (mobile-first): mapa e mensagens funcionando bem no celular.
-- Empty states elegantes (sem cara de app “em branco”).
-
-### 10) Checklist de entrega (o que você vai testar no final)
-- Cadastro com código válido → entra como pendente.
-- Admin aprova → usuário ganha acesso.
-- Mapa “perto de mim” mostra membros e abre perfis.
-- Busca + filtros retornam membros.
-- Enviar DM para não-relacionado → cai em Solicitações.
-- Aceitar solicitação → vira conversa normal.
-- Follow recíproco → DM direto.
-- Fluxos funcionando no mobile.
-
+Próximo passo
+- Você enviar o PNG final da logo (arquivo separado). Assim que eu receber, eu implemento exatamente os passos acima (header + sidebar + favicon + efeito “gold follow” no FRATERNIDADE).

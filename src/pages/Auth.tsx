@@ -7,6 +7,14 @@ import { useForm } from "react-hook-form";
 import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,10 +28,18 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+const resetSchema = z.object({
+  email: z.string().trim().max(255, "E-mail muito longo").email("Informe um e-mail válido"),
+});
+
+type ResetFormValues = z.infer<typeof resetSchema>;
+
 export default function AuthPage() {
   const { toast } = useToast();
-  const { session, signIn, signUp } = useAuth();
+  const { session, signIn, signUp, resetPassword } = useAuth();
   const [mode, setMode] = React.useState<"login" | "signup">("login");
+  const [resetOpen, setResetOpen] = React.useState(false);
+  const [resetLoading, setResetLoading] = React.useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -36,6 +52,11 @@ export default function AuthPage() {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { email: "", password: "" },
+  });
+
+  const resetForm = useForm<ResetFormValues>({
+    resolver: zodResolver(resetSchema),
+    defaultValues: { email: "" },
   });
 
   const onSubmit = async (values: FormValues) => {
@@ -57,6 +78,31 @@ export default function AuthPage() {
           ? "Você entrou com sucesso."
           : "Se necessário, verifique seu e-mail para confirmar o acesso.",
     });
+  };
+
+  const onResetSubmit = async (values: ResetFormValues) => {
+    if (resetLoading) return;
+    setResetLoading(true);
+
+    const { error } = await resetPassword(values.email);
+    setResetLoading(false);
+
+    if (error) {
+      toast({
+        title: "Não foi possível enviar o link",
+        description: "Tente novamente em instantes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "E-mail enviado",
+      description: "Se este e-mail existir, você receberá um link para redefinir a senha.",
+    });
+
+    resetForm.reset();
+    setResetOpen(false);
   };
 
   return (
@@ -115,6 +161,16 @@ export default function AuthPage() {
                 <Button type="submit" className="w-full">
                   Entrar
                 </Button>
+
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setResetOpen(true)}
+                    className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+                  >
+                    Esqueceu a senha?
+                  </button>
+                </div>
               </form>
             </TabsContent>
 
@@ -148,6 +204,34 @@ export default function AuthPage() {
           </Tabs>
         </CardContent>
       </Card>
+
+      <Dialog open={resetOpen} onOpenChange={(o) => (resetLoading ? null : setResetOpen(o))}>
+        <DialogContent className="invictus-surface invictus-frame border-border/70">
+          <DialogHeader>
+            <DialogTitle>Recuperar acesso</DialogTitle>
+            <DialogDescription>Informe seu e-mail para receber um link de redefinição de senha.</DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={resetForm.handleSubmit(onResetSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">E-mail</Label>
+              <Input id="reset-email" type="email" autoComplete="email" {...resetForm.register("email")} />
+              {resetForm.formState.errors.email && (
+                <p className="text-xs text-destructive">{resetForm.formState.errors.email.message}</p>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setResetOpen(false)} disabled={resetLoading}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={resetLoading}>
+                {resetLoading ? "Enviando…" : "Enviar link"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

@@ -4,7 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
-import Index from "./pages/Index";
+import Home from "./pages/Home";
+import Mapa from "./pages/Mapa";
 import NotFound from "./pages/NotFound";
 import Buscar from "./pages/Buscar";
 import Mensagens from "./pages/Mensagens";
@@ -24,7 +25,15 @@ const App = () => (
             path="/"
             element={
               <AppLayout>
-                <Index />
+                <Home />
+              </AppLayout>
+            }
+          />
+          <Route
+            path="/mapa"
+            element={
+              <AppLayout>
+                <Mapa />
               </AppLayout>
             }
           />

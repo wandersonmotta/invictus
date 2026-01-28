@@ -118,7 +118,7 @@ export default function AuthPage() {
               style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary) / 0.25))" }}
             />
             <div>
-              <CardTitle className="text-lg sm:text-xl">Invictus</CardTitle>
+              <CardTitle className="sr-only">Invictus</CardTitle>
               <CardDescription>Acesso exclusivo para membros</CardDescription>
             </div>
           </div>

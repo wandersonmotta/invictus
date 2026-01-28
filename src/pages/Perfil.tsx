@@ -6,10 +6,10 @@ export default function Perfil() {
   const { user, signOut } = useAuth();
 
   return (
-    <main className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold">Perfil</h1>
-        <p className="text-sm text-muted-foreground">Seu perfil executivo (placeholder).</p>
+    <main className="invictus-page">
+      <header className="invictus-page-header">
+        <h1 className="invictus-h1">Perfil</h1>
+        <p className="invictus-lead">Seu perfil executivo (placeholder).</p>
       </header>
 
       <Card className="invictus-surface invictus-frame border-border/70">

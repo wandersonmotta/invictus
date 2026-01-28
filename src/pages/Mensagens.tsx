@@ -3,14 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Mensagens() {
   return (
-    <main className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold">Mensagens</h1>
-        <p className="text-sm text-muted-foreground">Modelo Instagram: Inbox + Solicitações (placeholder).</p>
+    <main className="invictus-page">
+      <header className="invictus-page-header">
+        <h1 className="invictus-h1">Mensagens</h1>
+        <p className="invictus-lead">Modelo Instagram: Inbox + Solicitações (placeholder).</p>
       </header>
 
       <Tabs defaultValue="inbox">
-        <TabsList className="invictus-surface invictus-frame bg-muted/20">
+        <TabsList className="invictus-surface invictus-frame bg-muted/20 h-11">
           <TabsTrigger value="inbox">Inbox</TabsTrigger>
           <TabsTrigger value="requests">Solicitações</TabsTrigger>
         </TabsList>

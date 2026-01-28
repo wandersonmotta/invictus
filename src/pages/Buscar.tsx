@@ -2,10 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Buscar() {
   return (
-    <main className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold">Buscar</h1>
-        <p className="text-sm text-muted-foreground">Encontre membros por região, expertise e setor (placeholder).</p>
+    <main className="invictus-page">
+      <header className="invictus-page-header">
+        <h1 className="invictus-h1">Buscar</h1>
+        <p className="invictus-lead">Encontre membros por região, expertise e setor (placeholder).</p>
       </header>
 
       <Card className="invictus-surface invictus-frame border-border/70">

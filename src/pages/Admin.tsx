@@ -176,10 +176,10 @@ export default function Admin() {
   };
 
   return (
-    <main className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold">Admin</h1>
-        <p className="text-sm text-muted-foreground">Gerenciar categorias e treinamentos da aba Class.</p>
+    <main className="invictus-page">
+      <header className="invictus-page-header">
+        <h1 className="invictus-h1">Admin</h1>
+        <p className="invictus-lead">Gerenciar categorias e treinamentos da aba Class.</p>
       </header>
 
       {!isAdmin ? (
@@ -206,7 +206,7 @@ export default function Admin() {
         </Card>
       ) : (
         <Tabs defaultValue="categories" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid h-11 w-full grid-cols-2">
             <TabsTrigger value="categories">Categorias</TabsTrigger>
             <TabsTrigger value="trainings">Treinamentos</TabsTrigger>
           </TabsList>
@@ -226,7 +226,7 @@ export default function Admin() {
                   <Label htmlFor="cat-desc">Descrição (opcional)</Label>
                   <Textarea id="cat-desc" value={catDesc} onChange={(e) => setCatDesc(e.target.value)} />
                 </div>
-                <Button onClick={() => void createCategory()} disabled={!catName.trim()}>
+                <Button className="h-11" onClick={() => void createCategory()} disabled={!catName.trim()}>
                   Criar categoria
                 </Button>
               </CardContent>
@@ -318,6 +318,7 @@ export default function Admin() {
                 </div>
 
                 <Button
+                  className="h-11"
                   onClick={() => void createTraining()}
                   disabled={savingTraining || !trainingTitle.trim() || !trainingUrl.trim()}
                 >

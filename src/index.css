@@ -163,4 +163,21 @@ All colors MUST be HSL.
       0 10px 35px -18px hsl(var(--primary) / 0.8),
       0 0 0 1px hsl(var(--primary) / 0.35) inset;
   }
+
+  /* Mobile-first page rhythm (spacing + readable headers) */
+  .invictus-page {
+    @apply space-y-4 sm:space-y-6;
+  }
+
+  .invictus-page-header {
+    @apply space-y-1 sm:space-y-2;
+  }
+
+  .invictus-h1 {
+    @apply text-xl font-semibold sm:text-2xl;
+  }
+
+  .invictus-lead {
+    @apply text-sm leading-relaxed text-muted-foreground;
+  }
 }

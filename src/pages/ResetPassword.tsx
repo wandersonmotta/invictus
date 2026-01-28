@@ -57,7 +57,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <main className="min-h-svh grid place-items-center p-4">
+    <main className="min-h-svh grid place-items-center p-4 sm:p-6">
       <Card className="invictus-surface invictus-frame w-full max-w-md border-border/70">
         <CardHeader className="space-y-3">
           <div className="flex items-center gap-3">
@@ -69,7 +69,7 @@ export default function ResetPasswordPage() {
               style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary) / 0.25))" }}
             />
             <div>
-              <CardTitle>Redefinir senha</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Redefinir senha</CardTitle>
               <CardDescription>Escolha uma nova senha para sua conta.</CardDescription>
             </div>
           </div>
@@ -83,7 +83,7 @@ export default function ResetPasswordPage() {
               <p className="text-sm text-muted-foreground">
                 Não encontramos uma sessão de recuperação ativa. Abra o link do e-mail novamente.
               </p>
-              <Button type="button" className="w-full" onClick={() => navigate("/auth")}>
+              <Button type="button" className="w-full h-11" onClick={() => navigate("/auth")}>
                 Voltar para o acesso
               </Button>
             </div>
@@ -110,7 +110,7 @@ export default function ResetPasswordPage() {
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={saving}>
+              <Button type="submit" className="w-full h-11" disabled={saving}>
                 {saving ? "Salvando…" : "Salvar nova senha"}
               </Button>
             </form>

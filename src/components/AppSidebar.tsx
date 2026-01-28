@@ -1,5 +1,5 @@
 import { useLocation } from "react-router-dom";
-import { MapPin, Search, MessageCircle, User, Shield } from "lucide-react";
+import { Home as HomeIcon, MapPin, Search, MessageCircle, User, Shield } from "lucide-react";
 
 import { NavLink } from "@/components/NavLink";
 import { GoldHoverText } from "@/components/GoldHoverText";
@@ -17,7 +17,8 @@ import { useSidebar } from "@/components/ui/sidebar";
 
 
 const navItems = [
-  { title: "Mapa", url: "/", icon: MapPin },
+  { title: "Home", url: "/", icon: HomeIcon },
+  { title: "Mapa", url: "/mapa", icon: MapPin },
   { title: "Buscar", url: "/buscar", icon: Search },
   { title: "Mensagens", url: "/mensagens", icon: MessageCircle },
   { title: "Perfil", url: "/perfil", icon: User },

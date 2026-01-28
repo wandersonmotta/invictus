@@ -37,14 +37,6 @@ export function AppSidebar() {
     <Sidebar className={collapsed ? "w-14" : "w-64"} collapsible="icon" variant="inset">
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className={collapsed ? "py-3" : "py-3"}>
-            <div className={collapsed ? "flex items-center justify-center" : "flex items-center gap-3"}>
-              {!collapsed && (
-                <GoldHoverText className="text-[10px] font-semibold tracking-[0.35em]">MEMBRO</GoldHoverText>
-              )}
-            </div>
-          </SidebarGroupLabel>
-
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (

@@ -15,6 +15,7 @@ import Perfil from "./pages/Perfil";
 import Admin from "./pages/Admin";
 import AuthPage from "./pages/Auth";
 import ClassPage from "./pages/Class";
+import ResetPasswordPage from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route
               path="/"
               element={

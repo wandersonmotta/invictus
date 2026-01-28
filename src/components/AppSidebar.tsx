@@ -31,7 +31,7 @@ export function AppSidebar() {
   const isActive = (path: string) => currentPath === path;
 
   return (
-    <Sidebar className={collapsed ? "w-14" : "w-64"} collapsible="icon">
+    <Sidebar className={collapsed ? "w-14" : "w-64"} collapsible="icon" variant="inset">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Invictus</SidebarGroupLabel>
@@ -44,8 +44,8 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === "/"}
-                      className="flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-muted/60"
-                      activeClassName="bg-muted text-foreground"
+                      className="flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
+                      activeClassName="bg-sidebar-accent/80 text-sidebar-accent-foreground"
                       aria-current={isActive(item.url) ? "page" : undefined}
                     >
                       <item.icon className="h-4 w-4" />

@@ -8,7 +8,7 @@ export default function Buscar() {
         <p className="text-sm text-muted-foreground">Encontre membros por região, expertise e setor (placeholder).</p>
       </header>
 
-      <Card>
+      <Card className="bg-card/50 backdrop-blur-xl border-border/70 shadow-[0_0_0_1px_hsl(var(--border)/0.4)]">
         <CardHeader>
           <CardTitle>Em breve</CardTitle>
         </CardHeader>

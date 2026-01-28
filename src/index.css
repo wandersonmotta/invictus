@@ -8,6 +8,7 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
+    /* Light fallback (we default to .dark via main.tsx) */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
 
@@ -17,8 +18,8 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 42 85% 50%;
+    --primary-foreground: 222.2 84% 4.9%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -26,15 +27,15 @@ All colors MUST be HSL.
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 42 85% 50%;
+    --accent-foreground: 222.2 84% 4.9%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 42 85% 50%;
 
     --radius: 0.5rem;
 
@@ -56,41 +57,44 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    /* Invictus premium dark + gold (executivo, clean, glass) */
+    --background: 228 22% 6%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 230 20% 10%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 230 20% 10%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    /* Gold forte (acento principal) */
+    --primary: 42 85% 50%;
+    --primary-foreground: 228 22% 6%;
 
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 230 16% 14%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 230 16% 14%;
+    --muted-foreground: 215 20% 72%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 42 85% 50%;
+    --accent-foreground: 228 22% 6%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 230 16% 18%;
+    --input: 230 16% 18%;
+    --ring: 42 85% 50%;
+
+    --sidebar-background: 228 22% 6%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 42 85% 50%;
+    --sidebar-primary-foreground: 228 22% 6%;
+    --sidebar-accent: 230 16% 14%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 230 16% 18%;
+    --sidebar-ring: 42 85% 50%;
   }
 }
 
@@ -101,5 +105,16 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer base {
+  /* Subtle premium noise + vignette using only tokens */
+  body {
+    background-image:
+      radial-gradient(1200px 800px at 20% 0%, hsl(var(--primary) / 0.12), transparent 55%),
+      radial-gradient(900px 600px at 80% 10%, hsl(var(--primary) / 0.08), transparent 50%),
+      radial-gradient(900px 900px at 50% 120%, hsl(var(--foreground) / 0.05), transparent 55%);
+    background-attachment: fixed;
   }
 }

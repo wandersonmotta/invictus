@@ -105,7 +105,7 @@ export function CommunityThreadView({ threadId, onBack }: Props) {
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "community_posts",
           filter: `thread_id=eq.${threadId}`,

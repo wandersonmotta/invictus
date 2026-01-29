@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      geo_city_cache: {
+        Row: {
+          city: string
+          created_at: string
+          id: string
+          key: string
+          lat: number
+          lng: number
+          source: string
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          city: string
+          created_at?: string
+          id?: string
+          key: string
+          lat: number
+          lng: number
+          source?: string
+          state: string
+          updated_at?: string
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          id?: string
+          key?: string
+          lat?: number
+          lng?: number
+          source?: string
+          state?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       invite_codes: {
         Row: {
           active: boolean
@@ -86,11 +122,17 @@ export type Database = {
           approved_by: string | null
           avatar_url: string | null
           bio: string | null
+          city: string | null
           created_at: string
           display_name: string | null
           expertises: string[]
           id: string
+          location_lat: number | null
+          location_lng: number | null
+          location_updated_at: string | null
+          postal_code: string | null
           region: string | null
+          state: string | null
           updated_at: string
           user_id: string
         }
@@ -100,11 +142,17 @@ export type Database = {
           approved_by?: string | null
           avatar_url?: string | null
           bio?: string | null
+          city?: string | null
           created_at?: string
           display_name?: string | null
           expertises?: string[]
           id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          location_updated_at?: string | null
+          postal_code?: string | null
           region?: string | null
+          state?: string | null
           updated_at?: string
           user_id: string
         }
@@ -114,11 +162,17 @@ export type Database = {
           approved_by?: string | null
           avatar_url?: string | null
           bio?: string | null
+          city?: string | null
           created_at?: string
           display_name?: string | null
           expertises?: string[]
           id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          location_updated_at?: string | null
+          postal_code?: string | null
           region?: string | null
+          state?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -227,6 +281,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_approved_member_pins: {
+        Args: { p_limit?: number }
+        Returns: {
+          city: string
+          lat: number
+          lng: number
+          state: string
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

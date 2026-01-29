@@ -3,20 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { ChangePasswordCard } from "@/components/profile/ChangePasswordCard";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 export default function Perfil() {
-  const { user, signOut } = useAuth();
-
-  return (
-    <main className="invictus-page">
+  const {
+    user,
+    signOut
+  } = useAuth();
+  return <main className="invictus-page">
       <header className="invictus-page-header">
         <h1 className="invictus-h1">Perfil</h1>
         <p className="invictus-lead">Complete seu perfil — mesmo durante a aprovação.</p>
@@ -28,11 +21,10 @@ export default function Perfil() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-base font-semibold">Alterar senha</h2>
-            <p className="text-sm text-muted-foreground">Abra o popup para trocar sua senha com segurança.</p>
+            <p className="text-sm text-muted-foreground">Esqueceu sua senha? Clique para trocar sua senha com segurança.</p>
           </div>
 
-          {user?.email ? (
-            <Dialog>
+          {user?.email ? <Dialog>
               <DialogTrigger asChild>
                 <Button type="button" className="h-11">
                   Alterar senha
@@ -45,19 +37,14 @@ export default function Perfil() {
                 </DialogHeader>
                 <ChangePasswordCard email={user.email} />
               </DialogContent>
-            </Dialog>
-          ) : (
-            <Button type="button" className="h-11" disabled>
+            </Dialog> : <Button type="button" className="h-11" disabled>
               Alterar senha
-            </Button>
-          )}
+            </Button>}
         </div>
 
-        {!user?.email ? (
-          <p className="mt-3 text-xs text-muted-foreground">
+        {!user?.email ? <p className="mt-3 text-xs text-muted-foreground">
             Sua conta não suporta alteração de senha por aqui.
-          </p>
-        ) : null}
+          </p> : null}
       </section>
 
       <Card className="invictus-surface invictus-frame border-border/70">
@@ -78,6 +65,5 @@ export default function Perfil() {
           </Button>
         </CardContent>
       </Card>
-    </main>
-  );
+    </main>;
 }

@@ -158,7 +158,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"> & {
           className={cn(
             "flex h-full w-full flex-col bg-sidebar text-sidebar-foreground",
             variant === "floating" || variant === "inset"
-              ? "rounded-lg border border-sidebar-border shadow"
+              ? "rounded-lg shadow"
               : "",
           )}
         >

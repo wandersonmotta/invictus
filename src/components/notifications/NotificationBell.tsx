@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
 type NotificationRow = {
   id: string;
@@ -94,6 +95,7 @@ function buildHref(n: NotificationRow): string {
 export function NotificationBell() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [selected, setSelected] = React.useState<Record<string, boolean>>({});
 
   const unreadQuery = useQuery({
     queryKey: ["notifications", "unread"],
@@ -133,8 +135,26 @@ export function NotificationBell() {
     },
   });
 
+  const deleteNotifications = useMutation({
+    mutationFn: async (vars: { all: boolean; ids: string[] }) => {
+      const { error } = await supabase.rpc("delete_my_notifications" as any, {
+        p_all: vars.all,
+        p_ids: vars.all ? null : vars.ids,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      setSelected({});
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["notifications", "unread"] }),
+        qc.invalidateQueries({ queryKey: ["notifications", "list"] }),
+      ]);
+    },
+  });
+
   const unread = unreadQuery.data ?? 0;
   const badgeText = unread > 99 ? "99+" : String(unread);
+  const selectedIds = React.useMemo(() => Object.entries(selected).filter(([, v]) => v).map(([k]) => k), [selected]);
 
   return (
     <DropdownMenu
@@ -186,6 +206,52 @@ export function NotificationBell() {
           <div className="text-[11px] text-muted-foreground">Novidades e eventos da sua conta.</div>
         </div>
 
+        <div className="mx-1 mb-1 flex items-center justify-between gap-2 rounded-md px-2 py-1.5">
+          <button
+            type="button"
+            className="text-[11px] text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              const rows = listQuery.data ?? [];
+              if (rows.length === 0) return;
+              const allSelected = rows.every((r) => selected[r.id]);
+              if (allSelected) {
+                setSelected({});
+              } else {
+                const next: Record<string, boolean> = {};
+                rows.forEach((r) => {
+                  next[r.id] = true;
+                });
+                setSelected(next);
+              }
+            }}
+          >
+            {listQuery.data?.length && (listQuery.data ?? []).every((r) => selected[r.id]) ? "Limpar seleção" : "Selecionar todas"}
+          </button>
+
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={selectedIds.length === 0 || deleteNotifications.isPending}
+              onClick={() => deleteNotifications.mutate({ all: false, ids: selectedIds })}
+              className="h-7 px-2 text-[11px]"
+            >
+              Apagar selecionadas
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={(listQuery.data?.length ?? 0) === 0 || deleteNotifications.isPending}
+              onClick={() => deleteNotifications.mutate({ all: true, ids: [] })}
+              className="h-7 px-2 text-[11px]"
+            >
+              Apagar todas
+            </Button>
+          </div>
+        </div>
+
         <div className="h-px bg-[hsl(var(--foreground)_/_0.06)] mx-1" />
 
         {listQuery.isLoading ? (
@@ -201,6 +267,7 @@ export function NotificationBell() {
               const message = buildMessage(n);
               const href = buildHref(n);
               const isUnread = !n.read_at;
+              const isSelected = !!selected[n.id];
               return (
                 <DropdownMenuItem
                   key={n.id}
@@ -211,6 +278,28 @@ export function NotificationBell() {
                   }
                   onClick={() => navigate(href)}
                 >
+                  <button
+                    type="button"
+                    aria-label={isSelected ? "Desselecionar notificação" : "Selecionar notificação"}
+                    className={
+                      "mt-1 inline-flex h-5 w-5 items-center justify-center rounded-md border " +
+                      "border-border/70 bg-[hsl(var(--background)_/_0.12)] " +
+                      "hover:bg-[hsl(var(--background)_/_0.18)]"
+                    }
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelected((prev) => ({ ...prev, [n.id]: !prev[n.id] }));
+                    }}
+                  >
+                    <span
+                      className={cn(
+                        "h-2.5 w-2.5 rounded-sm transition-opacity",
+                        isSelected ? "opacity-100 bg-[hsl(var(--gold-hot))]" : "opacity-0",
+                      )}
+                    />
+                  </button>
+
                   <Avatar className="h-8 w-8 mt-0.5">
                     <AvatarImage src={n.actor_avatar_url ?? undefined} alt="Avatar" />
                     <AvatarFallback className="text-[10px]">{initials(n.actor_display_name)}</AvatarFallback>

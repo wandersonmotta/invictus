@@ -844,6 +844,10 @@ export type Database = {
         Args: { p_comment_id: string }
         Returns: boolean
       }
+      delete_my_notifications: {
+        Args: { p_all?: boolean; p_ids?: string[] }
+        Returns: number
+      }
       edit_community_post: {
         Args: { p_body: string; p_post_id: string }
         Returns: string

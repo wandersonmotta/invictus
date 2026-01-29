@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { GoldHoverText } from "@/components/GoldHoverText";
 import logo from "@/assets/invictus-logo.png";
 
 const loginSchema = z.object({
@@ -195,26 +196,32 @@ export default function AuthPage() {
               )}
             </div>
 
-            <Button type="submit" className="w-full h-11">
-              Entrar
-            </Button>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Button type="submit" className="h-11 w-full">
+                Entrar
+              </Button>
 
-            <div className="flex items-center justify-between">
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => setInviteOpen(true)}
-                className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+                className={
+                  "h-11 w-full group border-border/70 hover:bg-[hsl(var(--gold-soft)/0.12)] hover:border-[hsl(var(--gold-hot)/0.55)] hover:shadow-[0_0_0_1px_hsl(var(--gold-hot)/0.20),0_10px_30px_-12px_hsl(var(--primary)/0.35)]"
+                }
               >
-                Tenho convite
-              </button>
-              <button
-                type="button"
-                onClick={() => setResetOpen(true)}
-                className="text-xs text-muted-foreground underline-offset-4 hover:underline"
-              >
-                Esqueceu a senha?
-              </button>
+                <GoldHoverText className="text-sm font-medium" intensity={1}>
+                  Tenho um convite
+                </GoldHoverText>
+              </Button>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setResetOpen(true)}
+              className="w-full text-center text-xs text-muted-foreground underline-offset-4 hover:underline"
+            >
+              Esqueceu a senha?
+            </button>
           </form>
         </CardContent>
       </Card>

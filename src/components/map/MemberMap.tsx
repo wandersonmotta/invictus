@@ -1,5 +1,6 @@
 import * as React from "react";
 import L from "leaflet";
+import { LocateFixed, Minus, Plus } from "lucide-react";
 
 import type { ApprovedMemberPin } from "./useApprovedMemberPins";
 
@@ -26,17 +27,40 @@ export function MemberMap({
   pins: ApprovedMemberPin[];
   centerMe?: LatLng | null;
 }) {
+  const canGeolocate = typeof window !== "undefined" && !!window.navigator?.geolocation;
   const mapRef = React.useRef<L.Map | null>(null);
   const markersRef = React.useRef<L.LayerGroup | null>(null);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
 
-  const onCenterBrazil = React.useCallback(() => {
-    mapRef.current?.fitBounds(BRAZIL_BOUNDS, { animate: true });
+  const onZoomIn = React.useCallback(() => {
+    mapRef.current?.zoomIn();
   }, []);
 
-  const onCenterMe = React.useCallback(() => {
-    if (!centerMe) return;
-    mapRef.current?.setView([centerMe.lat, centerMe.lng], 11, { animate: true });
+  const onZoomOut = React.useCallback(() => {
+    mapRef.current?.zoomOut();
+  }, []);
+
+  const onGeolocate = React.useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Prefer the profile “approximate” location when available
+    if (centerMe) {
+      map.setView([centerMe.lat, centerMe.lng], 11, { animate: true });
+      return;
+    }
+
+    // Fallback: browser geolocation
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        map.setView([pos.coords.latitude, pos.coords.longitude], 13, { animate: true });
+      },
+      () => {
+        // silent fail
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60_000 },
+    );
   }, [centerMe]);
 
   const goldIcon = React.useMemo(() => {
@@ -54,7 +78,7 @@ export function MemberMap({
     if (!containerRef.current || mapRef.current) return;
 
     const map = L.map(containerRef.current, {
-      zoomControl: true,
+      zoomControl: false,
       attributionControl: true,
     });
 
@@ -97,22 +121,36 @@ export function MemberMap({
 
   return (
     <div className="invictus-surface invictus-frame invictus-map invictus-map-overlay relative w-full overflow-hidden rounded-lg border border-border/70">
-      <div className="absolute left-3 top-3 z-[600] flex items-center gap-2">
+      <div className="absolute right-3 top-3 z-[600] flex flex-col items-center gap-2">
         <button
           type="button"
-          onClick={onCenterBrazil}
-          className="invictus-map-control inline-flex h-11 items-center justify-center rounded-md px-3 text-sm font-medium"
+          onClick={onGeolocate}
+          disabled={!centerMe && !canGeolocate}
+          aria-label="Localizar"
+          className="invictus-map-control inline-flex h-11 w-11 items-center justify-center rounded-md"
         >
-          Brasil
+          <LocateFixed className="h-4 w-4" />
         </button>
-        <button
-          type="button"
-          onClick={onCenterMe}
-          disabled={!centerMe}
-          className="invictus-map-control inline-flex h-11 items-center justify-center rounded-md px-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Em mim
-        </button>
+
+        <div className="invictus-map-control invictus-map-zoom flex flex-col overflow-hidden rounded-md">
+          <button
+            type="button"
+            onClick={onZoomIn}
+            aria-label="Zoom in"
+            className="invictus-map-zoom-btn inline-flex h-11 w-11 items-center justify-center"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+          <div className="invictus-map-zoom-divider" />
+          <button
+            type="button"
+            onClick={onZoomOut}
+            aria-label="Zoom out"
+            className="invictus-map-zoom-btn inline-flex h-11 w-11 items-center justify-center"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <div className="h-[360px] w-full sm:h-[420px] lg:h-[520px]">

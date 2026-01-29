@@ -1,6 +1,7 @@
 import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProfileForm } from "@/components/profile/ProfileForm";
 
 export default function Perfil() {
   const { user, signOut } = useAuth();
@@ -9,17 +10,10 @@ export default function Perfil() {
     <main className="invictus-page">
       <header className="invictus-page-header">
         <h1 className="invictus-h1">Perfil</h1>
-        <p className="invictus-lead">Seu perfil executivo (placeholder).</p>
+        <p className="invictus-lead">Complete seu perfil — mesmo durante a aprovação.</p>
       </header>
 
-      <Card className="invictus-surface invictus-frame border-border/70">
-        <CardHeader>
-          <CardTitle>Em breve</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Aqui vamos incluir foto, bio, expertises e região.
-        </CardContent>
-      </Card>
+      {user?.id ? <ProfileForm userId={user.id} /> : null}
 
       <Card className="invictus-surface invictus-frame border-border/70">
         <CardHeader>

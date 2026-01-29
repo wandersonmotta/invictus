@@ -17,10 +17,37 @@ const BRAZIL_BOUNDS: [[number, number], [number, number]] = [
   [5.27, -34.79],
 ];
 
-export function MemberMap({ pins }: { pins: ApprovedMemberPin[] }) {
+type LatLng = { lat: number; lng: number };
+
+export function MemberMap({
+  pins,
+  centerMe,
+}: {
+  pins: ApprovedMemberPin[];
+  centerMe?: LatLng | null;
+}) {
   const mapRef = React.useRef<L.Map | null>(null);
   const markersRef = React.useRef<L.LayerGroup | null>(null);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
+
+  const onCenterBrazil = React.useCallback(() => {
+    mapRef.current?.fitBounds(BRAZIL_BOUNDS, { animate: true });
+  }, []);
+
+  const onCenterMe = React.useCallback(() => {
+    if (!centerMe) return;
+    mapRef.current?.setView([centerMe.lat, centerMe.lng], 11, { animate: true });
+  }, [centerMe]);
+
+  const goldIcon = React.useMemo(() => {
+    return L.divIcon({
+      className: "invictus-map-pin-wrap",
+      html: '<div class="invictus-map-pin" aria-hidden="true"><span class="invictus-map-pin-core"></span></div>',
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+      tooltipAnchor: [0, -14],
+    });
+  }, []);
 
   // init map once
   React.useEffect(() => {
@@ -57,12 +84,37 @@ export function MemberMap({ pins }: { pins: ApprovedMemberPin[] }) {
 
     for (const p of pins) {
       const label = p.city && p.state ? `${p.city}/${p.state}` : "Invictus";
-      L.marker([p.lat, p.lng]).addTo(markers).bindTooltip(label, { direction: "top", opacity: 1 });
+      L.marker([p.lat, p.lng], { icon: goldIcon })
+        .addTo(markers)
+        .bindTooltip(label, {
+          direction: "top",
+          opacity: 1,
+          sticky: true,
+          className: "invictus-map-tooltip",
+        });
     }
-  }, [pins]);
+  }, [pins, goldIcon]);
 
   return (
-    <div className="invictus-surface invictus-frame w-full overflow-hidden rounded-lg border border-border/70">
+    <div className="invictus-surface invictus-frame invictus-map invictus-map-overlay relative w-full overflow-hidden rounded-lg border border-border/70">
+      <div className="absolute left-3 top-3 z-[600] flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onCenterBrazil}
+          className="invictus-map-control inline-flex h-11 items-center justify-center rounded-md px-3 text-sm font-medium"
+        >
+          Brasil
+        </button>
+        <button
+          type="button"
+          onClick={onCenterMe}
+          disabled={!centerMe}
+          className="invictus-map-control inline-flex h-11 items-center justify-center rounded-md px-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Em mim
+        </button>
+      </div>
+
       <div className="h-[360px] w-full sm:h-[420px] lg:h-[520px]">
         <div ref={containerRef} className="h-full w-full" />
       </div>

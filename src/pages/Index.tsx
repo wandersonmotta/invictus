@@ -52,7 +52,14 @@ const Index = () => {
 
       <section className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <MemberMap pins={pins} />
+          <MemberMap
+            pins={pins}
+            centerMe={
+              typeof me?.location_lat === "number" && typeof me?.location_lng === "number"
+                ? { lat: me.location_lat, lng: me.location_lng }
+                : null
+            }
+          />
         </div>
 
         <aside className="space-y-4">

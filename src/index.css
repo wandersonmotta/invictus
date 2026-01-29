@@ -110,6 +110,17 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  /* Prevent layout shift when scroll is locked (e.g., opening dialogs) */
+  html {
+    scrollbar-gutter: stable;
+  }
+
+  @supports not (scrollbar-gutter: stable) {
+    html {
+      overflow-y: scroll;
+    }
+  }
+
   body {
     @apply bg-background text-foreground;
   }

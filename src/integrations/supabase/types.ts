@@ -14,6 +14,150 @@ export type Database = {
   }
   public: {
     Tables: {
+      community_channels: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      community_post_attachments: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          file_name: string | null
+          id: string
+          post_id: string
+          size_bytes: number | null
+          storage_bucket: string
+          storage_path: string
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          post_id: string
+          size_bytes?: number | null
+          storage_bucket?: string
+          storage_path: string
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          post_id?: string
+          size_bytes?: number | null
+          storage_bucket?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_post_attachments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_posts: {
+        Row: {
+          author_id: string
+          body: string | null
+          created_at: string
+          id: string
+          thread_id: string
+        }
+        Insert: {
+          author_id: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          thread_id: string
+        }
+        Update: {
+          author_id?: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_posts_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "community_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_threads: {
+        Row: {
+          body: string | null
+          channel_id: string
+          created_at: string
+          created_by: string
+          id: string
+          is_locked: boolean
+          last_post_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          channel_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_locked?: boolean
+          last_post_at?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          channel_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_locked?: boolean
+          last_post_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_threads_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "community_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_members: {
         Row: {
           accepted_at: string | null
@@ -473,6 +617,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_community_post_attachment: {
+        Args: {
+          p_content_type?: string
+          p_file_name?: string
+          p_post_id: string
+          p_size_bytes?: number
+          p_storage_path: string
+        }
+        Returns: string
+      }
+      create_community_post: {
+        Args: { p_body: string; p_thread_id: string }
+        Returns: string
+      }
+      create_community_thread: {
+        Args: { p_body?: string; p_channel_id: string; p_title: string }
+        Returns: string
+      }
       create_conversation: {
         Args: {
           p_group_name?: string
@@ -506,6 +668,20 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_community_thread: {
+        Args: { p_thread_id: string }
+        Returns: {
+          body: string
+          channel_id: string
+          channel_name: string
+          channel_slug: string
+          created_at: string
+          is_locked: boolean
+          last_post_at: string
+          thread_id: string
+          title: string
+        }[]
+      }
       get_my_threads: {
         Args: { p_folder: Database["public"]["Enums"]["conversation_folder"] }
         Returns: {
@@ -532,6 +708,15 @@ export type Database = {
           username: string
         }[]
       }
+      get_safe_author_card: {
+        Args: { p_author_id: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          user_id: string
+          username: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -539,7 +724,52 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_approved: { Args: never; Returns: boolean }
       is_mutual_follow: { Args: { a: string; b: string }; Returns: boolean }
+      list_community_channels: {
+        Args: never
+        Returns: {
+          description: string
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+        }[]
+      }
+      list_community_posts: {
+        Args: { p_before?: string; p_limit?: number; p_thread_id: string }
+        Returns: {
+          attachment_count: number
+          author_avatar_url: string
+          author_display_name: string
+          author_id: string
+          author_username: string
+          body: string
+          created_at: string
+          post_id: string
+          thread_id: string
+        }[]
+      }
+      list_community_threads: {
+        Args: {
+          p_channel_id: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+        }
+        Returns: {
+          author_avatar_url: string
+          author_display_name: string
+          author_username: string
+          channel_id: string
+          created_at: string
+          created_by: string
+          last_post_at: string
+          post_count: number
+          thread_id: string
+          title: string
+        }[]
+      }
       search_approved_members: {
         Args: { p_limit?: number; p_search?: string }
         Returns: {

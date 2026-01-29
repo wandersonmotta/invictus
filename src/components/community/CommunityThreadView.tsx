@@ -1,0 +1,281 @@
+import * as React from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { supabase } from "@/integrations/supabase/client";
+import type { CommunityAttachment, CommunityPost } from "@/components/community/types";
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+
+type Props = {
+  threadId: string;
+  onBack?: () => void;
+};
+
+function formatPt(dateIso: string) {
+  try {
+    return new Date(dateIso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  } catch {
+    return dateIso;
+  }
+}
+
+function bytesToHuman(bytes: number | null | undefined) {
+  if (!bytes && bytes !== 0) return "";
+  const units = ["B", "KB", "MB", "GB"];
+  let v = bytes;
+  let i = 0;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
+export function CommunityThreadView({ threadId, onBack }: Props) {
+  const qc = useQueryClient();
+  const [body, setBody] = React.useState("");
+  const [pendingFiles, setPendingFiles] = React.useState<File[]>([]);
+
+  const threadQuery = useQuery({
+    queryKey: ["community", "thread", threadId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_community_thread", { p_thread_id: threadId });
+      if (error) throw error;
+      return (data?.[0] ?? null) as any;
+    },
+    staleTime: 10_000,
+  });
+
+  const postsQuery = useQuery({
+    queryKey: ["community", "posts", threadId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("list_community_posts", { p_thread_id: threadId, p_limit: 80 });
+      if (error) throw error;
+      return (data ?? []) as CommunityPost[];
+    },
+    staleTime: 0,
+  });
+
+  React.useEffect(() => {
+    const channel = supabase
+      .channel(`community-posts:${threadId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "community_posts",
+          filter: `thread_id=eq.${threadId}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["community", "posts", threadId] });
+          qc.invalidateQueries({ queryKey: ["community", "threads"] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [qc, threadId]);
+
+  const createPostMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc("create_community_post", { p_thread_id: threadId, p_body: body });
+      if (error) throw error;
+      return data as string; // post_id
+    },
+    onSuccess: async (postId) => {
+      // upload anexos (se houver)
+      if (pendingFiles.length) {
+        for (const f of pendingFiles) {
+          const ext = f.name.includes(".") ? f.name.split(".").pop() : "bin";
+          const path = `${threadId}/${postId}/${crypto.randomUUID()}.${ext}`;
+          const { error: uploadError } = await supabase.storage.from("community-attachments").upload(path, f, {
+            contentType: f.type || undefined,
+            upsert: false,
+          });
+          if (uploadError) throw uploadError;
+
+          const { error: metaError } = await supabase.rpc("add_community_post_attachment", {
+            p_post_id: postId,
+            p_storage_path: path,
+            p_file_name: f.name,
+            p_content_type: f.type || null,
+            p_size_bytes: f.size,
+          });
+          if (metaError) throw metaError;
+        }
+      }
+
+      setBody("");
+      setPendingFiles([]);
+      await qc.invalidateQueries({ queryKey: ["community", "posts", threadId] });
+      await qc.invalidateQueries({ queryKey: ["community", "threads"] });
+    },
+  });
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="p-3 sm:p-4 border-b border-border/60">
+        <div className="flex items-start gap-3">
+          {onBack ? (
+            <Button size="sm" variant="secondary" onClick={onBack}>
+              Voltar
+            </Button>
+          ) : null}
+          <div className="min-w-0">
+            <div className="text-sm font-medium">
+              {threadQuery.isLoading ? "Carregando…" : threadQuery.data?.title ?? "Tema"}
+            </div>
+            {threadQuery.data?.channel_name ? (
+              <div className="mt-1 text-xs text-muted-foreground">#{threadQuery.data.channel_name}</div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto p-3 sm:p-4">
+        {postsQuery.isLoading ? (
+          <div className="text-sm text-muted-foreground">Carregando posts…</div>
+        ) : postsQuery.isError ? (
+          <div className="text-sm text-muted-foreground">Não foi possível carregar este tema.</div>
+        ) : !postsQuery.data?.length ? (
+          <div className="text-sm text-muted-foreground">Ainda não há mensagens neste tema.</div>
+        ) : (
+          <div className="grid gap-3">
+            {postsQuery.data.map((p) => (
+              <PostItem key={p.post_id} post={p} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-border/60 p-3 sm:p-4">
+        <div className="grid gap-2">
+          <Textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="Escreva uma mensagem…"
+            className="min-h-[84px]"
+          />
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <Input
+                type="file"
+                multiple
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  setPendingFiles(files.slice(0, 10));
+                }}
+              />
+              {pendingFiles.length ? (
+                <div className="text-xs text-muted-foreground">{pendingFiles.length} arquivo(s)</div>
+              ) : null}
+            </div>
+            <Button
+              onClick={() => createPostMutation.mutate()}
+              disabled={createPostMutation.isPending || (!body.trim() && pendingFiles.length === 0)}
+            >
+              {createPostMutation.isPending ? "Enviando…" : "Enviar"}
+            </Button>
+          </div>
+
+          <div className="text-[11px] text-muted-foreground">
+            Dica: anexos ficam privados e só membros aprovados conseguem abrir.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PostItem({ post }: { post: CommunityPost }) {
+  const attachmentsQuery = useQuery({
+    queryKey: ["community", "attachments", post.post_id],
+    enabled: post.attachment_count > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("community_post_attachments")
+        .select("*")
+        .eq("post_id", post.post_id)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as CommunityAttachment[];
+    },
+    staleTime: 60_000,
+  });
+
+  return (
+    <div className={cn("rounded-xl border p-3 sm:p-4", "invictus-surface invictus-frame border-border/70")}>
+      <div className="flex items-start gap-3">
+        <Avatar className="h-9 w-9 border border-border/70">
+          {post.author_avatar_url ? <AvatarImage src={post.author_avatar_url} alt={`Avatar de ${post.author_display_name}`} /> : null}
+          <AvatarFallback>{(post.author_display_name || "M").slice(0, 1).toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <div className="text-sm font-medium truncate">{post.author_display_name}</div>
+            {post.author_username ? <div className="text-xs text-muted-foreground">{post.author_username}</div> : null}
+            <div className="text-xs text-muted-foreground">• {formatPt(post.created_at)}</div>
+          </div>
+          {post.body ? <div className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{post.body}</div> : null}
+
+          {post.attachment_count > 0 ? (
+            <div className="mt-3">
+              <div className="text-xs text-muted-foreground">Anexos ({post.attachment_count})</div>
+              {attachmentsQuery.isLoading ? (
+                <div className="mt-1 text-xs text-muted-foreground">Carregando anexos…</div>
+              ) : attachmentsQuery.isError ? (
+                <div className="mt-1 text-xs text-muted-foreground">Não foi possível carregar anexos.</div>
+              ) : (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(attachmentsQuery.data ?? []).map((a) => (
+                    <AttachmentChip key={a.id} att={a} />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AttachmentChip({ att }: { att: CommunityAttachment }) {
+  const [loading, setLoading] = React.useState(false);
+
+  const label = att.file_name ?? att.storage_path.split("/").pop() ?? "arquivo";
+
+  return (
+    <button
+      type="button"
+      className={cn(
+        "text-left rounded-full border px-3 py-1.5 text-xs transition-colors",
+        "invictus-surface invictus-frame border-border/60",
+        "hover:bg-accent",
+      )}
+      onClick={async () => {
+        try {
+          setLoading(true);
+          const { data, error } = await supabase.storage.from("community-attachments").createSignedUrl(att.storage_path, 60);
+          if (error) throw error;
+          window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+        } finally {
+          setLoading(false);
+        }
+      }}
+      disabled={loading}
+      title={att.size_bytes ? `${label} (${bytesToHuman(att.size_bytes)})` : label}
+    >
+      <span className="font-medium">{loading ? "Abrindo…" : label}</span>
+      {att.size_bytes ? <span className="ml-2 text-muted-foreground">{bytesToHuman(att.size_bytes)}</span> : null}
+    </button>
+  );
+}

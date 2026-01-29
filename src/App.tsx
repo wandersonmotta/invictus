@@ -17,6 +17,7 @@ import AuthPage from "./pages/Auth";
 import ClassPage from "./pages/Class";
 import ResetPasswordPage from "./pages/ResetPassword";
 import AguardandoAprovacao from "./pages/AguardandoAprovacao";
+import Comunidade from "./pages/Comunidade";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +85,27 @@ const App = () => (
                 <RequireAuth>
                   <AppLayout>
                     <Mensagens />
+                  </AppLayout>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/comunidade"
+              element={
+                <RequireAuth>
+                  <AppLayout>
+                    <Comunidade />
+                  </AppLayout>
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/comunidade/:threadId"
+              element={
+                <RequireAuth>
+                  <AppLayout>
+                    <Comunidade />
                   </AppLayout>
                 </RequireAuth>
               }

@@ -852,6 +852,10 @@ export type Database = {
         Args: { p_body: string; p_post_id: string }
         Returns: string
       }
+      edit_feed_post_comment: {
+        Args: { p_body: string; p_comment_id: string }
+        Returns: string
+      }
       find_approved_member_by_username: {
         Args: { p_username: string }
         Returns: {

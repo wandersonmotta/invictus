@@ -161,6 +161,51 @@ All colors MUST be HSL.
       0 0 40px -28px hsl(var(--primary) / 0.55);
   }
 
+  /* Auth-only: extra premium glass + bold gold frame (doesn't affect rest of app) */
+  .invictus-auth-surface {
+    background: linear-gradient(
+        180deg,
+        hsl(var(--card) / calc(var(--glass) - 0.10)) 0%,
+        hsl(var(--card) / calc(var(--glass) - 0.18)) 100%
+      );
+    backdrop-filter: blur(20px);
+    box-shadow:
+      0 0 0 1px hsl(var(--foreground) / 0.06) inset,
+      0 12px 40px -26px hsl(var(--foreground) / 0.35);
+  }
+
+  @media (min-width: 768px) {
+    .invictus-auth-surface {
+      backdrop-filter: blur(22px) saturate(120%);
+    }
+  }
+
+  .invictus-auth-frame {
+    /* Gold line + controlled glow (premium, not neon) */
+    box-shadow:
+      0 0 0 1px hsl(var(--gold-hot) / 0.92),
+      0 0 0 1px hsl(var(--gold-hot) / 0.18) inset,
+      0 0 0 2px hsl(var(--gold-soft) / 0.12) inset,
+      0 18px 70px -38px hsl(var(--foreground) / 0.25),
+      0 0 70px -34px hsl(var(--gold-hot) / 0.52);
+    transition:
+      box-shadow 240ms ease,
+      transform 240ms ease;
+  }
+
+  /* Desktop-only aura hover (keeps mobile clean/perf) */
+  @media (min-width: 768px) {
+    .invictus-auth-frame:hover {
+      transform: translateY(-1px);
+      box-shadow:
+        0 0 0 1px hsl(var(--gold-hot) / 0.96),
+        0 0 0 1px hsl(var(--gold-hot) / 0.22) inset,
+        0 0 0 2px hsl(var(--gold-soft) / 0.14) inset,
+        0 20px 80px -38px hsl(var(--foreground) / 0.28),
+        0 0 88px -34px hsl(var(--gold-hot) / 0.62);
+    }
+  }
+
   .invictus-gold-line {
     background: linear-gradient(90deg, transparent, hsl(var(--gold-hot) / 0.9), transparent);
   }

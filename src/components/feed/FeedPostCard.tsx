@@ -21,7 +21,7 @@ export function FeedPostCard({ post }: { post: FeedPost & { media_urls: { url: s
     },
   });
 
-  const primary = post.media_urls[0];
+  const primary = post.media_urls[0] as any;
 
   return (
     <Card className="invictus-surface invictus-frame border-border/70">
@@ -48,6 +48,8 @@ export function FeedPostCard({ post }: { post: FeedPost & { media_urls: { url: s
           <ReelsMedia
             url={primary.url}
             contentType={primary.contentType}
+            trimStartSeconds={primary.trimStartSeconds ?? null}
+            trimEndSeconds={primary.trimEndSeconds ?? null}
             alt={`Mídia de ${post.author_display_name}`}
           />
         ) : null}

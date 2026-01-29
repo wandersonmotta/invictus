@@ -29,6 +29,8 @@ export default function Feed() {
             (p.media ?? []).map(async (m) => ({
               url: await createSignedUrl("feed-media", m.storage_path),
               contentType: m.content_type,
+              trimStartSeconds: m.trim_start_seconds ?? null,
+              trimEndSeconds: m.trim_end_seconds ?? null,
             })),
           );
           return { ...p, media_urls };

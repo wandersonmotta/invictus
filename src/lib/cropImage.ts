@@ -19,15 +19,17 @@ export async function getCroppedImageBlob(options: {
   imageSrc: string;
   cropPixels: Area;
   size?: number;
+  outputWidth?: number;
+  outputHeight?: number;
   mimeType?: "image/jpeg" | "image/png";
   quality?: number; // only for jpeg
 }) {
-  const { imageSrc, cropPixels, size = 512, mimeType = "image/jpeg", quality = 0.9 } = options;
+  const { imageSrc, cropPixels, size = 512, outputWidth, outputHeight, mimeType = "image/jpeg", quality = 0.9 } = options;
   const image = await createImage(imageSrc);
 
   const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
+  canvas.width = outputWidth ?? size;
+  canvas.height = outputHeight ?? size;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas não suportado");
 
@@ -39,7 +41,7 @@ export async function getCroppedImageBlob(options: {
   const sWidth = Math.max(1, cropPixels.width);
   const sHeight = Math.max(1, cropPixels.height);
 
-  ctx.drawImage(image, sx, sy, sWidth, sHeight, 0, 0, size, size);
+  ctx.drawImage(image, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
 
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(

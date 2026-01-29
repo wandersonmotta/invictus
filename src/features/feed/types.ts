@@ -4,6 +4,8 @@ export type FeedMediaItem = {
   storage_path: string;
   content_type: string | null;
   sort_order: number | null;
+  trim_start_seconds?: number | null;
+  trim_end_seconds?: number | null;
 };
 
 export type FeedPost = {

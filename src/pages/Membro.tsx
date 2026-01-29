@@ -241,6 +241,8 @@ export default function Membro() {
                       <ReelsMedia
                         url={selectedMediaUrls[0].url}
                         contentType={selectedMediaUrls[0].contentType}
+                        trimStartSeconds={(selectedPost.media?.[0] as any)?.trim_start_seconds ?? null}
+                        trimEndSeconds={(selectedPost.media?.[0] as any)?.trim_end_seconds ?? null}
                         alt="Mídia do post"
                       />
                     ) : (

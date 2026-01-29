@@ -295,6 +295,8 @@ export type Database = {
           sort_order: number
           storage_bucket: string
           storage_path: string
+          trim_end_seconds: number | null
+          trim_start_seconds: number | null
           width: number | null
         }
         Insert: {
@@ -307,6 +309,8 @@ export type Database = {
           sort_order?: number
           storage_bucket?: string
           storage_path: string
+          trim_end_seconds?: number | null
+          trim_start_seconds?: number | null
           width?: number | null
         }
         Update: {
@@ -319,6 +323,8 @@ export type Database = {
           sort_order?: number
           storage_bucket?: string
           storage_path?: string
+          trim_end_seconds?: number | null
+          trim_start_seconds?: number | null
           width?: number | null
         }
         Relationships: [

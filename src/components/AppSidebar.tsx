@@ -66,7 +66,6 @@ export function AppSidebar() {
                       <SidebarMenuButton
                         asChild
                         isActive={isActive(item.url)}
-                        tooltip={item.title}
                         className="invictus-sidebar-item"
                       >
                         <NavLink

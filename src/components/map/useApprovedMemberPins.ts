@@ -9,6 +9,8 @@ export type ApprovedMemberPin = {
   state: string | null;
   lat: number;
   lng: number;
+  avatar_url: string;
+  display_name: string | null;
 };
 
 export function useApprovedMemberPins() {

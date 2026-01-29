@@ -31,12 +31,18 @@
   opacity: 0.55;
 }
 
-  /* Dark executive look for default OSM tiles (no external tiles dependency) */
-  .invictus-map .leaflet-tile-pane {
-  /* darker + less washed grey */
-  filter: saturate(0.22) contrast(1.28) brightness(0.56) sepia(0.22);
-  opacity: 0.62;
-  }
+/* Dark executive look for raster tiles (OSM fallback); tuned for "gold land" + more transparency */
+.invictus-map .leaflet-tile-pane {
+  /* more gold bias, less "generic gray" */
+  filter:
+    grayscale(0.12)
+    sepia(0.78)
+    saturate(1.35)
+    contrast(1.12)
+    brightness(0.60)
+    hue-rotate(-10deg);
+  opacity: 0.48;
+}
 
   /* Premium vignette + gold ambience */
   .invictus-map-overlay::before {

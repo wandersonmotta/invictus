@@ -12,7 +12,7 @@ export default function Perfil() {
   return <main className="invictus-page">
       <header className="invictus-page-header">
         <h1 className="invictus-h1">Perfil</h1>
-        <p className="invictus-lead">Complete seu perfil — mesmo durante a aprovação.</p>
+        <p className="invictus-lead">Complete o seu perfil — mesmo durante a aprovação.</p>
       </header>
 
       {user?.id ? <ProfileForm userId={user.id} /> : null}

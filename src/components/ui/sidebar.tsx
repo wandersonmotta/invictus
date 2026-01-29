@@ -12,10 +12,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = "16rem";
+const SIDEBAR_WIDTH = "15rem";
 const SIDEBAR_WIDTH_MOBILE = "min(24rem, 88vw)";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
+
+type SidebarMobileMode = "sheet" | "fixed";
 type SidebarContext = {
   state: "expanded" | "collapsed";
   open: boolean;
@@ -24,6 +26,8 @@ type SidebarContext = {
   setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
   toggleSidebar: () => void;
+  toggleable: boolean;
+  mobileMode: SidebarMobileMode;
 };
 const SidebarContext = React.createContext<SidebarContext | null>(null);
 function useSidebar() {
@@ -33,14 +37,21 @@ function useSidebar() {
   }
   return context;
 }
-const SidebarProvider = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"> & {
-  defaultOpen?: boolean;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-}>(({
+const SidebarProvider = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<"div"> & {
+    defaultOpen?: boolean;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    toggleable?: boolean;
+    mobileMode?: SidebarMobileMode;
+  }
+>(({
   defaultOpen = true,
   open: openProp,
   onOpenChange: setOpenProp,
+  toggleable = true,
+  mobileMode = "sheet",
   className,
   style,
   children,
@@ -52,8 +63,9 @@ const SidebarProvider = React.forwardRef<HTMLDivElement, React.ComponentProps<"d
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
   const [_open, _setOpen] = React.useState(defaultOpen);
-  const open = openProp ?? _open;
+  const open = toggleable ? openProp ?? _open : true;
   const setOpen = React.useCallback((value: boolean | ((value: boolean) => boolean)) => {
+    if (!toggleable) return;
     const openState = typeof value === "function" ? value(open) : value;
     if (setOpenProp) {
       setOpenProp(openState);
@@ -63,15 +75,17 @@ const SidebarProvider = React.forwardRef<HTMLDivElement, React.ComponentProps<"d
 
     // This sets the cookie to keep the sidebar state.
     document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
-  }, [setOpenProp, open]);
+  }, [setOpenProp, open, toggleable]);
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
+    if (!toggleable) return;
     return isMobile ? setOpenMobile(open => !open) : setOpen(open => !open);
-  }, [isMobile, setOpen, setOpenMobile]);
+  }, [isMobile, setOpen, setOpenMobile, toggleable]);
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
+    if (!toggleable) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
@@ -80,7 +94,7 @@ const SidebarProvider = React.forwardRef<HTMLDivElement, React.ComponentProps<"d
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [toggleSidebar]);
+  }, [toggleSidebar, toggleable]);
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.
@@ -92,12 +106,16 @@ const SidebarProvider = React.forwardRef<HTMLDivElement, React.ComponentProps<"d
     isMobile,
     openMobile,
     setOpenMobile,
-    toggleSidebar
-  }), [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]);
+    toggleSidebar,
+    toggleable,
+    mobileMode
+  }), [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, toggleable, mobileMode]);
+
+  const sidebarWidth = isMobile && mobileMode === "fixed" ? "min(15rem, 88vw)" : SIDEBAR_WIDTH;
   return <SidebarContext.Provider value={contextValue}>
       <TooltipProvider delayDuration={0}>
         <div style={{
-        "--sidebar-width": SIDEBAR_WIDTH,
+        "--sidebar-width": sidebarWidth,
         "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
         ...style
       } as React.CSSProperties} className={cn("group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar", className)} ref={ref} {...props}>
@@ -123,14 +141,15 @@ const Sidebar = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"> & {
     isMobile,
     state,
     openMobile,
-    setOpenMobile
+    setOpenMobile,
+    mobileMode
   } = useSidebar();
   if (collapsible === "none") {
     return <div className={cn("flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground", className)} ref={ref} {...props}>
         {children}
       </div>;
   }
-  if (isMobile) {
+  if (isMobile && mobileMode !== "fixed") {
     return <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
         <SheetContent data-sidebar="sidebar" data-mobile="true" className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden" style={{
         "--sidebar-width": SIDEBAR_WIDTH_MOBILE
@@ -138,6 +157,19 @@ const Sidebar = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"> & {
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
       </Sheet>;
+  }
+
+  // Mobile fixed mode: render as a normal, always-visible sidebar (no Sheet).
+  if (isMobile && mobileMode === "fixed") {
+    return (
+      <div
+        className={cn("flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground", className)}
+        ref={ref}
+        {...props}
+      >
+        {children}
+      </div>
+    );
   }
   return <div ref={ref} className="group peer hidden text-sidebar-foreground md:block" data-state={state} data-collapsible={state === "collapsed" ? collapsible : ""} data-variant={variant} data-side={side}>
       {/* This is what handles the sidebar gap on desktop */}

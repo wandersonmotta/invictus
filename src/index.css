@@ -277,6 +277,73 @@ All colors MUST be HSL.
       0 0 0 1px hsl(var(--primary) / 0.35) inset;
   }
 
+  /* Modal glass (clean, elegant) with subtle gold cut-corner frame */
+  .invictus-modal-glass {
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    /* chamfer/cut corners */
+    clip-path: polygon(
+      14px 0%,
+      calc(100% - 14px) 0%,
+      100% 14px,
+      100% calc(100% - 14px),
+      calc(100% - 14px) 100%,
+      14px 100%,
+      0% calc(100% - 14px),
+      0% 14px
+    );
+
+    /* glass surface: slightly more transparent than cards */
+    background: linear-gradient(
+      180deg,
+      hsl(var(--background) / 0.22) 0%,
+      hsl(var(--card) / 0.30) 55%,
+      hsl(var(--background) / 0.18) 100%
+    );
+    backdrop-filter: blur(24px) saturate(150%);
+    box-shadow:
+      0 1px 0 0 hsl(var(--foreground) / 0.10) inset,
+      0 0 0 1px hsl(var(--foreground) / 0.08) inset,
+      0 22px 70px -52px hsl(var(--foreground) / 0.55);
+  }
+
+  .invictus-modal-glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    clip-path: inherit;
+    background:
+      radial-gradient(120% 80% at 10% 0%, hsl(var(--foreground) / 0.12), transparent 55%),
+      radial-gradient(110% 70% at 95% 10%, hsl(var(--primary) / 0.10), transparent 55%),
+      linear-gradient(180deg, hsl(var(--foreground) / 0.08), transparent 38%);
+    mix-blend-mode: screen;
+    opacity: 0.9;
+  }
+
+  .invictus-modal-glass::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    clip-path: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--gold-soft) / 0.08),
+      hsl(var(--gold-hot) / 0.40) 35%,
+      hsl(var(--gold-soft) / 0.16) 70%,
+      hsl(var(--gold-hot) / 0.32)
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.95;
+  }
+
   /* Mobile-first page rhythm (spacing + readable headers) */
   .invictus-page {
     @apply space-y-4 sm:space-y-6;

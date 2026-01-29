@@ -7,14 +7,59 @@ type Props = {
   url: string;
   contentType: string | null;
   alt: string;
+  trimStartSeconds?: number | null;
+  trimEndSeconds?: number | null;
   className?: string;
   muted?: boolean;
   controls?: boolean;
   onClick?: () => void;
 };
 
-export function ReelsMedia({ url, contentType, alt, className, muted, controls = true, onClick }: Props) {
+export function ReelsMedia({
+  url,
+  contentType,
+  alt,
+  trimStartSeconds,
+  trimEndSeconds,
+  className,
+  muted,
+  controls = true,
+  onClick,
+}: Props) {
   const isVideo = Boolean(contentType?.startsWith("video/"));
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+
+  React.useEffect(() => {
+    if (!isVideo) return;
+    const el = videoRef.current;
+    if (!el) return;
+
+    const start = typeof trimStartSeconds === "number" ? trimStartSeconds : null;
+    const end = typeof trimEndSeconds === "number" ? trimEndSeconds : null;
+
+    const onLoaded = () => {
+      if (start != null && Number.isFinite(start)) {
+        try {
+          el.currentTime = Math.max(0, start);
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    const onTimeUpdate = () => {
+      if (end != null && Number.isFinite(end) && el.currentTime >= end) {
+        el.pause();
+      }
+    };
+
+    el.addEventListener("loadedmetadata", onLoaded);
+    el.addEventListener("timeupdate", onTimeUpdate);
+    return () => {
+      el.removeEventListener("loadedmetadata", onLoaded);
+      el.removeEventListener("timeupdate", onTimeUpdate);
+    };
+  }, [isVideo, trimStartSeconds, trimEndSeconds, url]);
 
   return (
     <button
@@ -31,6 +76,7 @@ export function ReelsMedia({ url, contentType, alt, className, muted, controls =
           {isVideo ? (
             <video
               src={url}
+              ref={videoRef}
               className="h-full w-full object-cover"
               playsInline
               controls={controls}

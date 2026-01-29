@@ -1,0 +1,202 @@
+/* ============ Invictus Map (Leaflet) ============ */
+.invictus-map {
+  /* helps the filter/overlay read as “premium dark” */
+  background: hsl(var(--background));
+}
+
+  /* Dark executive look for default OSM tiles (no external tiles dependency) */
+  .invictus-map .leaflet-tile-pane {
+    filter: saturate(0.35) contrast(1.15) brightness(0.78) sepia(0.18);
+  }
+
+  /* Premium vignette + gold ambience */
+  .invictus-map-overlay::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 450;
+    background:
+      radial-gradient(1200px 700px at 20% 0%, hsl(var(--primary) / 0.16), transparent 55%),
+      radial-gradient(900px 650px at 80% 12%, hsl(var(--primary) / 0.10), transparent 55%),
+      radial-gradient(1100px 850px at 50% 120%, hsl(var(--foreground) / 0.08), transparent 60%),
+      linear-gradient(180deg, hsl(var(--background) / 0.02), hsl(var(--background) / 0.10));
+    mix-blend-mode: screen;
+    opacity: 0.95;
+  }
+
+  /* ========= Pins (gold, premium glow, animated) ========= */
+  .invictus-map-pin-wrap {
+    /* Leaflet will set translate on this element; keep it lightweight */
+    background: transparent;
+    border: 0;
+  }
+
+  .invictus-map-pin {
+    width: 30px;
+    height: 30px;
+    border-radius: 9999px;
+    position: relative;
+    display: grid;
+    place-items: center;
+    transform-origin: 50% 50%;
+    filter:
+      drop-shadow(0 10px 16px hsl(var(--foreground) / 0.22))
+      drop-shadow(0 0 18px hsl(var(--primary) / 0.32));
+    animation: invictus-pin-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .invictus-map-pin::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--gold-soft) / 0.95),
+      hsl(var(--gold-hot) / 0.95) 45%,
+      hsl(var(--gold-soft) / 0.85)
+    );
+    box-shadow:
+      0 0 0 1px hsl(var(--gold-soft) / 0.35) inset,
+      0 0 0 2px hsl(var(--gold-hot) / 0.35) inset;
+    opacity: 0.98;
+  }
+
+  .invictus-map-pin::after {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    border-radius: inherit;
+    background:
+      radial-gradient(90% 80% at 28% 18%, hsl(var(--foreground) / 0.22), transparent 55%),
+      radial-gradient(110% 90% at 70% 75%, hsl(var(--background) / 0.55), transparent 58%);
+    mix-blend-mode: overlay;
+    opacity: 0.75;
+  }
+
+  .invictus-map-pin-core {
+    position: relative;
+    width: 11px;
+    height: 11px;
+    border-radius: 9999px;
+    background: hsl(var(--background) / 0.9);
+    box-shadow:
+      0 0 0 1px hsl(var(--gold-hot) / 0.55),
+      0 0 0 4px hsl(var(--gold-hot) / 0.10);
+  }
+
+  @keyframes invictus-pin-in {
+    0% {
+      opacity: 0;
+      transform: translateY(8px) scale(0.75);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .invictus-map-pin {
+      animation: none;
+    }
+  }
+
+  /* ========= Tooltip (glass) ========= */
+  .invictus-map .leaflet-tooltip.invictus-map-tooltip {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--card) / 0.62) 0%,
+      hsl(var(--card) / 0.48) 100%
+    );
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border) / 0.7);
+    border-radius: calc(var(--radius) - 2px);
+    box-shadow:
+      0 0 0 1px hsl(var(--primary) / 0.10) inset,
+      0 18px 60px -34px hsl(var(--foreground) / 0.35),
+      0 0 70px -46px hsl(var(--primary) / 0.50);
+    padding: 8px 10px;
+    backdrop-filter: blur(14px);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .invictus-map .leaflet-tooltip.invictus-map-tooltip::before {
+    border-top-color: hsl(var(--border) / 0.75);
+  }
+
+  /* ========= Controls (zoom + attribution) ========= */
+  .invictus-map-control {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--card) / 0.62) 0%,
+      hsl(var(--card) / 0.48) 100%
+    );
+    border: 1px solid hsl(var(--border) / 0.75);
+    color: hsl(var(--foreground));
+    backdrop-filter: blur(14px);
+    box-shadow:
+      0 0 0 1px hsl(var(--primary) / 0.10) inset,
+      0 12px 42px -28px hsl(var(--foreground) / 0.30);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+  }
+
+  @media (min-width: 768px) {
+    .invictus-map-control:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow:
+        0 0 0 1px hsl(var(--primary) / 0.16) inset,
+        0 18px 60px -34px hsl(var(--foreground) / 0.38),
+        0 0 80px -52px hsl(var(--primary) / 0.55);
+    }
+  }
+
+  .invictus-map .leaflet-control-zoom {
+    border: 0;
+    box-shadow: none;
+  }
+
+  .invictus-map .leaflet-control-zoom a {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--card) / 0.62) 0%,
+      hsl(var(--card) / 0.48) 100%
+    );
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border) / 0.75);
+    backdrop-filter: blur(14px);
+    box-shadow:
+      0 0 0 1px hsl(var(--primary) / 0.10) inset,
+      0 16px 54px -34px hsl(var(--foreground) / 0.32);
+    width: 42px;
+    height: 42px;
+    line-height: 40px;
+  }
+
+  .invictus-map .leaflet-control-zoom a + a {
+    border-top: 0;
+  }
+
+  .invictus-map .leaflet-control-zoom a:hover {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--card) / 0.72) 0%,
+      hsl(var(--card) / 0.54) 100%
+    );
+  }
+
+  .invictus-map .leaflet-control-attribution {
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    font-size: 11px;
+    padding: 0 6px 6px 0;
+    opacity: 0.75;
+  }
+
+  .invictus-map .leaflet-control-attribution a {
+    color: hsl(var(--muted-foreground));
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }

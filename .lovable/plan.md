@@ -1,96 +1,114 @@
 
-Objetivo
-- Tirar o aspecto “genérico” da navegação lateral e criar um visual 100% Invictus (glass + dourado + metálico), mantendo legibilidade e performance.
-- Você escolheu: **sem bloco de marca no topo**, visual **marcante**, e item ativo com **barra dourada + capsule**.
+Objetivo (o que vai mudar de verdade)
+- A sidebar deixar de parecer “um skin genérico” e ganhar uma assinatura Invictus própria, com linguagem visual consistente e repetível (um “padrão”), sem depender de glow exagerado.
+- Direção escolhida: Executivo preciso + Title Case + ícones metálicos apenas no ativo + ativo forte / hover discreto.
 
-O que vou mudar (resultado esperado)
-1) Sidebar com identidade “Invictus”
-- Fundo com glass (mais “profundo” que o resto do app), vinheta sutil e uma “aura” dourada bem controlada.
-- Borda/recorte premium: linha dourada interna + sombra de profundidade (sem neon).
+Diagnóstico do “estranho / genérico” (por que está parecendo IA)
+- Hoje o item é basicamente “rounded + glow + barra”: é um padrão comum em muitos templates.
+- Falta um “motivo” (motif) repetido que seja só da Invictus (ex.: recorte, friso, placa metálica, microdetalhes).
+- Tipografia/ícone não têm hierarquia suficiente (tamanho/spacing/ritmo) e o ativo não cria um “selo” visual memorável.
 
-2) Itens de navegação (o que deixa de ser genérico)
-- Estado normal: ícone + texto com leve brilho dourado no hover (sem exagero).
-- Estado hover: “sweep” dourado sutil + elevação mínima.
-- Estado ativo: 
-  - **Barra dourada** na esquerda (indicador forte)
-  - **Capsule glass** envolvendo o item (com moldura dourada + highlight metálico)
-  - Glow sutil (premium, não chamativo)
+Resultado visual proposto (assinatura Invictus)
+1) Motif exclusivo: “Recorte Invictus” (executivo + robusto)
+- Em vez de pill genérico, o item vira uma “placa” com cantos chanfrados (chamfer) via clip-path, e um microfriso interno (specular) que dá cara de metal/vidro.
+- A barra dourada vira parte do objeto (um “trilho” embutido) e não só um before colado.
 
-3) Experiência quando colapsada (mini)
-- Continua com os ícones (como já está).
-- Tooltip por item (para não ficar “mudo” quando só tiver ícone).
-- Mantém o mesmo destaque de ativo (barra + capsule) adaptado ao tamanho mini.
+2) Ícone metálico no ativo (de verdade, sem gambiarra de stroke-gradient)
+- Criar um “icon plate” (uma plaquinha atrás do ícone) que só aparece no item ativo:
+  - Base glass + borda champagne (gradiente dourado) + highlight metálico.
+  - O ícone em si fica com cor mais clara e uma sombra sutil, mas o “metálico” vem da placa (fica muito mais premium e controlável).
+- Isso cria uma marcação memorável: “ativo = ícone em medalhão/placa”, sem virar heráldico (continua executivo).
 
-Exploração do que já existe (base atual)
-- `src/components/AppSidebar.tsx`: hoje cada item usa `NavLink` com classes simples e `activeClassName`.
-- `src/components/ui/sidebar.tsx`: já oferece `data-active`, estados de colapso e estrutura consistente para estilizar via CSS/Tailwind.
-- Tokens já existem em `src/index.css` (gold-soft / gold-hot / glass / sidebar-*).
+3) Tipografia robusta (Title Case com ritmo)
+- Aumentar um pouco o tamanho e ajustar o line-height, mas principalmente:
+  - Inserir um “subtle tracking” (bem pequeno) e um peso consistente.
+  - Ajustar o alinhamento vertical e o espaçamento entre ícone e texto para ficar com cara de produto grande (SaaS premium), não template.
 
-Implementação (passo a passo)
-A) Ajustar a composição da sidebar (AppSidebar)
-1. Migrar o highlight de ativo para usar também os estados do componente do Sidebar:
-   - Passar `tooltip={item.title}` no `SidebarMenuButton` quando colapsado (ou sempre, já que ele só mostra no collapsed).
-   - Informar “ativo” tanto via `NavLink` quanto via `SidebarMenuButton` (para conseguir estilo mais rico com `data-active=true`).
-2. Centralizar as classes em 2 “camadas”:
-   - Uma classe de “container do item” (capsule) aplicada no `SidebarMenuButton` (ou wrapper).
-   - Uma classe de “link interno” aplicada no `NavLink` para tipografia e alinhamento.
-3. Garantir acessibilidade:
-   - `aria-current="page"` continua.
-   - Foco visível com ring dourado já existe via tokens; vamos reforçar.
+4) Hover discreto, porém “caro”
+- Remover sensação de “efeito por efeito”: nada de sweep visível.
+- Hover passa a ser:
+  - leve lift (quase imperceptível),
+  - um micro realce no friso interno (specular),
+  - e um aumento mínimo de contraste do texto/ícone.
+- Mantém o “executivo preciso” e ainda assim dá feedback.
 
-Arquivos afetados:
-- `src/components/AppSidebar.tsx`
+Mudanças técnicas (arquitetura / como vamos fazer)
+A) Ajustes no markup para permitir o “icon plate” e o recorte
+Arquivo: src/components/AppSidebar.tsx
+- Envolver o ícone em um wrapper dedicado:
+  - <span className="invictus-sidebar-iconWrap"><item.icon ... /></span>
+  - Isso permite desenhar a plaquinha via CSS (pseudo-elements) sem depender do SVG.
+- (Opcional, mas recomendado) Passar tooltip como objeto para podermos aplicar skin no tooltip:
+  - tooltip={{ children: item.title, className: "invictus-tooltip" }}
+  - Assim, o modo colapsado também fica “Invictus”, não padrão.
 
-B) Criar o “skin Invictus” via CSS (sem mexer na lib)
-1. Adicionar classes utilitárias/estilos em `src/index.css` dentro de `@layer components`:
-   - `.invictus-sidebar` para o container do Sidebar (glass + aura + borda dourada).
-   - `.invictus-sidebar-item` para o item base.
-   - `.invictus-sidebar-item--active` (ou via seletores `[data-active=true]`) para:
-     - capsule glass
-     - barra dourada à esquerda (pseudo-elemento `::before`)
-     - highlight metálico (pseudo `::after` com gradiente “champagne/chrome”)
-   - `.invictus-sidebar-icon` e `.invictus-sidebar-label` para micro-ajustes (tracking, opacidade, brilho).
-2. Estilizar usando seletores já existentes do shadcn sidebar:
-   - `[data-sidebar="sidebar"]` para o container.
-   - `[data-sidebar="menu-button"][data-active="true"]` para o ativo.
-   - `group-data-[collapsible=icon]` para adaptar ao modo colapsado.
+B) Reescrever o skin da sidebar com 1 sistema de tokens interno + 1 motif claro
+Arquivo: src/styles/invictus-sidebar.css
+1) Container: dar “robustez” sem exagero
+- Criar um background com:
+  - vinheta mais controlada,
+  - microtextura (grid/diagonal muito sutil usando gradients) para virar assinatura,
+  - e borda interna com “champagne edge” (mais metal, menos glow).
+- Garantir performance: nada de animações pesadas; manter blur em um nível só.
 
-Arquivos afetados:
-- `src/index.css`
+2) Item: “Invictus Cut Plate”
+- Trocar bordas arredondadas genéricas por recorte:
+  - clip-path polygon com cantos chanfrados (e fallback para border-radius normal se necessário).
+- Inserir:
+  - friso interno (specular line) via ::before em estado normal (quase invisível),
+  - e reforço no ativo.
 
-C) Ajustes finos (para ficar “marcante” sem perder classe)
-1. Ajustar o “tom do dourado” no ativo:
-   - Usar `--gold-hot` para o outline/linha forte e `--gold-soft` para gradientes.
-2. Controlar “glow”:
-   - Glow apenas no ativo/hover e sempre com opacidade baixa (evitar neon).
-3. Garantir que o fundo do item (capsule) não fique transparente demais:
-   - A capsule deve ter background real (glass), para não “vazar” e ficar feio (especialmente em dark).
+3) Ativo: forte, exclusivo, legível
+- Ativo = 3 camadas:
+  - (i) cápsula/placa glass com recorte,
+  - (ii) trilho/barra dourada embutida (mais “hardware”, menos glow),
+  - (iii) icon plate metálico atrás do ícone.
+- Controlar brilho: glow mínimo; o “luxo” vem do contraste, recorte e friso.
 
-Checklist de validação (o que vamos testar no Preview)
+4) Ícones e letras
+- Estado normal:
+  - ícone um pouco maior (para “robusto”), opacidade bem calibrada.
+  - label com Title Case e melhor proporção.
+- Estado ativo:
+  - label com cor dourada suave (sem neon),
+  - ícone com contraste melhor e drop-shadow mínimo,
+  - icon plate entra para dar “assinatura”.
+
+C) Garantias de UX / estados
+- Manter:
+  - aria-current
+  - foco visível (focus-visible ring com dourado)
+  - collapsed: texto some, tooltip aparece, ativo continua identificável mesmo só com o ícone e a barra.
+
+Checklist de validação (o que você vai perceber imediatamente)
 1) Visual
-- Sidebar parece “premium”: profundidade + vidro + dourado metálico.
-- Item ativo tem claramente: barra dourada + capsule (sem poluir).
-- Hover é “vivo”, mas executivo (sem neon).
+- A sidebar “assina” o app: recorte + friso + placa do ícone = identidade.
+- O item ativo fica memorável sem virar carnaval.
+- Nada parece “um template genérico com dourado”.
 
-2) UX
-- Com sidebar expandida: texto legível, bom contraste.
-- Com sidebar colapsada: tooltips aparecem; ícones continuam claros.
-- Navegação entre rotas atualiza o ativo corretamente (ex.: /admin, /mapa, /perfil).
+2) Usabilidade
+- Ainda é rápida e legível.
+- Em modo colapsado, dá para navegar sem adivinhar (tooltips com skin).
 
-3) Responsivo
-- Mobile: sidebar como drawer não perde estilos (sem transparência ruim).
-- Toques: áreas clicáveis continuam confortáveis.
+3) Consistência Invictus
+- Mesmos tokens gold-soft/gold-hot + glass, mas com forma e detalhes próprios.
 
-Riscos / cuidados
-- Evitar excesso de blur e sombras pesadas para não degradar performance em mobile.
-- Garantir que o “glass” não deixe o texto com pouco contraste (vamos calibrar opacidades).
-- Não quebrar a lógica de colapso do Sidebar (vamos respeitar `data-*` e padrões existentes).
+Escopo (arquivos que vou editar)
+- src/components/AppSidebar.tsx
+- src/styles/invictus-sidebar.css
+- (Possível ajuste pequeno) src/index.css apenas se eu precisar adicionar uma classe de tooltip no layer components (idealmente fica só no invictus-sidebar.css, como já está importado).
 
-Entrega incremental
-1) Aplicar “skin Invictus” no container da sidebar + itens base.
-2) Implementar estado ativo (barra + capsule) e hover.
-3) Ajustar collapsed (tooltips + estilos adaptados).
-4) Polimento: contraste, espessuras, sombras.
+Riscos / mitigação
+- clip-path pode variar em alguns browsers: vou manter border-radius como fallback e usar recorte de forma conservadora.
+- Excesso de detalhe pode pesar: vou limitar a microtextura a opacidades muito baixas e sem animação.
 
-Observação (sobre o que você pediu)
-- Como você quer “sem bloco de marca”, não vou duplicar logo/nome dentro da sidebar. Toda a assinatura vai vir do material/efeitos do próprio menu (o que deixa mais “clean” e ainda assim único).
+Entrega em etapas (para você conseguir aprovar pelo “feeling”)
+1) Reestruturação do item (wrapper do ícone + base de tipografia).
+2) Aplicar “Invictus Cut Plate” (recorte + friso).
+3) Ativo forte com trilho dourado embutido + icon plate metálico.
+4) Ajustar hover para discreto e premium.
+5) Skin do tooltip (se você topar; é rápido e dá acabamento de produto).
+
+Critério de sucesso (objetivo final)
+- Você bate o olho e pensa: “isso é Invictus”, não “shadcn com dourado”.
+- E principalmente: o ativo/ícone vira um elemento de linguagem visual, não só um efeito.

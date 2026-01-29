@@ -508,6 +508,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      send_message: {
+        Args: { p_body: string; p_conversation_id: string }
+        Returns: string
+      }
     }
     Enums: {
       access_status: "pending" | "approved" | "rejected"

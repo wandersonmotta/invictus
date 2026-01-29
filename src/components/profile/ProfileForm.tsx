@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ProfilePrivacySelect, type ProfileVisibility } from "@/components/profile/ProfilePrivacySelect";
 
 const profileSchema = z.object({
   first_name: z.string().trim().min(1, "Nome obrigatório").max(30, "Máximo 30 caracteres"),
@@ -51,6 +52,8 @@ const profileSchema = z.object({
     .max(500, "Máximo 500 caracteres")
     .optional()
     .or(z.literal("")),
+
+  profile_visibility: z.enum(["members", "mutuals", "private"]).default("members"),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -70,6 +73,7 @@ type LoadedProfile = {
   location_lng: number | null;
   expertises: string[] | null;
   access_status: string | null;
+  profile_visibility: ProfileVisibility | null;
 };
 
 function onlyDigits(v: string) {
@@ -125,6 +129,7 @@ export function ProfileForm({ userId }: { userId: string }) {
       postal_code: "",
       bio: "",
       expertisesCsv: "",
+      profile_visibility: "members",
     },
     mode: "onSubmit",
   });
@@ -134,7 +139,7 @@ export function ProfileForm({ userId }: { userId: string }) {
     const { data, error } = await supabase
       .from("profiles")
       .select(
-        "display_name, first_name, last_name, username, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status",
+        "display_name, first_name, last_name, username, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status, profile_visibility",
       )
       .eq("user_id", userId)
       .maybeSingle();
@@ -158,6 +163,7 @@ export function ProfileForm({ userId }: { userId: string }) {
       postal_code: p?.postal_code ? formatCep(p.postal_code) : "",
       bio: p?.bio ?? "",
       expertisesCsv: (p?.expertises ?? []).join(", "),
+      profile_visibility: (p?.profile_visibility ?? "members") as ProfileVisibility,
     });
     setLoading(false);
   }, [form, toast, userId]);
@@ -192,13 +198,14 @@ export function ProfileForm({ userId }: { userId: string }) {
       username: normalizeUsernameInput(values.username) || null,
       bio: values.bio?.trim() || null,
       expertises,
+      profile_visibility: values.profile_visibility,
     };
 
     const { data, error } = await supabase
       .from("profiles")
       .upsert(payload, { onConflict: "user_id" })
       .select(
-        "display_name, first_name, last_name, username, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status",
+        "display_name, first_name, last_name, username, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status, profile_visibility",
       )
       .maybeSingle();
 
@@ -245,7 +252,7 @@ export function ProfileForm({ userId }: { userId: string }) {
       .from("profiles")
       .upsert({ user_id: userId, avatar_url: avatarUrl }, { onConflict: "user_id" })
       .select(
-        "display_name, first_name, last_name, username, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status",
+        "display_name, first_name, last_name, username, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status, profile_visibility",
       )
       .maybeSingle();
 
@@ -466,6 +473,12 @@ export function ProfileForm({ userId }: { userId: string }) {
                 <p className="text-xs text-destructive">{form.formState.errors.bio.message}</p>
               ) : null}
             </div>
+
+            <ProfilePrivacySelect
+              value={(form.watch("profile_visibility") ?? "members") as ProfileVisibility}
+              disabled={loading || saving}
+              onChange={(next) => form.setValue("profile_visibility", next, { shouldDirty: true })}
+            />
 
             <div className="space-y-2">
               <Label htmlFor="expertisesCsv">Expertises</Label>

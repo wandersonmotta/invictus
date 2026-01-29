@@ -32,7 +32,14 @@ export function UserMenu() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="group invictus-topbar-user-trigger focus-visible:ring-1 focus-visible:ring-ring/40"
+          className={
+            "group invictus-topbar-user-trigger " +
+            // override do ghost (hover:bg-accent) -> glass sutil, sem amarelo
+            "hover:bg-[hsl(var(--foreground)_/_0.04)] hover:text-foreground " +
+            // estado aberto (data-state=open no trigger)
+            "data-[state=open]:bg-[hsl(var(--foreground)_/_0.05)] " +
+            "focus-visible:ring-1 focus-visible:ring-ring/40"
+          }
         >
           <Avatar className="h-8 w-8">
             <AvatarImage

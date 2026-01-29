@@ -18,6 +18,8 @@ import ClassPage from "./pages/Class";
 import ResetPasswordPage from "./pages/ResetPassword";
 import AguardandoAprovacao from "./pages/AguardandoAprovacao";
 import Comunidade from "./pages/Comunidade";
+import Feed from "./pages/Feed";
+import Membro from "./pages/Membro";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +57,28 @@ const App = () => (
                 <RequireAuth>
                   <AppLayout>
                     <Index />
+                  </AppLayout>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/feed"
+              element={
+                <RequireAuth>
+                  <AppLayout>
+                    <Feed />
+                  </AppLayout>
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/membro/:username"
+              element={
+                <RequireAuth>
+                  <AppLayout>
+                    <Membro />
                   </AppLayout>
                 </RequireAuth>
               }

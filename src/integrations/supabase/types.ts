@@ -226,6 +226,135 @@ export type Database = {
         }
         Relationships: []
       }
+      feed_post_comments: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          post_id: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          id?: string
+          post_id: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_post_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "feed_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_post_likes: {
+        Row: {
+          created_at: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "feed_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_post_media: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          height: number | null
+          id: string
+          post_id: string
+          size_bytes: number | null
+          sort_order: number
+          storage_bucket: string
+          storage_path: string
+          width: number | null
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          height?: number | null
+          id?: string
+          post_id: string
+          size_bytes?: number | null
+          sort_order?: number
+          storage_bucket?: string
+          storage_path: string
+          width?: number | null
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          height?: number | null
+          id?: string
+          post_id?: string
+          size_bytes?: number | null
+          sort_order?: number
+          storage_bucket?: string
+          storage_path?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_post_media_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "feed_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_posts: {
+        Row: {
+          author_id: string
+          caption: string | null
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          caption?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          caption?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       follows: {
         Row: {
           created_at: string
@@ -627,6 +756,13 @@ export type Database = {
         }
         Returns: string
       }
+      add_feed_post_comment: {
+        Args: { p_body: string; p_post_id: string }
+        Returns: string
+      }
+      can_view_author: { Args: { p_author_id: string }; Returns: boolean }
+      can_view_feed_media: { Args: { p_object_name: string }; Returns: boolean }
+      can_view_post: { Args: { p_post_id: string }; Returns: boolean }
       create_community_post: {
         Args: { p_body: string; p_thread_id: string }
         Returns: string
@@ -643,7 +779,15 @@ export type Database = {
         }
         Returns: string
       }
+      create_feed_post: {
+        Args: { p_caption: string; p_media: Json }
+        Returns: string
+      }
       delete_community_post: { Args: { p_post_id: string }; Returns: string }
+      delete_feed_post_comment: {
+        Args: { p_comment_id: string }
+        Returns: boolean
+      }
       edit_community_post: {
         Args: { p_body: string; p_post_id: string }
         Returns: string
@@ -687,6 +831,14 @@ export type Database = {
           title: string
         }[]
       }
+      get_follow_stats: {
+        Args: { p_user_id: string }
+        Returns: {
+          followers_count: number
+          following_count: number
+          is_following: boolean
+        }[]
+      }
       get_my_threads: {
         Args: { p_folder: Database["public"]["Enums"]["conversation_folder"] }
         Returns: {
@@ -708,6 +860,22 @@ export type Database = {
           expertises: string[]
           first_name: string
           last_name: string
+          state: string
+          user_id: string
+          username: string
+        }[]
+      }
+      get_public_profile_by_username: {
+        Args: { p_username: string }
+        Returns: {
+          avatar_url: string
+          bio: string
+          can_view: boolean
+          city: string
+          display_name: string
+          expertises: string[]
+          profile_visibility: Database["public"]["Enums"]["profile_visibility"]
+          region: string
           state: string
           user_id: string
           username: string
@@ -775,6 +943,46 @@ export type Database = {
           title: string
         }[]
       }
+      list_feed_post_comments: {
+        Args: { p_limit?: number; p_post_id: string }
+        Returns: {
+          author_avatar_url: string
+          author_display_name: string
+          author_user_id: string
+          author_username: string
+          body: string
+          comment_id: string
+          created_at: string
+        }[]
+      }
+      list_feed_posts: {
+        Args: { p_before?: string; p_limit?: number; p_mode: string }
+        Returns: {
+          author_avatar_url: string
+          author_display_name: string
+          author_user_id: string
+          author_username: string
+          caption: string
+          comment_count: number
+          created_at: string
+          like_count: number
+          liked_by_me: boolean
+          media: Json
+          post_id: string
+        }[]
+      }
+      list_profile_feed_posts: {
+        Args: { p_before?: string; p_limit?: number; p_user_id: string }
+        Returns: {
+          caption: string
+          comment_count: number
+          created_at: string
+          like_count: number
+          liked_by_me: boolean
+          media: Json
+          post_id: string
+        }[]
+      }
       list_safe_author_cards: {
         Args: { p_user_ids: string[] }
         Returns: {
@@ -797,6 +1005,8 @@ export type Database = {
         Args: { p_body: string; p_conversation_id: string }
         Returns: string
       }
+      toggle_feed_post_like: { Args: { p_post_id: string }; Returns: boolean }
+      toggle_follow: { Args: { p_target_user_id: string }; Returns: boolean }
     }
     Enums: {
       access_status: "pending" | "approved" | "rejected"

@@ -1,5 +1,5 @@
 import { useLocation } from "react-router-dom";
-import { Home as HomeIcon, MapPin, Search, Send, User, Shield, Clapperboard, MessagesSquare } from "lucide-react";
+import { Home as HomeIcon, MapPin, Search, Send, User, Shield, Clapperboard, MessagesSquare, Newspaper } from "lucide-react";
 
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ const navSections = [
     label: "Início",
     items: [
       { title: "Home", url: "/", icon: HomeIcon },
+      { title: "Feed", url: "/feed", icon: Newspaper },
       { title: "Mapa", url: "/mapa", icon: MapPin },
       { title: "Buscar", url: "/buscar", icon: Search },
     ],

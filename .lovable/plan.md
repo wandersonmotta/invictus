@@ -1,93 +1,136 @@
 
-## O que você pediu (interpretação)
-Você gostou de ter “algo por trás” na sidebar, mas quer:
-- **um dourado com gradiente misturado com preto/grafite**
-- **bem sutil**
-- com sensação de **vidro / mármore** (efeito “pedra polida” por baixo do glass)
-- aparecendo **no fundo + um leve realce no topo**
-- funcionando **no dark e no light**
+## Objetivo (o que você quer agora)
+1) **Voltar o “efeito por trás” na sidebar**, mas em um padrão **clean + sofisticado** (vidro/mármore com dourado + grafite bem sutil).
+2) Corrigir o motivo de “não estar funcionando” (hoje o efeito pode não estar aparecendo por um detalhe estrutural do componente).
+3) Aproveitar e remover o warning de **ref**/Tooltip que está vindo do `SidebarMenuButton` (isso também ajuda a estabilizar UI e evita comportamentos estranhos).
 
-## Onde mexer (baseado no código atual)
-O visual do container da sidebar está centralizado em:
-- `src/styles/invictus-sidebar.css`
-  - `.invictus-sidebar [data-sidebar="sidebar"]` (background principal)
-  - `::before` (camada de highlights/edge)
-  - `::after` hoje está `content: none;` (pode virar a nova camada “mármore”)
-Os tokens de cor existentes já ajudam:
-- `src/index.css`: `--gold-soft`, `--gold-hot`, `--card`, `--background`, `--foreground`, `--glass`
+---
 
-## Estratégia visual (como vamos “fazer mármore” sem imagem)
-Vamos criar um “mármore” usando **camadas de gradientes** (barato, sem assets):
-1) **Base glass neutra** continua (para não voltar o glaze feio)
-2) **Camada “mármore” (bem sutil)** em um pseudo-elemento (provavelmente `::after`)
-   - 2–3 `radial-gradient(...)` dourados muito leves (cantos/topo)
-   - 1–2 `radial-gradient(...)` grafite/escuro para simular “veios”
-   - 1 `linear-gradient(...)` suave para orientar o fluxo do mármore
-   - `mix-blend-mode: soft-light` (ou `overlay`) + `opacity` baixa
-3) **Realce no topo** integrado no `::before`
-   - uma faixa leve de highlight (tipo “luz no vidro”)
-4) **Champagne edge** permanece, mas calibrada para não “banhar” de ouro.
+## Diagnóstico (por que o mármore pode não aparecer)
+Seu CSS está mirando especificamente:
 
-## Mudanças planejadas (passo a passo)
+- `.invictus-sidebar [data-sidebar="sidebar"]`
+- e seus pseudo-elementos `::before` / `::after`
 
-### 1) Adicionar “marble overlay” na sidebar (invictus-sidebar.css)
-Arquivo: `src/styles/invictus-sidebar.css`
+Só que no arquivo `src/components/ui/sidebar.tsx`, quando você usa:
+- `collapsible="none"`
 
-- Manter o background atual do container como base:
-  - `background: linear-gradient(180deg, hsl(var(--card) / var(--glass)) 0%, hsl(var(--card) / 0.16) 100%);`
+o componente `Sidebar` **retorna um `<div>` “direto” sem o wrapper interno com `data-sidebar="sidebar"`**.
 
-- Trocar `.invictus-sidebar [data-sidebar="sidebar"]::after` de `content: none;` para uma camada ativa:
-  - `content: ""`
-  - `position: absolute; inset: 0; border-radius: inherit; pointer-events: none;`
-  - `opacity`: alvo “Sutil” (ex.: 0.35–0.55, ajustável)
-  - `mix-blend-mode: soft-light` (primeira tentativa) para ficar “dentro do vidro”
-  - `filter: blur(0.2px)` (opcional e mínimo) para “polir” sem pesar
-  - `background` com stack tipo:
-    - `radial-gradient(120% 90% at 15% 10%, hsl(var(--gold-hot) / 0.10), transparent 55%)`
-    - `radial-gradient(120% 90% at 90% 20%, hsl(var(--gold-soft) / 0.08), transparent 60%)`
-    - `radial-gradient(120% 110% at 40% 80%, hsl(var(--foreground) / 0.08), transparent 65%)` (veio escuro)
-    - `linear-gradient(135deg, transparent 0%, hsl(var(--gold-hot) / 0.06) 35%, transparent 70%)`
-  - Isso cria o “mármore” sem virar “glaze dourado”.
+Trecho atual (simplificado):
+- `if (collapsible === "none") return <div className="...">{children}</div>;`
 
-### 2) Realce no topo (invictus-sidebar.css)
-Ainda em `src/styles/invictus-sidebar.css`, reforçar o `::before` para “Fundo + topo”:
-- manter a borda champagne sutil
-- adicionar um highlight concentrado no topo (bem discreto), ex.:
-  - `radial-gradient(120% 60% at 50% 0%, hsl(var(--gold-soft) / 0.10), transparent 55%)`
-- manter `opacity` controlada para não competir com o conteúdo do menu
+Ou seja:
+- **não existe** nenhum elemento com atributo `data-sidebar="sidebar"` nesse modo,
+- então seu CSS do mármore **não encontra alvo**, e o fundo “especial” não aparece.
 
-### 3) Ajuste específico para Light theme (fallback)
-Como você pediu “Dark + light”, vamos garantir que no `:root` (light) o efeito não fique estranho:
-- No light, `--card`/`--background` são claros, então dourado pode “aparecer demais”.
-- Vamos fazer o overlay no light usar opacidades menores (no próprio CSS via seletor do tema), ex.:
-  - `:root .invictus-sidebar [data-sidebar="sidebar"]::after { opacity: ... menor }`
-  - `.dark .invictus-sidebar ... { opacity: ... um pouco maior }`
-Sem criar novos tokens obrigatórios (mas se precisar, podemos adicionar 1–2 custom properties para facilitar “tuning”).
+Isso explica perfeitamente o “não está funcionando”.
 
-### 4) Checagens de legibilidade (ativo/hover)
-Depois do novo fundo:
-- Validar contraste de:
-  - `.invictus-sidebar-item[data-active="true"]` (fundo ativo)
-  - cor dos textos (`.invictus-sidebar-label`) e ícones
-- Se o fundo “mármore” fizer o item ativo perder leitura, ajustamos:
-  - aumentar levemente o `background` do ativo (ex.: 0.03 → 0.04/0.05)
-  - ou reduzir a opacidade do overlay só atrás da lista (opção avançada)
+---
+
+## Diagnóstico extra (warning de ref no console)
+Nos logs do usuário aparece:
+- `Warning: Function components cannot be given refs... Check the render method of SidebarMenuButton`
+
+Isso acontece porque `SidebarMenuButton` está envolvendo com Tooltip mesmo quando a sidebar **nunca vai colapsar** (estado não chega a “collapsed”), então o Tooltip acaba sendo “trabalho extra” e pode tentar passar `ref` para algo que não aceita em algum cenário.
+
+Como sua sidebar está fixa e `collapsible="none"`, tooltip nesse caso é dispensável (ou deve ser ativado apenas quando realmente necessário).
+
+---
+
+## O que vou implementar (mudanças)
+### 1) Garantir `data-sidebar="sidebar"` também no modo `collapsible="none"` (fix principal)
+**Arquivo:** `src/components/ui/sidebar.tsx`
+
+- Ajustar o branch do `collapsible === "none"` para renderizar um container interno com:
+  - `data-sidebar="sidebar"`
+  - `className` equivalente ao wrapper usado nas outras variantes (onde o CSS já funciona)
+
+Duas opções equivalentes (vou escolher a mais consistente com o resto do componente):
+- **Opção A (recomendada):** manter o `<div>` externo como “casca” e criar um `<div data-sidebar="sidebar">` interno que recebe `children`.
+- **Opção B:** colocar `data-sidebar="sidebar"` no próprio `<div>` do branch.
+
+Resultado: o CSS do mármore volta a “encaixar” sem mudar seus seletores.
+
+---
+
+### 2) Tornar Tooltip do `SidebarMenuButton` condicional (fix do warning e robustez)
+**Arquivo:** `src/components/ui/sidebar.tsx`
+
+No `SidebarMenuButton`, hoje ele sempre faz:
+- se `tooltip` existe, ele envolve em `<Tooltip> ... </Tooltip>`, e só esconde o TooltipContent via `hidden=...`.
+
+Vou mudar a lógica para:
+- se `state !== "collapsed"` **ou** `isMobile`, **retornar só o botão** (sem Tooltip wrapper).
+- Tooltip só existe quando:
+  - `state === "collapsed"` e `!isMobile`
+
+Isso elimina o warning de `ref` e deixa o componente mais “à prova de bala”, principalmente agora que a sidebar não colapsa.
+
+---
+
+### 3) Ajuste do `AppSidebar` para não pedir tooltip quando não faz sentido (opcional, mas bom)
+**Arquivo:** `src/components/AppSidebar.tsx`
+
+Como `collapsible="none"`, os textos estão sempre visíveis, então tooltip é redundante.
+Vou:
+- remover `tooltip={item.title}` (ou condicioná-lo, se você quiser manter por algum motivo específico).
+
+Mesmo que a etapa (2) já resolva, isso reduz complexidade.
+
+---
+
+### 4) Refinar o “mármore/vidro” para ficar mais “padrão sofisticado” (sem ficar feio)
+**Arquivo:** `src/styles/invictus-sidebar.css`
+
+Seu efeito atual já está muito na direção certa (camadas + `soft-light` + opacidades por tema). O refinamento aqui será mais “tuning” do que reinvenção:
+
+- Garantir que `::before` (top highlight) seja:
+  - bem discreto
+  - com “cara de vidro” (highlight concentrado e suave)
+- Ajustar o `::after` (mármore) para:
+  - dourado mais “champagne” (menos saturação percebida via opacidade)
+  - veios grafite mais suaves (menos “mancha”)
+  - manter `mix-blend-mode: soft-light` (ou testar `overlay` se necessário, mas soft-light costuma ser o mais elegante)
+- Calibrar opacidades:
+  - Light: mais baixo
+  - Dark: um pouco mais presente, mas ainda sutil
+
+Importante: depois que o `data-sidebar="sidebar"` voltar a existir, você provavelmente vai ver que “funciona” imediatamente — aí a gente só lapida o visual.
+
+---
 
 ## Arquivos que serão alterados
-- `src/styles/invictus-sidebar.css` (principal; é onde o efeito vai nascer)
-(Opcional, se precisarmos de “tuning tokens”)
-- `src/index.css` (somente se a gente decidir criar variáveis do tipo `--sidebar-marble-opacity` para controlar fácil)
+1) `src/components/ui/sidebar.tsx`
+   - Renderizar `data-sidebar="sidebar"` também em `collapsible="none"`.
+   - Tooltip do `SidebarMenuButton` só quando `collapsed` e desktop.
 
-## Critérios de aceite (bem objetivos)
-1) Sidebar mantém o “fundo com vida”, mas:
-   - **não parece glaze dourado**
-   - é **sutil** e “dentro do vidro”
-2) Dá sensação de **mármore/vidro** (veios suaves + dourado discreto)
-3) Existe um **leve highlight no topo**
-4) Continua legível (texto/ícones/ativo) no `/buscar` e em outras rotas
-5) No tema claro, o efeito existe mas é **mais discreto** (sem estourar contraste)
+2) `src/components/AppSidebar.tsx`
+   - Remover/condicionar `tooltip` (para manter clean e evitar wrapper desnecessário).
 
-## Testes que vou fazer/te pedir para validar
-- Desktop: navegar `/buscar`, `/mapa`, `/perfil` e conferir legibilidade
-- Mobile (modo fixo): conferir se o fundo não “polui” numa tela menor (opacidade pode precisar -10% no mobile)
-- Tema claro: forçar light e confirmar que não fica “amarelado demais”
+3) `src/styles/invictus-sidebar.css`
+   - Ajustes finos no overlay mármore + highlight topo (mantendo clean + sofisticado).
+
+---
+
+## Critérios de aceite (objetivos)
+1) A sidebar volta a ter “algo por trás”:
+   - vidro/mármore com dourado + grafite
+   - **sutil**, sem “banho dourado”
+2) O efeito aparece no **dark e no light** (mais discreto no light).
+3) Sem warning de `ref` no console relacionado ao `SidebarMenuButton`.
+4) Tudo continua legível (labels/ícones/ativo) e clicável.
+
+---
+
+## Como vamos validar (rápido e prático)
+1) Recarregar a página e checar visual na `/` e `/buscar`.
+2) Alternar light/dark (mesmo que o app default seja dark) para confirmar o fallback.
+3) Confirmar no console:
+   - não aparece mais o warning “Function components cannot be given refs… SidebarMenuButton”.
+4) Confirmar que o fundo “mármore” realmente está atrás do menu (sem afetar clique/scroll).
+
+---
+
+## Observação importante
+O “não está funcionando” aqui é quase certamente por **estrutura HTML diferente** no modo `collapsible="none"` (faltava o `data-sidebar="sidebar"`), não por causa do seu CSS do mármore em si. Depois do fix estrutural, o CSS que você já aprovou deve “entrar” imediatamente.

@@ -11,7 +11,8 @@ type GoldHoverTextProps = {
  * Texto premium com "dourado seguindo o mouse".
  * Usa tokens HSL do design system (primary / gold-soft / gold-hot).
  */
-export function GoldHoverText({ children, className, intensity = 1 }: GoldHoverTextProps) {
+export const GoldHoverText = React.forwardRef<HTMLSpanElement, GoldHoverTextProps>(
+  ({ children, className, intensity = 1 }, forwardedRef) => {
   const ref = React.useRef<HTMLSpanElement | null>(null);
   const [active, setActive] = React.useState(false);
   const [pos, setPos] = React.useState({ x: 50, y: 50 });
@@ -27,7 +28,11 @@ export function GoldHoverText({ children, className, intensity = 1 }: GoldHoverT
 
   return (
     <span
-      ref={ref}
+      ref={(node) => {
+        ref.current = node;
+        if (typeof forwardedRef === "function") forwardedRef(node);
+        else if (forwardedRef) (forwardedRef as React.MutableRefObject<HTMLSpanElement | null>).current = node;
+      }}
       onMouseEnter={(e) => {
         setActive(true);
         updateFromEvent(e);
@@ -60,4 +65,6 @@ export function GoldHoverText({ children, className, intensity = 1 }: GoldHoverT
       {children}
     </span>
   );
-}
+});
+
+GoldHoverText.displayName = "GoldHoverText";

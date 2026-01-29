@@ -1,237 +1,105 @@
 
-Objetivo (o que você pediu)
-- Adicionar um sino de notificações ao lado do menu do usuário (avatar + nome).
-- Exibir um contador (badge) circular amarelo com fonte branca quando houver notificações não lidas.
-- Ao clicar no sino, abrir um dropdown “glass” (vidro clean/sophisticated), com a lista de notificações.
-- Tipos iniciais de notificação:
-  - Curtidas no seu post
-  - Comentários no seu post
-  - Solicitação/ação de seguir (follow)
-  - “Conexão” (quando alguém te segue de volta / vira recíproco)
-  - Mensagens (DM) e solicitações de DM (requests)
-  - Novo treinamento publicado no Class
-- Comportamento aprovado por você:
-  - Marcar como lidas ao abrir o dropdown do sino
-  - Treinamentos: notificar todos os membros aprovados
-  - Ao clicar numa notificação: levar para Feed (post), Perfil, Conversa (DM) e/ou Class conforme o tipo
+Objetivo
+- No Feed, permitir clicar no avatar/nome/@ do autor para abrir o perfil público dele.
+- Em /perfil, adicionar uma aba “Ver como fica” com um layout estilo Instagram, exibindo: avatar, nome, @, bio, expertises em chips e grid de posts com visualizador.
+- No perfil público: manter “Seguir + Mensagem” para outros membros (como já existe em /membro/:username) e, quando for o próprio usuário, mostrar “Editar perfil” levando para /perfil.
 
-------------------------------------------------------------
-1) Exploração do estado atual (o que já existe hoje)
-- Topbar atual: `src/components/AppLayout.tsx` mostra logo + “FRATERNIDADE” à esquerda e `UserMenu` à direita.
-- Já existe “glass premium” para dropdowns: classe `.invictus-topbar-menu-glass` em `src/styles/invictus-topbar.css`.
-- Backend (Lovable Cloud) já tem tabelas para os eventos que queremos notificar:
-  - `feed_post_likes`, `feed_post_comments`, `feed_posts`
-  - `follows`
-  - `messages`, `conversation_members`, `conversations`
-  - `trainings` (Class)
-- Já existem RPCs para ações principais (ex.: `toggle_follow`, `send_message`, etc.), então podemos integrar notificações sem mexer na UI principal desses fluxos.
+Contexto encontrado no projeto (estado atual)
+- Já existe rota de perfil público: /membro/:username (src/pages/Membro.tsx) com layout tipo Instagram, bio, contadores, grid e viewer.
+- O Feed renderiza cada post em src/components/feed/FeedPostCard.tsx e hoje não tem link no header (avatar/nome/@).
+- O perfil do usuário (/perfil) hoje é focado em edição (ProfileForm) e sessão, mas não tem um preview “instagram-style”.
+- A bio e expertises já são campos no profiles e já aparecem em /membro/:username (bio aparece; expertises ainda não estão em chips no layout do Membro).
 
-------------------------------------------------------------
-2) Estratégia técnica (simples, robusta e escalável)
-Vamos implementar notificações persistidas no banco (Lovable Cloud) com:
-- 1 tabela central: `public.notifications`
-- Triggers no banco para gerar notificações automaticamente quando acontecer:
-  - Like, comment, follow, message, aceitação de request, publicação de treino
+Decisão do usuário (confirmada)
+- “Perfil estilo Instagram”: Abas dentro de /perfil.
+- “Cliques no Feed”: Tornar clicável (avatar/nome/@).
+- Elementos desejados: Seguir + Mensagem (para outros), Editar perfil (meu), Grid + visualizador, Expertises em chips.
 
-Motivo de usar triggers:
-- Garante que a notificação é criada mesmo que o evento seja inserido por qualquer lugar (RPC, admin, futuramente outra tela).
-- Evita depender de “lembrar” de disparar notificação em cada lugar no frontend.
+Plano de implementação (frontend)
+1) Tornar autor do post clicável no Feed
+   - Arquivo: src/components/feed/FeedPostCard.tsx
+   - Alterações:
+     - Importar Link e/ou useNavigate do react-router-dom.
+     - Transformar o bloco do cabeçalho (avatar + nome + @) em um link clicável quando post.author_username existir.
+       - URL: `/membro/${encodeURIComponent(post.author_username.replace(/^@/, ""))}`
+     - Se author_username for null:
+       - Manter como texto/sem link (sem navegação).
+     - Ajustar classes (cursor-pointer, hover/focus states) para ficar “instagram-like” e acessível (focus-visible, aria-label).
+   - Resultado: no Feed, tocar no avatar/nome/@ abre o perfil público do autor.
 
-------------------------------------------------------------
-3) Banco de dados: tabelas + RLS + funções + triggers
-3.1) Criar tabela `public.notifications`
-Campos (proposta):
-- `id uuid primary key default gen_random_uuid()`
-- `user_id uuid not null` (destinatário)
-- `actor_id uuid null` (quem causou o evento: quem curtiu/comentou/seguiu/enviou mensagem)
-- `type text not null` (ex.: 'feed_like', 'feed_comment', 'follow', 'connection', 'dm_message', 'dm_request', 'dm_request_accepted', 'class_new_training')
-- `entity_id uuid null` (post_id, training_id, etc. dependendo do tipo)
-- `conversation_id uuid null` (para DM)
-- `created_at timestamptz not null default now()`
-- `read_at timestamptz null`
-- `data jsonb not null default '{}'::jsonb` (para extras: preview do comentário, etc.)
+2) Criar “view de perfil estilo Instagram” para o próprio usuário (reutilizável)
+   - Objetivo: renderizar um layout semelhante ao de src/pages/Membro.tsx, mas para “meu perfil”, sem depender de :username na URL.
+   - Abordagem:
+     - Criar um componente novo (ex.: src/components/profile/MyPublicProfilePreview.tsx ou src/pages/MeuPerfilPreviewSection.tsx) que:
+       - Recebe userId (do AuthProvider).
+       - Faz query no backend para pegar meus dados (profiles) via SELECT (permitido pela RLS “Users can view own profile”):
+         - Campos: display_name, username, avatar_url, bio, city, state, expertises, profile_visibility (se necessário para UI).
+       - Faz query dos meus posts:
+         - Reaproveitar RPC list_profile_feed_posts (como em Membro.tsx) com p_user_id = meu userId.
+         - Reutilizar createSignedUrl para thumbs e viewer (mesmo padrão do Membro.tsx).
+       - Renderiza:
+         - Header: avatar grande, display_name, @
+         - Contadores:
+           - Para “meu perfil”, podem ser carregados usando o mesmo RPC get_follow_stats com p_user_id = meu userId (para followers/following).
+           - “Posts” = quantidade do retorno do RPC de posts (ou um contador do backend se existir; por agora, tamanho do array).
+         - Ações:
+           - Botão “Editar perfil” que navega para /perfil (ou alterna para a aba “Editar” diretamente).
+         - Bio (texto) e Expertises em chips:
+           - Renderizar expertises como badges/chips (ex.: usando componente Badge ou classes utilitárias), com wrap.
+         - Grid de posts + visualizador:
+           - Mesmo comportamento do /membro/:username (Dialog + ReelsMedia + CommentsDrawer + Curtir).
+   - Observação importante:
+     - Não exibir e-mail (não faz parte do profiles e já está mascarado no /perfil).
+     - Manter somente informações “públicas” (bio, @, nome, avatar, city/state, expertises).
 
-Índices:
-- `(user_id, read_at, created_at desc)` para badge e listagem rápida
-- `(user_id, created_at desc)` para paginação
+3) Adicionar abas em /perfil: “Editar perfil” e “Ver como fica”
+   - Arquivo: src/pages/Perfil.tsx
+   - Alterações:
+     - Introduzir Tabs (já existe em src/components/ui/tabs.tsx e é usado no Feed).
+     - Estrutura sugerida:
+       - Aba 1: “Editar perfil” -> renderiza <ProfileForm userId={user.id} /> (como hoje).
+       - Aba 2: “Ver como fica” -> renderiza o novo componente de preview “instagram-style” do próprio usuário.
+     - Manter as seções atuais (Alterar senha e Sessão) dentro da aba “Editar perfil” (para não poluir o preview).
+     - Opcional: Se quiser, um botão “Ver como fica” pode também estar dentro do formulário para alternar de aba (UX).
 
-3.2) RLS (segurança)
-- Ativar RLS na tabela.
-- Políticas:
-  - SELECT: usuário só vê `notifications.user_id = auth.uid()`
-  - UPDATE: usuário só pode marcar como lida as próprias (`user_id = auth.uid()`)
-  - INSERT/DELETE: bloqueado direto (false). Notificações serão criadas via triggers com `security definer` quando necessário.
+4) Expertises em chips no perfil público (outros membros também)
+   - Arquivo: src/pages/Membro.tsx
+   - Alterações:
+     - Abaixo da bio (ou abaixo do bloco de localização), renderizar p.expertises como chips/badges quando existir.
+     - Mantém consistência com o preview do próprio usuário.
 
-3.3) Funções RPC (para o frontend consumir)
-- `count_unread_notifications()` -> retorna bigint
-- `list_my_notifications(p_limit int, p_before timestamptz null)`:
-  - retorna lista com:
-    - dados da notificação
-    - dados do ator (join em `profiles` por `actor_id`) para mostrar avatar + nome
-- `mark_notifications_read(p_before timestamptz)`:
-  - marca como lidas (read_at=now()) todas as notificações do usuário com `created_at <= p_before` e `read_at is null`
-  - será chamada ao abrir o dropdown (conforme sua preferência)
+5) Polimento de UX (Instagram feel)
+   - Hover/press feedback nos links do Feed (subtle underline/opacity).
+   - Loading states:
+     - Usar Skeleton (já existe src/components/ui/skeleton.tsx) para avatar/nome/grid enquanto carrega (opcional, mas recomendado).
+   - Estados vazios:
+     - Sem posts: mostrar “Ainda não há posts” na aba preview.
+   - Mobile:
+     - Garantir que o header de perfil quebre bem (stack em coluna, botões com largura total quando necessário).
 
-3.4) Triggers que geram notificações
-A) Likes (curtidas)
-- Trigger AFTER INSERT em `public.feed_post_likes`
-- Buscar autor do post (feed_posts.author_id) e notificar:
-  - Se `NEW.user_id != author_id` então criar notificação para `author_id` com:
-    - type='feed_like'
-    - actor_id=NEW.user_id
-    - entity_id=NEW.post_id
+Plano de validação (teste end-to-end)
+- Feed:
+  - Abrir /feed, clicar no avatar/nome/@ de um post com @ definido e verificar que abre /membro/:username correto.
+  - Testar post cujo author_username esteja vazio (se existir) e confirmar que não navega.
+- Perfil:
+  - Ir em /perfil:
+    - Aba “Editar” continua salvando bio/expertises.
+    - Aba “Ver como fica” mostra a bio e expertises em chips imediatamente após salvar (pode exigir refresh/refetch; vamos alinhar para refetch ao salvar).
+- Perfil público:
+  - Em /membro/:username confirmar que expertises agora aparecem como chips.
+  - Abrir um post no grid e validar viewer, curtidas e comentários.
 
-B) Comments (comentários)
-- Trigger AFTER INSERT em `public.feed_post_comments`
-- Notificar o autor do post (se não for auto-comentário)
-  - type='feed_comment'
-  - data pode conter `comment_preview` (primeiros 80 chars) para ficar “instagram-like”
+Notas técnicas (para implementação)
+- Sincronização após salvar perfil:
+  - O ProfileForm hoje salva via upsert e mantém estado local, mas a aba preview precisa refazer fetch para refletir mudanças.
+  - Solução: após “Perfil salvo”, invalidar queries do react-query relacionadas ao perfil (ex.: queryKey ["my-profile", userId] e a query do preview), ou passar um callback onSaved para disparar refetch/invalidate.
+- Roteamento:
+  - Usar Link para navegação no Feed (melhor acessibilidade) com fallback quando não houver username.
+- Reuso de código:
+  - Reaproveitar ao máximo o código de viewer/grid de src/pages/Membro.tsx para não duplicar lógica e manter comportamento idêntico.
 
-C) Follow
-- Trigger AFTER INSERT em `public.follows`
-- Notificar o `following_id`:
-  - type='follow'
-  - actor_id=follower_id
-- E detectar “conexão” (recíproco):
-  - Se já existir o inverso (following_id -> follower_id), criar notificação extra para `follower_id`:
-    - type='connection'
-    - actor_id=following_id
-
-D) Mensagens (DM)
-- Trigger AFTER INSERT em `public.messages`
-- Para cada membro da conversa (conversation_members) diferente do sender:
-  - criar notificação type='dm_message' para aquele membro
-  - preencher `conversation_id`
-- Para “Solicitações” (requests):
-  - Se existir lógica de folder='requests' e accepted_at null para o destinatário, podemos também criar type='dm_request' no momento correto.
-  - Como a criação/roteamento de requests acontece via RPC de criação de conversa, a versão mais segura é:
-    - (opção 1) trigger no próprio INSERT de messages + checar status do destinatário (accepted_at is null) e então usar type='dm_request'
-    - (opção 2) adicionar notificação dentro do RPC `create_conversation` (mas isso depende do fluxo atual)
-  - Durante implementação vamos escolher a que encaixar melhor com o que já existe em migrations/RPCs (sem quebrar o sistema).
-
-E) Aceitar solicitação de DM
-- Trigger AFTER UPDATE em `public.conversation_members`
-- Quando `accepted_at` mudar de null -> not null:
-  - notificar os outros membros da conversa:
-    - type='dm_request_accepted'
-    - actor_id = user_id que aceitou
-    - conversation_id = conversation_id
-
-F) Novo treinamento publicado (Class)
-- Trigger AFTER INSERT/UPDATE em `public.trainings`
-- Condição:
-  - novo treino inserido com `published=true`, OU
-  - update onde published mudou de false -> true
-- Para todos os perfis aprovados (profiles.access_status='approved'):
-  - criar notificação type='class_new_training'
-  - entity_id=training.id
-  - actor_id pode ser null (sistema) ou o admin que publicou (se existir esse dado). Para o MVP: actor_id null e texto “Novo treinamento no Class”.
-
-Observação de performance:
-- Inserir uma notificação por usuário é ok para base pequena/média. Se crescer muito, podemos migrar para um modelo “broadcast” + tabela de leituras. Mas para o MVP, manter simples.
-
-------------------------------------------------------------
-4) Frontend: sino + dropdown glass + badge + navegação
-4.1) Criar componente `NotificationBell`
-- Local sugerido: `src/components/notifications/NotificationBell.tsx` (nova pasta `notifications/`)
-- UI:
-  - Ícone `Bell` (lucide-react)
-  - Badge:
-    - círculo pequeno
-    - fundo amarelo (token do ouro, ex.: `--gold-hot`)
-    - texto branco
-    - número: 1–99, e “99+” acima disso
-  - Abertura:
-    - usar `DropdownMenu` (Radix) como já está no `UserMenu`
-    - aplicar classe `invictus-topbar-menu-glass` para o dropdown ficar consistente e não “see-through”
-    - z-index alto (Radix já usa z-50; manter/garantir)
-
-4.2) Listagem das notificações dentro do dropdown
-- Mostrar as últimas 15–20:
-  - avatar do ator (quando existir)
-  - texto amigável (instagram-like), exemplos:
-    - “Fulano curtiu sua publicação”
-    - “Fulano comentou: ‘…’”
-    - “Fulano começou a te seguir”
-    - “Você e Fulano agora são conexões”
-    - “Nova mensagem de Fulano”
-    - “Novo treinamento publicado no Class”
-  - horário relativo (ex.: “2 min”, “1 h”, “ontem”) usando date-fns
-- Estado vazio: “Sem novidades por enquanto.”
-
-4.3) Marcar como lidas ao abrir (conforme sua escolha)
-- Quando `DropdownMenu` abrir:
-  - chamar `mark_notifications_read(now())`
-  - invalidar/refetch das queries:
-    - unread count
-    - list
-
-4.4) Navegação ao clicar em uma notificação (conforme o tipo)
-- feed_like / feed_comment:
-  - navegar para `/feed` e abrir o post alvo (MVP: rolar até o post se estiver no retorno; etapa 2: modal “post detail” por id)
-- follow / connection:
-  - navegar para `/membro/:username` (precisamos do username do ator; resolveremos via join no RPC list_my_notifications)
-- dm_message / dm_request / dm_request_accepted:
-  - navegar para `/mensagens/:conversationId`
-- class_new_training:
-  - navegar para `/class` (etapa 2: destacar o treino específico)
-
-4.5) Inserir o sino na Topbar
-- Editar `src/components/AppLayout.tsx`:
-  - no lado direito, antes do `UserMenu`, adicionar `<NotificationBell />`
-  - manter espaçamento sutil (gap pequeno) e estética clean.
-
-4.6) Estilo visual (Instagram + Invictus)
-- O sino deve ser discreto (ghost/clean), com hover glass suave.
-- Badge amarelo com texto branco, bem pequeno (estilo Instagram).
-- Dropdown: usar o mesmo “glass premium” do menu do usuário.
-- Garantir fundo sólido o suficiente (não transparente).
-
-------------------------------------------------------------
-5) Testes + “tirar print” (verificar e validar)
-Depois de implementar, vamos fazer um checklist end-to-end (e eu mesmo vou capturar screenshots no preview):
-
-5.1) Teste do badge (não lidas)
-- Criar evento de notificação (ex.: curtir um post com outra conta, ou mandar mensagem)
-- Confirmar:
-  - badge aparece com o número correto
-  - ao abrir o sino, badge zera (marca lidas ao abrir)
-
-5.2) Teste do dropdown
-- Visual: glass bonito, sem “see-through”, cantos arredondados, z-index ok (não fica atrás de nada)
-- Lista: avatar/nome/tempo corretos
-
-5.3) Teste de clique e deep-link
-- Clicar em notificação de:
-  - feed (leva para feed)
-  - perfil (leva para /membro/…)
-  - DM (leva para /mensagens/:id)
-  - Class (leva para /class)
-
-5.4) Prints
-- Print 1: topbar mostrando sino + badge ao lado do UserMenu
-- Print 2: dropdown aberto com 3–5 notificações (estilo vidro)
-
-------------------------------------------------------------
-6) Entregáveis (o que será alterado/criado)
-Backend (migração SQL)
-- Criar `public.notifications`
-- Criar RLS policies
-- Criar RPCs:
-  - `count_unread_notifications`
-  - `list_my_notifications`
-  - `mark_notifications_read`
-- Criar triggers:
-  - likes/comments/follows/messages/conversation_members/trainings
-
-Frontend
-- Novo componente: `NotificationBell`
-- Ajuste no header: `AppLayout.tsx`
-- Pequenas utilidades de formatação de texto/tempo (se necessário) reutilizando `date-fns`
-
-------------------------------------------------------------
-7) Observações e próximos passos (sem travar o MVP)
-- “Eventos” e “novidades” gerais (além de treino) podem entrar como tipos adicionais depois (ex.: announcements/admin posts).
-- Se a base de usuários crescer muito, a notificação de treino para “todos aprovados” pode virar “broadcast” para reduzir inserts. Não é necessário agora.
-
-Pronto para implementar assim: primeiro o banco (tabelas+triggers+RPC), depois o sino na topbar com dropdown glass e badge, e por fim os testes/prints.
+Entregáveis
+- FeedPostCard com header clicável para perfil.
+- /perfil com Tabs: Editar | Ver como fica.
+- Componente de preview do próprio perfil (instagram-style) com grid + viewer + chips.
+- /membro/:username exibindo expertises em chips.

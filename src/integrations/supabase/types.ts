@@ -85,9 +85,12 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           avatar_url: string | null
+          bio: string | null
           created_at: string
           display_name: string | null
+          expertises: string[]
           id: string
+          region: string | null
           updated_at: string
           user_id: string
         }
@@ -96,9 +99,12 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           display_name?: string | null
+          expertises?: string[]
           id?: string
+          region?: string | null
           updated_at?: string
           user_id: string
         }
@@ -107,9 +113,12 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           display_name?: string | null
+          expertises?: string[]
           id?: string
+          region?: string | null
           updated_at?: string
           user_id?: string
         }

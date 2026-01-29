@@ -16,10 +16,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <header
             className={
               "sticky top-0 z-20 flex h-14 items-center gap-2 px-3 sm:px-4 backdrop-blur-xl " +
-              // volta ao padrão glass (sem a barra clara do border-b)
               "invictus-surface " +
-              // separador sutil usando tokens (evita linha branca forte)
-              "shadow-[0_1px_0_0_hsl(var(--border)_/_0.45)]"
+              // barra clara SUTIL para separar do topo (sem ficar branca/estourada)
+              "relative after:content-[''] after:absolute after:left-0 after:right-0 after:bottom-0 after:h-px " +
+              "after:bg-gradient-to-r after:from-transparent after:via-[hsl(var(--foreground)_/_0.10)] after:to-transparent"
             }
           >
             <div className="flex-1">

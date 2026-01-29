@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { FeedComment } from "@/features/feed/types";
 
+import { FeedCommentRow } from "@/components/feed/FeedCommentRow";
+
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,6 +98,17 @@ export function CommentsDrawer({ postId, count }: { postId: string; count: numbe
     onError: (e: any) => toast({ title: "Não foi possível apagar", description: e?.message, variant: "destructive" }),
   });
 
+  const likeMutation = useMutation({
+    mutationFn: async (commentId: string) => {
+      const { error } = await supabase.rpc("toggle_feed_comment_like", { p_comment_id: commentId });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["feed_comments", postId] });
+    },
+    onError: (e: any) => toast({ title: "Não foi possível curtir", description: e?.message, variant: "destructive" }),
+  });
+
   return (
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>
@@ -121,89 +134,33 @@ export function CommentsDrawer({ postId, count }: { postId: string; count: numbe
                   const isEditing = editingId === c.comment_id;
 
                   return (
-                    <div key={c.comment_id} className="flex gap-3">
-                      {c.author_avatar_url ? (
-                        <img
-                          src={c.author_avatar_url}
-                          alt={`Avatar de ${c.author_display_name}`}
-                          className="h-8 w-8 rounded-full border border-border/70 object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="h-8 w-8 rounded-full border border-border/70 invictus-surface" />
-                      )}
-
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="text-xs text-muted-foreground">
-                          <span className="font-medium text-foreground">{c.author_display_name}</span>
-                          {c.author_username ? <span className="ml-2">{c.author_username}</span> : null}
-                        </div>
-
-                        {isEditing ? (
-                          <div className="flex gap-2">
-                            <Input
-                              value={editBody}
-                              onChange={(e) => setEditBody(e.target.value)}
-                              placeholder="Edite seu comentário…"
-                              className="h-8 text-sm"
-                            />
-                            <Button
-                              type="button"
-                              size="sm"
-                              onClick={() => editMutation.mutate({ commentId: c.comment_id, newBody: editBody })}
-                              disabled={editMutation.isPending}
-                            >
-                              Salvar
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setEditingId(null);
-                                setEditBody("");
-                              }}
-                            >
-                              Cancelar
-                            </Button>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="text-sm text-foreground">{c.body}</div>
-                            {isMe && (
-                              <div className="flex gap-2">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 px-2 text-xs"
-                                  onClick={() => {
-                                    setEditingId(c.comment_id);
-                                    setEditBody(c.body);
-                                  }}
-                                >
-                                  Editar
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-                                  onClick={() => {
-                                    if (confirm("Apagar este comentário?")) {
-                                      deleteMutation.mutate(c.comment_id);
-                                    }
-                                  }}
-                                  disabled={deleteMutation.isPending}
-                                >
-                                  Apagar
-                                </Button>
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
+                    <FeedCommentRow
+                      key={c.comment_id}
+                      comment={c}
+                      isMe={isMe}
+                      isEditing={isEditing}
+                      editBody={editBody}
+                      onEditBodyChange={setEditBody}
+                      onStartEdit={() => {
+                        setEditingId(c.comment_id);
+                        setEditBody(c.body);
+                      }}
+                      onCancelEdit={() => {
+                        setEditingId(null);
+                        setEditBody("");
+                      }}
+                      onSaveEdit={() => editMutation.mutate({ commentId: c.comment_id, newBody: editBody })}
+                      onDelete={() => {
+                        if (confirm("Apagar este comentário?")) {
+                          deleteMutation.mutate(c.comment_id);
+                        }
+                      }}
+                      onToggleLike={() => likeMutation.mutate(c.comment_id)}
+                      likeDisabled={likeMutation.isPending}
+                      editDisabled={editMutation.isPending}
+                      deleteDisabled={deleteMutation.isPending}
+                      saveDisabled={editMutation.isPending}
+                    />
                   );
                 })
               ) : (

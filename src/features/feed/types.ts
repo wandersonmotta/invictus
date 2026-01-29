@@ -30,4 +30,6 @@ export type FeedComment = {
   author_display_name: string;
   author_username: string | null;
   author_avatar_url: string | null;
+  like_count: number;
+  liked_by_me: boolean;
 };

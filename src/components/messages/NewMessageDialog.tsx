@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
-type MemberRow = { user_id: string; display_name: string; avatar_url: string | null };
+type MemberRow = { user_id: string; display_name: string; username: string | null; avatar_url: string | null };
 
 export function NewMessageDialog({
   open,
@@ -99,7 +99,7 @@ export function NewMessageDialog({
           </DialogHeader>
 
           <div className="mt-4 space-y-3">
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar membros" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nome ou @" />
 
             {isGroup ? (
               <Input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Nome do grupo (opcional)" />
@@ -134,6 +134,9 @@ export function NewMessageDialog({
                           )}
                           <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-medium">{m.display_name}</div>
+                            {m.username ? (
+                              <div className="truncate text-xs text-muted-foreground">{m.username}</div>
+                            ) : null}
                           </div>
                         </button>
                       </li>

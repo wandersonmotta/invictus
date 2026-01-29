@@ -21,6 +21,20 @@ const profileSchema = z.object({
     .max(60, "Máximo 60 caracteres")
     .optional()
     .or(z.literal("")),
+  username: z
+    .string()
+    .trim()
+    .max(21, "Máximo 21 caracteres")
+    .optional()
+    .or(z.literal(""))
+    .refine(
+      (v) => {
+        const t = (v ?? "").trim();
+        if (!t) return true;
+        return /^@[a-z0-9._]{3,20}$/.test(t);
+      },
+      "@ inválido (use @ + 3 a 20 caracteres: a-z, 0-9, . e _)"
+    ),
   postal_code: z
     .string()
     .trim()
@@ -45,6 +59,7 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 type LoadedProfile = {
   display_name: string | null;
+  username: string | null;
   avatar_url: string | null;
   bio: string | null;
   region: string | null;
@@ -65,6 +80,12 @@ function formatCep(v: string) {
   const d = onlyDigits(v).slice(0, 8);
   if (d.length <= 5) return d;
   return `${d.slice(0, 5)}-${d.slice(5)}`;
+}
+
+function normalizeUsernameInput(v: string | undefined) {
+  const raw = (v ?? "").trim().toLowerCase();
+  if (!raw) return null;
+  return raw.startsWith("@") ? raw : `@${raw}`;
 }
 
 function normalizeExpertises(csv: string | undefined) {
@@ -96,6 +117,7 @@ export function ProfileForm({ userId }: { userId: string }) {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       display_name: "",
+      username: "",
       postal_code: "",
       bio: "",
       expertisesCsv: "",
@@ -108,7 +130,7 @@ export function ProfileForm({ userId }: { userId: string }) {
     const { data, error } = await supabase
       .from("profiles")
       .select(
-        "display_name, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status",
+        "display_name, username, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status",
       )
       .eq("user_id", userId)
       .maybeSingle();
@@ -127,6 +149,7 @@ export function ProfileForm({ userId }: { userId: string }) {
     setProfile(p);
     form.reset({
       display_name: p?.display_name ?? "",
+      username: p?.username ?? "",
       postal_code: p?.postal_code ? formatCep(p.postal_code) : "",
       bio: p?.bio ?? "",
       expertisesCsv: (p?.expertises ?? []).join(", "),
@@ -160,6 +183,7 @@ export function ProfileForm({ userId }: { userId: string }) {
     const payload = {
       user_id: userId,
       display_name: values.display_name?.trim() || null,
+      username: normalizeUsernameInput(values.username) || null,
       bio: values.bio?.trim() || null,
       expertises,
     };
@@ -168,12 +192,22 @@ export function ProfileForm({ userId }: { userId: string }) {
       .from("profiles")
       .upsert(payload, { onConflict: "user_id" })
       .select(
-        "display_name, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status",
+        "display_name, username, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status",
       )
       .maybeSingle();
 
     setSaving(false);
     if (error) {
+      const msg = (error as any)?.message as string | undefined;
+      // unique index on lower(username)
+      if (msg?.toLowerCase().includes("profiles_username_lower_unique")) {
+        toast({
+          title: "Esse @ já está em uso",
+          description: "Escolha outro @ (letras minúsculas, números, . e _).",
+          variant: "destructive",
+        });
+        return;
+      }
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
       return;
     }
@@ -322,6 +356,29 @@ export function ProfileForm({ userId }: { userId: string }) {
                 ) : null}
                 <p className="text-xs text-muted-foreground">Obrigatório. Ao salvar, vamos preencher automaticamente Cidade/UF.</p>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="username">@ do usuário</Label>
+              <Input
+                id="username"
+                disabled={loading || saving}
+                placeholder="@seu.usuario"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                {...form.register("username", {
+                  onBlur: (e) => {
+                    const normalized = normalizeUsernameInput(e.target.value) ?? "";
+                    form.setValue("username", normalized, { shouldValidate: true, shouldDirty: true });
+                  },
+                })}
+              />
+              {form.formState.errors.username ? (
+                <p className="text-xs text-destructive">{form.formState.errors.username.message}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Opcional. Use @ + letras minúsculas, números, . e _</p>
+              )}
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">

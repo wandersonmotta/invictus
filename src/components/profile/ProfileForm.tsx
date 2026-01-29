@@ -109,7 +109,7 @@ function normalizeExpertises(csv: string | undefined) {
   });
 }
 
-export function ProfileForm({ userId }: { userId: string }) {
+export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () => void }) {
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -227,6 +227,7 @@ export function ProfileForm({ userId }: { userId: string }) {
 
     setProfile((data ?? null) as LoadedProfile | null);
     toast({ title: "Perfil salvo" });
+    onSaved?.();
   });
 
   async function uploadAvatarBlob(blob: Blob) {
@@ -264,6 +265,7 @@ export function ProfileForm({ userId }: { userId: string }) {
 
     setProfile((updated ?? null) as LoadedProfile | null);
     toast({ title: "Foto atualizada" });
+    onSaved?.();
   }
 
   const accessStatus = profile?.access_status ?? null;

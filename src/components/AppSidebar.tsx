@@ -13,7 +13,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { useSidebar } from "@/components/ui/sidebar";
 
 
 const navSections = [
@@ -44,16 +43,14 @@ const navSections = [
 
 export function AppSidebar() {
   const location = useLocation();
-  const { state } = useSidebar();
   const currentPath = location.pathname;
-  const collapsed = state === "collapsed";
 
   const isActive = (path: string) => currentPath === path;
 
   return (
     <Sidebar
-      className={cn("invictus-sidebar", collapsed ? "w-14" : "w-64")}
-      collapsible="icon"
+      className={cn("invictus-sidebar")}
+      collapsible="none"
       variant="inset"
     >
       <SidebarContent>
@@ -61,11 +58,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             {navSections.map((section) => (
               <div key={section.label} className="invictus-sidebar-section">
-                {!collapsed && (
-                  <SidebarGroupLabel className="invictus-sidebar-sectionLabel">
-                    {section.label}
-                  </SidebarGroupLabel>
-                )}
+                <SidebarGroupLabel className="invictus-sidebar-sectionLabel">{section.label}</SidebarGroupLabel>
 
                 <SidebarMenu className="invictus-sidebar-menu">
                   {section.items.map((item) => (
@@ -85,9 +78,7 @@ export function AppSidebar() {
                           <span className="invictus-sidebar-iconWrap" aria-hidden="true">
                             <item.icon className="invictus-sidebar-icon" aria-hidden="true" />
                           </span>
-                          {!collapsed && (
-                            <span className="invictus-sidebar-label">{item.title}</span>
-                          )}
+                          <span className="invictus-sidebar-label">{item.title}</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -95,8 +86,6 @@ export function AppSidebar() {
                 </SidebarMenu>
               </div>
             ))}
-
-            {!collapsed && <div className="invictus-gold-line mt-3 h-px w-full opacity-70" />}
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

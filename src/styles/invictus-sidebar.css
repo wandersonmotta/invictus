@@ -12,14 +12,13 @@
      Assinatura: vinheta + marca d’água (monograma) + “champagne edge” (sem textura). */
   .invictus-sidebar [data-sidebar="sidebar"] {
     position: relative;
-    background:
-      radial-gradient(120% 80% at 18% 0%, hsl(var(--gold-soft) / 0.06), transparent 58%),
-      radial-gradient(110% 80% at 110% 14%, hsl(var(--gold-hot) / 0.04), transparent 62%),
-      linear-gradient(180deg, hsl(var(--card) / var(--glass)) 0%, hsl(var(--card) / 0.18) 100%);
+    /* Clean glass (sem "glaze" dourado) */
+    background: linear-gradient(180deg, hsl(var(--card) / var(--glass)) 0%, hsl(var(--card) / 0.16) 100%);
     backdrop-filter: blur(18px);
     box-shadow:
       0 0 0 1px hsl(var(--border) / 0.60) inset,
-      0 0 0 1px hsl(var(--gold-hot) / 0.08) inset,
+      /* champagne edge (bem sutil, sem "banho" dourado) */
+      0 0 0 1px hsl(var(--gold-hot) / 0.03) inset,
       0 24px 80px -60px hsl(var(--foreground) / 0.55);
   }
 
@@ -30,13 +29,8 @@
     pointer-events: none;
     border-radius: inherit;
     background:
-      /* champagne edge */
-      linear-gradient(
-        135deg,
-        hsl(var(--gold-soft) / 0.06),
-        hsl(var(--gold-hot) / 0.12) 40%,
-        transparent 70%
-      ),
+      /* champagne edge (apenas na borda, quase imperceptível) */
+      linear-gradient(135deg, hsl(var(--gold-hot) / 0.06), transparent 58%),
       /* controlled specular */
       linear-gradient(180deg, hsl(var(--foreground) / 0.10), transparent 34%);
     opacity: 0.95;
@@ -124,13 +118,13 @@
     bottom: 22%;
     width: 2px;
     border-radius: 999px;
-    background: linear-gradient(180deg, hsl(var(--gold-soft)), hsl(var(--gold-hot)));
-    opacity: 0.9;
+    background: linear-gradient(180deg, hsl(var(--gold-soft) / 0.55), hsl(var(--gold-hot) / 0.55));
+    opacity: 0.7;
     z-index: 0;
   }
 
   .invictus-sidebar-item[data-active="true"] {
-    background: hsl(var(--foreground) / 0.04);
+    background: hsl(var(--foreground) / 0.03);
   }
 
   /* Link interno (tipografia/alinhamento) */

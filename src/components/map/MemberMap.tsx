@@ -1,8 +1,9 @@
 import * as React from "react";
 import L from "leaflet";
-import { LocateFixed, Minus, Plus } from "lucide-react";
+import { LocateFixed } from "lucide-react";
 
 import type { ApprovedMemberPin } from "./useApprovedMemberPins";
+import { getMapboxTileConfig } from "@/config/mapbox";
 
 // Fix default marker icons in bundlers
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -23,22 +24,19 @@ type LatLng = { lat: number; lng: number };
 export function MemberMap({
   pins,
   centerMe,
+  mapbox,
 }: {
   pins: ApprovedMemberPin[];
   centerMe?: LatLng | null;
+  mapbox?: {
+    token: string;
+    style: string;
+  } | null;
 }) {
   const canGeolocate = typeof window !== "undefined" && !!window.navigator?.geolocation;
   const mapRef = React.useRef<L.Map | null>(null);
   const markersRef = React.useRef<L.LayerGroup | null>(null);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
-
-  const onZoomIn = React.useCallback(() => {
-    mapRef.current?.zoomIn();
-  }, []);
-
-  const onZoomOut = React.useCallback(() => {
-    mapRef.current?.zoomOut();
-  }, []);
 
   const onGeolocate = React.useCallback(() => {
     const map = mapRef.current;
@@ -63,14 +61,29 @@ export function MemberMap({
     );
   }, [centerMe]);
 
-  const goldIcon = React.useMemo(() => {
-    return L.divIcon({
-      className: "invictus-map-pin-wrap",
-      html: '<div class="invictus-map-pin" aria-hidden="true"><span class="invictus-map-pin-core"></span></div>',
-      iconSize: [30, 30],
-      iconAnchor: [15, 15],
-      tooltipAnchor: [0, -14],
+  const iconCacheRef = React.useRef<Map<string, L.DivIcon>>(new Map());
+
+  const getAvatarIcon = React.useCallback((avatarUrl: string) => {
+    const cache = iconCacheRef.current;
+    const cached = cache.get(avatarUrl);
+    if (cached) return cached;
+
+    // Avoid broken HTML attributes from unexpected characters
+    const safeUrl = encodeURI(avatarUrl).replace(/"/g, "%22");
+    const icon = L.divIcon({
+      className: "invictus-avatar-pin-wrap",
+      html: `
+        <div class="invictus-avatar-pin" aria-hidden="true">
+          <span class="invictus-avatar-ring" aria-hidden="true"></span>
+          <img class="invictus-avatar-img" src="${safeUrl}" alt="" loading="lazy" />
+        </div>
+      `,
+      iconSize: [42, 42],
+      iconAnchor: [21, 21],
+      tooltipAnchor: [0, -18],
     });
+    cache.set(avatarUrl, icon);
+    return icon;
   }, []);
 
   // init map once
@@ -82,7 +95,16 @@ export function MemberMap({
       attributionControl: true,
     });
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {}).addTo(map);
+    const mb = mapbox ? getMapboxTileConfig(mapbox) : null;
+    const tileUrl = mb?.tileUrl ?? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+    const attribution =
+      mb?.attribution ??
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+    L.tileLayer(tileUrl, {
+      attribution,
+      opacity: 0.46,
+    }).addTo(map);
 
     const markers = L.layerGroup().addTo(map);
 
@@ -96,7 +118,7 @@ export function MemberMap({
       mapRef.current = null;
       markersRef.current = null;
     };
-  }, []);
+  }, [mapbox]);
 
   // update markers when pins change
   React.useEffect(() => {
@@ -107,8 +129,14 @@ export function MemberMap({
     markers.clearLayers();
 
     for (const p of pins) {
-      const label = p.city && p.state ? `${p.city}/${p.state}` : "Invictus";
-      L.marker([p.lat, p.lng], { icon: goldIcon })
+      const label =
+        p.display_name?.trim()
+          ? `${p.display_name}${p.city && p.state ? ` — ${p.city}/${p.state}` : ""}`
+          : p.city && p.state
+            ? `${p.city}/${p.state}`
+            : "Invictus";
+
+      L.marker([p.lat, p.lng], { icon: getAvatarIcon(p.avatar_url) })
         .addTo(markers)
         .bindTooltip(label, {
           direction: "top",
@@ -117,7 +145,7 @@ export function MemberMap({
           className: "invictus-map-tooltip",
         });
     }
-  }, [pins, goldIcon]);
+  }, [pins, getAvatarIcon]);
 
   return (
     <div className="invictus-surface invictus-frame invictus-map invictus-map-overlay relative w-full overflow-hidden rounded-lg border border-border/70">
@@ -132,26 +160,6 @@ export function MemberMap({
         >
           <LocateFixed className="h-4 w-4" />
         </button>
-
-        <div className="invictus-map-control invictus-map-zoom flex flex-col overflow-hidden rounded-md">
-          <button
-            type="button"
-            onClick={onZoomIn}
-            aria-label="Zoom in"
-            className="invictus-map-zoom-btn inline-flex h-11 w-11 items-center justify-center"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
-          <div className="invictus-map-zoom-divider" />
-          <button
-            type="button"
-            onClick={onZoomOut}
-            aria-label="Zoom out"
-            className="invictus-map-zoom-btn inline-flex h-11 w-11 items-center justify-center"
-          >
-            <Minus className="h-4 w-4" />
-          </button>
-        </div>
       </div>
 
       <div className="h-[360px] w-full sm:h-[420px] lg:h-[520px]">

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { MemberMap } from "@/components/map/MemberMap";
 import { useApprovedMemberPins } from "@/components/map/useApprovedMemberPins";
+import { MAPBOX_PREMIUM } from "@/config/invictusMap";
 
 // Update this page (the content is just a fallback if you fail to update the page)
 
@@ -59,6 +60,7 @@ const Index = () => {
                 ? { lat: me.location_lat, lng: me.location_lng }
                 : null
             }
+            mapbox={MAPBOX_PREMIUM.token && MAPBOX_PREMIUM.style ? MAPBOX_PREMIUM : null}
           />
         </div>
 

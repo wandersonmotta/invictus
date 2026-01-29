@@ -29,26 +29,42 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-10 gap-2 px-2">
+        <Button
+          variant="ghost"
+          className="group invictus-topbar-user-trigger focus-visible:ring-1 focus-visible:ring-ring/40"
+        >
           <Avatar className="h-8 w-8">
-            <AvatarImage src={profile?.avatar_url ?? undefined} alt="Sua foto de perfil" />
+            <AvatarImage
+              src={profile?.avatar_url ?? undefined}
+              alt="Sua foto de perfil"
+              className="transition duration-200 group-hover:opacity-85 group-hover:saturate-125 group-hover:brightness-110 group-data-[state=open]:opacity-100"
+            />
             <AvatarFallback>{initials(profile?.first_name, profile?.last_name)}</AvatarFallback>
           </Avatar>
-          <GoldHoverText className="hidden max-w-[16rem] truncate text-xs font-semibold tracking-wide sm:block">
-            {label}
-          </GoldHoverText>
+
+          {/* Base clean + overlay metálico (aparece no hover e quando estiver aberto) */}
+          <span className="relative hidden max-w-[16rem] truncate text-xs font-semibold tracking-wide sm:block">
+            <span className="transition-opacity duration-200 group-hover:opacity-85">
+              <span className="text-muted-foreground">{label}</span>
+            </span>
+            <GoldHoverText className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-data-[state=open]:opacity-100">
+              {label}
+            </GoldHoverText>
+          </span>
         </Button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
         align="end"
-        className="invictus-surface invictus-frame border-border/70 z-50 min-w-48"
+        className="invictus-modal-glass invictus-frame border-border/40 z-50 min-w-52 p-1"
       >
         <DropdownMenuItem
           onClick={() => void signOut()}
-          className="gap-2"
+          className="group gap-2 cursor-pointer rounded-md focus:bg-[hsl(var(--foreground)_/_0.06)] focus:text-foreground data-[highlighted]:bg-[hsl(var(--foreground)_/_0.05)] data-[highlighted]:text-foreground"
         >
-          <LogOut />
+          <LogOut
+            className="text-[hsl(var(--gold-hot)_/_0.92)] transition group-hover:[filter:drop-shadow(0_0_12px_hsl(var(--gold-hot)_/_0.28))]"
+          />
           <GoldHoverText className="text-sm font-medium">Sair</GoldHoverText>
         </DropdownMenuItem>
       </DropdownMenuContent>

@@ -161,7 +161,7 @@ export default function AuthPage() {
 
   return (
     <main className="min-h-svh grid place-items-center p-4 sm:p-6">
-      <Card className="invictus-surface invictus-frame w-full max-w-md border-border/70">
+      <Card className="invictus-auth-surface invictus-auth-frame w-full max-w-md border-0">
         <CardHeader className="space-y-3">
           <div className="flex items-center gap-3">
             <div className="flex flex-col items-center gap-1">
@@ -230,7 +230,7 @@ export default function AuthPage() {
       </Card>
 
       <Dialog open={inviteOpen} onOpenChange={(o) => (inviteLoading ? null : setInviteOpen(o))}>
-        <DialogContent className="invictus-surface invictus-frame border-border/70">
+        <DialogContent className="invictus-auth-surface invictus-auth-frame border-0">
           <DialogHeader>
             <DialogTitle>Entrar com convite</DialogTitle>
             <DialogDescription>Crie sua conta usando um código de convite válido.</DialogDescription>
@@ -274,7 +274,7 @@ export default function AuthPage() {
       </Dialog>
 
       <Dialog open={resetOpen} onOpenChange={(o) => (resetLoading ? null : setResetOpen(o))}>
-          <DialogContent className="invictus-surface invictus-frame border-border/70">
+          <DialogContent className="invictus-auth-surface invictus-auth-frame border-0">
           <DialogHeader>
             <DialogTitle>Recuperar acesso</DialogTitle>
             <DialogDescription>Informe seu e-mail para receber um link de redefinição de senha.</DialogDescription>

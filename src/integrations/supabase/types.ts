@@ -14,8 +14,76 @@ export type Database = {
   }
   public: {
     Tables: {
+      invite_codes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          max_uses: number
+          note: string | null
+          uses_count: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          max_uses?: number
+          note?: string | null
+          uses_count?: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          max_uses?: number
+          note?: string | null
+          uses_count?: number
+        }
+        Relationships: []
+      }
+      invite_redemptions: {
+        Row: {
+          id: string
+          invite_id: string
+          redeemed_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          invite_id: string
+          redeemed_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          invite_id?: string
+          redeemed_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invite_redemptions_invite_id_fkey"
+            columns: ["invite_id"]
+            isOneToOne: false
+            referencedRelation: "invite_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
+          access_status: Database["public"]["Enums"]["access_status"]
+          approved_at: string | null
+          approved_by: string | null
           avatar_url: string | null
           created_at: string
           display_name: string | null
@@ -24,6 +92,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          access_status?: Database["public"]["Enums"]["access_status"]
+          approved_at?: string | null
+          approved_by?: string | null
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
@@ -32,6 +103,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          access_status?: Database["public"]["Enums"]["access_status"]
+          approved_at?: string | null
+          approved_by?: string | null
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
@@ -153,6 +227,7 @@ export type Database = {
       }
     }
     Enums: {
+      access_status: "pending" | "approved" | "rejected"
       app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
@@ -281,6 +356,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      access_status: ["pending", "approved", "rejected"],
       app_role: ["admin", "moderator", "user"],
     },
   },

@@ -145,9 +145,27 @@ const Sidebar = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"> & {
     mobileMode
   } = useSidebar();
   if (collapsible === "none") {
-    return <div className={cn("flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground", className)} ref={ref} {...props}>
-        {children}
-      </div>;
+    return (
+      <div
+        ref={ref}
+        className={cn("flex h-full w-[--sidebar-width] flex-col bg-transparent text-sidebar-foreground", className)}
+        data-side={side}
+        data-variant={variant}
+        {...props}
+      >
+        <div
+          data-sidebar="sidebar"
+          className={cn(
+            "flex h-full w-full flex-col bg-sidebar text-sidebar-foreground",
+            variant === "floating" || variant === "inset"
+              ? "rounded-lg border border-sidebar-border shadow"
+              : "",
+          )}
+        >
+          {children}
+        </div>
+      </div>
+    );
   }
   if (isMobile && mobileMode !== "fixed") {
     return <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
@@ -352,6 +370,13 @@ const SidebarMenuButton = React.forwardRef<HTMLButtonElement, React.ComponentPro
   if (!tooltip) {
     return button;
   }
+
+  // Tooltip só faz sentido quando a sidebar está colapsada (ícones) e no desktop.
+  // Evita wrappers desnecessários e elimina warnings de ref em cenários onde o Tooltip nunca aparece.
+  if (state !== "collapsed" || isMobile) {
+    return button;
+  }
+
   if (typeof tooltip === "string") {
     tooltip = {
       children: tooltip
@@ -359,7 +384,7 @@ const SidebarMenuButton = React.forwardRef<HTMLButtonElement, React.ComponentPro
   }
   return <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent side="right" align="center" hidden={state !== "collapsed" || isMobile} {...tooltip} />
+      <TooltipContent side="right" align="center" {...tooltip} />
     </Tooltip>;
 });
 SidebarMenuButton.displayName = "SidebarMenuButton";

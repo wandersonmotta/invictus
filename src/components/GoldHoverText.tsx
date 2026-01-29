@@ -68,3 +68,6 @@ export const GoldHoverText = React.forwardRef<HTMLSpanElement, GoldHoverTextProp
 });
 
 GoldHoverText.displayName = "GoldHoverText";
+
+// Compat: alguns lugares podem importar como default.
+export default GoldHoverText;

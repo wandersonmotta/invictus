@@ -12,8 +12,8 @@
   .invictus-sidebar [data-sidebar="sidebar"] {
     position: relative;
     background:
-      radial-gradient(110% 70% at 18% 0%, hsl(var(--gold-soft) / 0.18), transparent 55%),
-      radial-gradient(95% 70% at 110% 20%, hsl(var(--gold-hot) / 0.10), transparent 55%),
+      radial-gradient(110% 70% at 18% 0%, hsl(var(--gold-soft) / 0.10), transparent 58%),
+      radial-gradient(95% 70% at 110% 20%, hsl(var(--gold-hot) / 0.06), transparent 60%),
       linear-gradient(180deg, hsl(var(--card) / var(--glass)) 0%, hsl(var(--card) / 0.20) 100%);
     backdrop-filter: blur(18px);
     box-shadow:
@@ -54,10 +54,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background:
-      linear-gradient(90deg, transparent, hsl(var(--gold-soft) / 0.14), transparent),
-      radial-gradient(120% 90% at 12% 0%, hsl(var(--foreground) / 0.10), transparent 60%);
-    transform: translateX(-35%);
+    background: radial-gradient(120% 90% at 18% 0%, hsl(var(--foreground) / 0.10), transparent 62%);
     opacity: 0;
     transition:
       opacity 180ms ease,
@@ -65,29 +62,29 @@
   }
 
   .invictus-sidebar-item:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 14px 40px -32px hsl(var(--gold-hot) / 0.55);
+    transform: translateY(-0.5px);
+    box-shadow: 0 12px 40px -34px hsl(var(--foreground) / 0.55);
   }
 
   .invictus-sidebar-item:hover::after {
     opacity: 1;
-    transform: translateX(20%);
+    transform: translateX(0%);
   }
 
   /* Active capsule + bar */
   .invictus-sidebar-item[data-active="true"] {
     background:
       linear-gradient(180deg, hsl(var(--background) / 0.22), hsl(var(--background) / 0.14)),
-      radial-gradient(120% 90% at 18% 0%, hsl(var(--gold-soft) / 0.10), transparent 60%);
+      radial-gradient(120% 90% at 18% 0%, hsl(var(--gold-soft) / 0.08), transparent 62%);
     box-shadow:
-      /* gold outline */
-      0 0 0 1px hsl(var(--gold-hot) / 0.60) inset,
+      /* crisp gold outline */
+      0 0 0 1px hsl(var(--gold-hot) / 0.70) inset,
       /* specular */
       0 1px 0 0 hsl(var(--foreground) / 0.12) inset,
       /* depth */
       0 18px 60px -44px hsl(var(--foreground) / 0.60),
-      /* controlled glow */
-      0 0 90px -56px hsl(var(--gold-hot) / 0.75);
+      /* almost no glow (executive) */
+      0 0 70px -60px hsl(var(--gold-hot) / 0.35);
   }
 
   .invictus-sidebar-item[data-active="true"]::before {
@@ -96,7 +93,7 @@
     left: 0;
     top: 10%;
     bottom: 10%;
-    width: 3px;
+    width: 4px;
     border-radius: 999px;
     background: linear-gradient(
       180deg,
@@ -105,15 +102,15 @@
     );
     box-shadow:
       0 0 0 1px hsl(var(--gold-hot) / 0.35),
-      0 0 24px -10px hsl(var(--gold-hot) / 0.85);
+      0 0 18px -12px hsl(var(--gold-hot) / 0.65);
   }
 
   .invictus-sidebar-item[data-active="true"]::after {
     opacity: 1;
     transform: translateX(0%);
     background:
-      linear-gradient(135deg, hsl(var(--gold-soft) / 0.08), transparent 35%),
-      linear-gradient(180deg, hsl(var(--foreground) / 0.12), transparent 40%);
+      linear-gradient(135deg, hsl(var(--gold-soft) / 0.06), transparent 42%),
+      linear-gradient(180deg, hsl(var(--foreground) / 0.14), transparent 44%);
   }
 
   /* Link interno (tipografia/alinhamento) */
@@ -132,27 +129,26 @@
   .invictus-sidebar-icon {
     width: 1rem;
     height: 1rem;
-    color: hsl(var(--sidebar-foreground) / 0.92);
-    filter: drop-shadow(0 0 10px hsl(var(--gold-hot) / 0.10));
+    color: hsl(var(--sidebar-foreground) / 0.88);
   }
 
   .invictus-sidebar-label {
-    letter-spacing: 0.08em;
+    letter-spacing: 0.02em;
     font-weight: 600;
     color: hsl(var(--sidebar-foreground) / 0.92);
-    text-transform: uppercase;
-    font-size: 0.72rem;
+    text-transform: none;
+    font-size: 0.85rem;
     line-height: 1;
   }
 
   /* Active text polish */
   .invictus-sidebar-item[data-active="true"] .invictus-sidebar-label {
     color: hsl(var(--gold-soft) / 0.92);
-    text-shadow: 0 0 18px hsl(var(--gold-hot) / 0.20);
+    text-shadow: 0 0 14px hsl(var(--gold-hot) / 0.16);
   }
   .invictus-sidebar-item[data-active="true"] .invictus-sidebar-icon {
     color: hsl(var(--gold-soft) / 0.92);
-    filter: drop-shadow(0 0 14px hsl(var(--gold-hot) / 0.25));
+    filter: drop-shadow(0 0 12px hsl(var(--gold-hot) / 0.22));
   }
 
   /* Mini (collapsed): manter mesma assinatura sem “sumir” */

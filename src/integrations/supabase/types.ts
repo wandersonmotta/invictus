@@ -514,6 +514,21 @@ export type Database = {
           type: Database["public"]["Enums"]["conversation_type"]
         }[]
       }
+      get_public_profile: {
+        Args: { p_user_id: string }
+        Returns: {
+          avatar_url: string
+          bio: string
+          city: string
+          display_name: string
+          expertises: string[]
+          first_name: string
+          last_name: string
+          state: string
+          user_id: string
+          username: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

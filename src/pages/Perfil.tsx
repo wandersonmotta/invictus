@@ -2,6 +2,7 @@ import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileForm } from "@/components/profile/ProfileForm";
+import { ChangePasswordCard } from "@/components/profile/ChangePasswordCard";
 
 export default function Perfil() {
   const { user, signOut } = useAuth();
@@ -14,6 +15,19 @@ export default function Perfil() {
       </header>
 
       {user?.id ? <ProfileForm userId={user.id} /> : null}
+
+      {user?.email ? (
+        <ChangePasswordCard email={user.email} />
+      ) : (
+        <Card className="invictus-surface invictus-frame border-border/70">
+          <CardHeader>
+            <CardTitle className="text-base">Alterar senha</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Sua conta não suporta alteração de senha por aqui.
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="invictus-surface invictus-frame border-border/70">
         <CardHeader>

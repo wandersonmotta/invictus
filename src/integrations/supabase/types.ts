@@ -14,6 +14,92 @@ export type Database = {
   }
   public: {
     Tables: {
+      conversation_members: {
+        Row: {
+          accepted_at: string | null
+          conversation_id: string
+          folder: Database["public"]["Enums"]["conversation_folder"]
+          joined_at: string
+          last_read_at: string | null
+          member_role: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          conversation_id: string
+          folder?: Database["public"]["Enums"]["conversation_folder"]
+          joined_at?: string
+          last_read_at?: string | null
+          member_role?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          conversation_id?: string
+          folder?: Database["public"]["Enums"]["conversation_folder"]
+          joined_at?: string
+          last_read_at?: string | null
+          member_role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_members_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          created_at: string
+          created_by: string
+          group_name: string | null
+          id: string
+          last_message_at: string | null
+          type: Database["public"]["Enums"]["conversation_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          group_name?: string | null
+          id?: string
+          last_message_at?: string | null
+          type: Database["public"]["Enums"]["conversation_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          group_name?: string | null
+          id?: string
+          last_message_at?: string | null
+          type?: Database["public"]["Enums"]["conversation_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          following_id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          following_id: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          following_id?: string
+        }
+        Relationships: []
+      }
       geo_city_cache: {
         Row: {
           city: string
@@ -111,6 +197,100 @@ export type Database = {
             columns: ["invite_id"]
             isOneToOne: false
             referencedRelation: "invite_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_status: {
+        Row: {
+          created_at: string
+          expires_at: string
+          status_text: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          status_text: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          status_text?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      message_attachments: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          file_name: string | null
+          id: string
+          message_id: string
+          size_bytes: number | null
+          storage_bucket: string
+          storage_path: string
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          message_id: string
+          size_bytes?: number | null
+          storage_bucket?: string
+          storage_path: string
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          message_id?: string
+          size_bytes?: number | null
+          storage_bucket?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          body: string | null
+          conversation_id: string
+          created_at: string
+          id: string
+          sender_id: string
+        }
+        Insert: {
+          body?: string | null
+          conversation_id: string
+          created_at?: string
+          id?: string
+          sender_id: string
+        }
+        Update: {
+          body?: string | null
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
         ]
@@ -281,6 +461,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_conversation: {
+        Args: {
+          p_group_name?: string
+          p_member_ids: string[]
+          p_type: Database["public"]["Enums"]["conversation_type"]
+        }
+        Returns: string
+      }
       get_approved_member_pins: {
         Args: { p_limit?: number }
         Returns: {
@@ -300,10 +488,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_mutual_follow: { Args: { a: string; b: string }; Returns: boolean }
     }
     Enums: {
       access_status: "pending" | "approved" | "rejected"
       app_role: "admin" | "moderator" | "user"
+      conversation_folder: "inbox" | "requests"
+      conversation_type: "direct" | "group"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -433,6 +624,8 @@ export const Constants = {
     Enums: {
       access_status: ["pending", "approved", "rejected"],
       app_role: ["admin", "moderator", "user"],
+      conversation_folder: ["inbox", "requests"],
+      conversation_type: ["direct", "group"],
     },
   },
 } as const

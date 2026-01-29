@@ -49,7 +49,11 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     asChild
                     isActive={isActive(item.url)}
-                    tooltip={item.title}
+                    tooltip={{
+                      children: item.title,
+                      className: "invictus-tooltip",
+                      sideOffset: 10,
+                    }}
                     className="invictus-sidebar-item"
                   >
                     <NavLink
@@ -58,7 +62,9 @@ export function AppSidebar() {
                       className="invictus-sidebar-link"
                       aria-current={isActive(item.url) ? "page" : undefined}
                     >
-                      <item.icon className="invictus-sidebar-icon" aria-hidden="true" />
+                      <span className="invictus-sidebar-iconWrap" aria-hidden="true">
+                        <item.icon className="invictus-sidebar-icon" aria-hidden="true" />
+                      </span>
                       {!collapsed && <span className="invictus-sidebar-label">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>

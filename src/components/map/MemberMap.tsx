@@ -121,6 +121,7 @@ export function MemberMap({
 
   return (
     <div className="invictus-surface invictus-frame invictus-map invictus-map-overlay relative w-full overflow-hidden rounded-lg border border-border/70">
+      <div className="invictus-map-sweep" aria-hidden="true" />
       <div className="absolute right-3 top-3 z-[600] flex flex-col items-center gap-2">
         <button
           type="button"

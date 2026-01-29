@@ -21,12 +21,12 @@ const profileSchema = z.object({
     .max(60, "Máximo 60 caracteres")
     .optional()
     .or(z.literal("")),
-  region: z
+  postal_code: z
     .string()
     .trim()
-    .max(80, "Máximo 80 caracteres")
-    .optional()
-    .or(z.literal("")),
+    .min(8, "CEP obrigatório")
+    .max(9, "CEP inválido")
+    .refine((v) => v.replace(/\D/g, "").length === 8, "CEP inválido (use 8 dígitos)"),
   bio: z
     .string()
     .trim()
@@ -48,9 +48,24 @@ type LoadedProfile = {
   avatar_url: string | null;
   bio: string | null;
   region: string | null;
+  postal_code: string | null;
+  city: string | null;
+  state: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
   expertises: string[] | null;
   access_status: string | null;
 };
+
+function onlyDigits(v: string) {
+  return v.replace(/\D/g, "");
+}
+
+function formatCep(v: string) {
+  const d = onlyDigits(v).slice(0, 8);
+  if (d.length <= 5) return d;
+  return `${d.slice(0, 5)}-${d.slice(5)}`;
+}
 
 function normalizeExpertises(csv: string | undefined) {
   const items = (csv ?? "")
@@ -81,7 +96,7 @@ export function ProfileForm({ userId }: { userId: string }) {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       display_name: "",
-      region: "",
+      postal_code: "",
       bio: "",
       expertisesCsv: "",
     },
@@ -92,7 +107,9 @@ export function ProfileForm({ userId }: { userId: string }) {
     setLoading(true);
     const { data, error } = await supabase
       .from("profiles")
-      .select("display_name, avatar_url, bio, region, expertises, access_status")
+      .select(
+        "display_name, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status",
+      )
       .eq("user_id", userId)
       .maybeSingle();
 
@@ -110,7 +127,7 @@ export function ProfileForm({ userId }: { userId: string }) {
     setProfile(p);
     form.reset({
       display_name: p?.display_name ?? "",
-      region: p?.region ?? "",
+      postal_code: p?.postal_code ? formatCep(p.postal_code) : "",
       bio: p?.bio ?? "",
       expertisesCsv: (p?.expertises ?? []).join(", "),
     });
@@ -125,10 +142,24 @@ export function ProfileForm({ userId }: { userId: string }) {
     setSaving(true);
     const expertises = normalizeExpertises(values.expertisesCsv);
 
+     // CEP obrigatório: resolve cidade/UF + salva coordenadas (backend)
+    const { data: locData, error: locError } = await supabase.functions.invoke("resolve-location-from-cep", {
+      body: { postal_code: values.postal_code },
+    });
+
+    if (locError || (locData as any)?.error || !(locData as any)?.ok) {
+      setSaving(false);
+      toast({
+        title: "CEP inválido",
+        description: locError?.message ?? (locData as any)?.error ?? "Não foi possível validar seu CEP.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const payload = {
       user_id: userId,
       display_name: values.display_name?.trim() || null,
-      region: values.region?.trim() || null,
       bio: values.bio?.trim() || null,
       expertises,
     };
@@ -136,7 +167,9 @@ export function ProfileForm({ userId }: { userId: string }) {
     const { data, error } = await supabase
       .from("profiles")
       .upsert(payload, { onConflict: "user_id" })
-      .select("display_name, avatar_url, bio, region, expertises, access_status")
+      .select(
+        "display_name, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status",
+      )
       .maybeSingle();
 
     setSaving(false);
@@ -185,7 +218,9 @@ export function ProfileForm({ userId }: { userId: string }) {
     const { error: updateError, data: updated } = await supabase
       .from("profiles")
       .upsert({ user_id: userId, avatar_url: avatarUrl }, { onConflict: "user_id" })
-      .select("display_name, avatar_url, bio, region, expertises, access_status")
+      .select(
+        "display_name, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status",
+      )
       .maybeSingle();
 
     setUploading(false);
@@ -268,16 +303,47 @@ export function ProfileForm({ userId }: { userId: string }) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="region">Região</Label>
+                <Label htmlFor="postal_code">CEP</Label>
                 <Input
-                  id="region"
+                  id="postal_code"
                   disabled={loading || saving}
-                  placeholder="Cidade/UF"
-                  {...form.register("region")}
+                  placeholder="00000-000"
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  {...form.register("postal_code", {
+                    onChange: (e) => {
+                      const next = formatCep(e.target.value);
+                      form.setValue("postal_code", next, { shouldValidate: false });
+                    },
+                  })}
                 />
-                {form.formState.errors.region ? (
-                  <p className="text-xs text-destructive">{form.formState.errors.region.message}</p>
+                {form.formState.errors.postal_code ? (
+                  <p className="text-xs text-destructive">{form.formState.errors.postal_code.message}</p>
                 ) : null}
+                <p className="text-xs text-muted-foreground">Obrigatório. Ao salvar, vamos preencher automaticamente Cidade/UF.</p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="city">Cidade</Label>
+                <Input
+                  id="city"
+                  disabled
+                  value={profile?.city ?? ""}
+                  placeholder="—"
+                  readOnly
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="state">UF</Label>
+                <Input
+                  id="state"
+                  disabled
+                  value={profile?.state ?? ""}
+                  placeholder="—"
+                  readOnly
+                />
               </div>
             </div>
 

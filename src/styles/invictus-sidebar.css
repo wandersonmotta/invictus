@@ -12,26 +12,26 @@
      Assinatura: vinheta + marca d’água (monograma) + “champagne edge” (sem textura). */
   .invictus-sidebar [data-sidebar="sidebar"] {
     position: relative;
+    overflow: visible;
     /* Tuning knobs (light defaults; dark overrides below) */
     --sidebar-marble-opacity: 0.14;
     --sidebar-top-highlight-opacity: 0.78;
     --sidebar-marble-blend: soft-light;
-    /* Gold border strength (light defaults; dark overrides below) */
-    --sidebar-gold-border-1: 0.22;
-    --sidebar-gold-border-2: 0.08;
+    /* Frame (champagne) */
+    --sidebar-frame-opacity: 0.92;
+    --sidebar-frame-soft: 0.18;
+    --sidebar-frame-hot: 0.62;
     /* Clean glass (sem "glaze" dourado) */
     background: linear-gradient(
       180deg,
-      hsl(var(--card) / calc(var(--glass) - 0.12)) 0%,
-      hsl(var(--card) / 0.10) 100%
+      /* vidro real: mais transparente que --card */
+      hsl(var(--background) / 0.22) 0%,
+      hsl(var(--background) / 0.12) 100%
     );
-    backdrop-filter: blur(22px) saturate(165%);
+    backdrop-filter: blur(24px) saturate(170%);
     box-shadow:
-      /* ALWAYS-ON gold frame (INSET so it can't get clipped by viewport edges) */
-      0 0 0 1px hsl(var(--gold-hot) / var(--sidebar-gold-border-1)) inset,
-      /* second ring for presence (soft depth) */
-      0 0 0 2px hsl(var(--gold-soft) / var(--sidebar-gold-border-2)) inset,
-      0 0 0 1px hsl(var(--border) / 0.60) inset,
+      /* depth only (frame is a real border via ::after) */
+      0 0 0 1px hsl(var(--border) / 0.46) inset,
       /* internal metal polish */
       0 1px 0 0 hsl(var(--foreground) / 0.08) inset,
       0 24px 80px -60px hsl(var(--foreground) / 0.55);
@@ -41,8 +41,32 @@
   .dark .invictus-sidebar [data-sidebar="sidebar"] {
     --sidebar-marble-opacity: 0.26;
     --sidebar-top-highlight-opacity: 0.90;
-    --sidebar-gold-border-1: 0.30;
-    --sidebar-gold-border-2: 0.12;
+    --sidebar-frame-opacity: 0.96;
+    --sidebar-frame-soft: 0.20;
+    --sidebar-frame-hot: 0.70;
+  }
+
+  /* Borda real (champagne) — sempre fina, sempre visível, sem engrossar */
+  .invictus-sidebar [data-sidebar="sidebar"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--gold-soft) / var(--sidebar-frame-soft)),
+      hsl(var(--gold-hot) / var(--sidebar-frame-hot)) 35%,
+      hsl(var(--gold-soft) / 0.26) 70%,
+      hsl(var(--gold-hot) / 0.52)
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: var(--sidebar-frame-opacity);
   }
 
   .invictus-sidebar [data-sidebar="sidebar"]::before {
@@ -53,23 +77,12 @@
     border-radius: inherit;
     background:
       /* top highlight (luz no vidro) */
-      radial-gradient(110% 55% at 50% 0%, hsl(var(--gold-soft) / 0.08), transparent 60%),
+      radial-gradient(110% 55% at 50% 0%, hsl(var(--gold-soft) / 0.16), transparent 60%),
       /* champagne edge (apenas na borda, quase imperceptível) */
-      linear-gradient(135deg, hsl(var(--gold-hot) / 0.05), transparent 60%),
+      linear-gradient(135deg, hsl(var(--gold-hot) / 0.08), transparent 60%),
       /* controlled specular */
-      linear-gradient(180deg, hsl(var(--foreground) / 0.08), transparent 36%);
-    opacity: var(--sidebar-top-highlight-opacity);
-  }
-
-  /* Remove “spine” do Command Deck (padrão do print é lista limpa) */
-  .invictus-sidebar [data-sidebar="sidebar"]::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    border-radius: inherit;
-    /* “mármore sob o vidro”: dourado + grafite, bem sutil */
-    background:
+      linear-gradient(180deg, hsl(var(--foreground) / 0.10), transparent 36%),
+      /* “mármore sob o vidro”: dourado + grafite, bem sutil */
       radial-gradient(120% 90% at 14% 10%, hsl(var(--gold-hot) / 0.10), transparent 56%),
       radial-gradient(120% 90% at 92% 18%, hsl(var(--gold-soft) / 0.08), transparent 60%),
       /* veios grafite (bem suaves) */
@@ -146,30 +159,43 @@
 
   /* Active: acontece no trilho (notch), não no fundo do item */
   .invictus-sidebar-item[data-active="true"] {
-    background: transparent;
+    /* Capsule glass */
+    background: linear-gradient(
+      180deg,
+      hsl(var(--background) / 0.22) 0%,
+      hsl(var(--background) / 0.12) 100%
+    );
+    backdrop-filter: blur(12px) saturate(155%);
     box-shadow: none;
   }
 
-  /* Active discreto (como lista do print): barra fina + leve fundo */
+  /* Aro fino dourado (capsule) */
   .invictus-sidebar-item[data-active="true"]::after {
     content: "";
     position: absolute;
-    left: 0.65rem;
-    top: 22%;
-    bottom: 22%;
-    width: 2px;
-    border-radius: 999px;
-    background: linear-gradient(180deg, hsl(var(--gold-soft) / 0.55), hsl(var(--gold-hot) / 0.55));
-    opacity: 0.7;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--gold-soft) / 0.12),
+      hsl(var(--gold-hot) / 0.62) 35%,
+      hsl(var(--gold-soft) / 0.22) 70%,
+      hsl(var(--gold-hot) / 0.52)
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.9;
     z-index: 0;
-  }
-
-  .invictus-sidebar-item[data-active="true"] {
-    background: hsl(var(--foreground) / 0.03);
   }
 
   /* Link interno (tipografia/alinhamento) */
   .invictus-sidebar-link {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 0.65rem;
@@ -181,6 +207,23 @@
     padding-block: 0.85rem;
     color: hsl(var(--sidebar-foreground));
     text-decoration: none;
+  }
+
+  /* Filete dourado (mais elegante) — fica no link pra não brigar com o aro */
+  .invictus-sidebar-item[data-active="true"] .invictus-sidebar-link::before {
+    content: "";
+    position: absolute;
+    left: 0.65rem;
+    top: 22%;
+    bottom: 22%;
+    width: 2px;
+    border-radius: 999px;
+    background: linear-gradient(
+      180deg,
+      hsl(var(--gold-soft) / 0.55),
+      hsl(var(--gold-hot) / 0.55)
+    );
+    opacity: 0.65;
   }
 
   /* Mantém pseudo-elements no fundo e conteúdo acima */

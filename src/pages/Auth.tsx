@@ -164,7 +164,7 @@ export default function AuthPage() {
       <Card className="invictus-surface invictus-frame w-full max-w-md border-border/70">
         <CardHeader className="space-y-3">
           <div className="flex items-center gap-3">
-            <div className="flex flex-col items-start gap-1">
+            <div className="flex flex-col items-center gap-1">
               <img
                 src={logo}
                 alt="Logo da Invictus"

@@ -3,6 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { ChangePasswordCard } from "@/components/profile/ChangePasswordCard";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function Perfil() {
   const { user, signOut } = useAuth();
@@ -16,18 +24,41 @@ export default function Perfil() {
 
       {user?.id ? <ProfileForm userId={user.id} /> : null}
 
-      {user?.email ? (
-        <ChangePasswordCard email={user.email} />
-      ) : (
-        <Card className="invictus-surface invictus-frame border-border/70">
-          <CardHeader>
-            <CardTitle className="text-base">Alterar senha</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
+      <section className="invictus-surface invictus-frame border-border/70 rounded-xl p-4 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold">Alterar senha</h2>
+            <p className="text-sm text-muted-foreground">Abra o popup para trocar sua senha com segurança.</p>
+          </div>
+
+          {user?.email ? (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button type="button" className="h-11">
+                  Alterar senha
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="border-0 bg-transparent p-0 shadow-none">
+                <DialogHeader className="sr-only">
+                  <DialogTitle>Alterar senha</DialogTitle>
+                  <DialogDescription>Formulário para alteração de senha.</DialogDescription>
+                </DialogHeader>
+                <ChangePasswordCard email={user.email} />
+              </DialogContent>
+            </Dialog>
+          ) : (
+            <Button type="button" className="h-11" disabled>
+              Alterar senha
+            </Button>
+          )}
+        </div>
+
+        {!user?.email ? (
+          <p className="mt-3 text-xs text-muted-foreground">
             Sua conta não suporta alteração de senha por aqui.
-          </CardContent>
-        </Card>
-      )}
+          </p>
+        ) : null}
+      </section>
 
       <Card className="invictus-surface invictus-frame border-border/70">
         <CardHeader>

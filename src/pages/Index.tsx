@@ -62,9 +62,11 @@ const Index = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, canUseProximity]);
 
+  const gpsReady = deviceLocation.status === "granted" && !!deviceLocation.exact;
+
   const nearby = React.useMemo(() => {
     if (mode !== "nearby") return null;
-    if (!deviceLocation.exact) return null;
+    if (!gpsReady) return null;
     const meLoc = deviceLocation.exact;
 
     const list = pins
@@ -80,8 +82,11 @@ const Index = () => {
 
   const pinsForMap = React.useMemo(() => {
     if (mode !== "nearby") return pins;
+    // Enquanto o GPS ainda não retornou uma coordenada, evite “mapa vazio”:
+    // mantém o mapa global visível e só filtra quando o GPS estiver pronto.
+    if (!gpsReady) return pins;
     return (nearby ?? []).map((x) => x.pin);
-  }, [mode, pins, nearby]);
+  }, [mode, pins, nearby, gpsReady]);
 
   const mapCenter = React.useMemo(() => {
     if (mode === "nearby" && deviceLocation.exact) return deviceLocation.exact;
@@ -176,7 +181,11 @@ const Index = () => {
                                 Raio: <span className="font-medium">{radiusKm} km</span>
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {deviceLocation.status === "requesting" ? "Solicitando GPS…" : null}
+                                {deviceLocation.status === "requesting"
+                                  ? "Solicitando GPS…"
+                                  : !gpsReady
+                                    ? "Aguardando GPS…"
+                                    : null}
                               </div>
                             </div>
                             <Slider
@@ -222,7 +231,7 @@ const Index = () => {
                                 ))}
                               </ul>
                             </div>
-                          ) : mode === "nearby" && deviceLocation.status === "granted" ? (
+                          ) : mode === "nearby" && gpsReady ? (
                             <p className="text-muted-foreground">Ninguém dentro do raio selecionado.</p>
                           ) : null}
                         </>

@@ -1,109 +1,100 @@
 
-## Entendimento do pedido
-Você quer a sidebar com:
-- **efeito glass/vidro mais evidente** (sem ficar “pesado”)
-- **textura mármore** bem sutil (grafite + detalhes dourados)
-- **contorno/borda dourada sempre ativa** (não é hover), **clarinha** e **um pouco mais presente** (2ª opção que você escolheu), sem atrapalhar leitura/navegação.
+## O que eu entendi (com base no seu print + sua explicação)
+Você quer um visual mais “vidro/transparente sofisticado” na sidebar (inclusive na área do contorno), e:
+1) **contorno dourado**: mais claro (“champagne”), **bem fino** e **visível** (clean, sem grosseria).
+2) **fundo da sidebar**: mais translúcido (parecendo vidro real, não “card” opaco).
+3) **item ativo**: destaque “premium” no estilo **capsule glass** (sem ficar pesado, mas chamando atenção).
 
-Hoje já existe o “mármore sob o vidro” e um highlight no topo em `src/styles/invictus-sidebar.css`, mas falta um contorno dourado “de verdade”, visível e constante.
-
----
-
-## Causa provável do “contorno não aparece / fica fraco”
-No modo `variant="inset"` a estrutura do Sidebar pode aplicar borda/sombra via classes do componente (no `src/components/ui/sidebar.tsx`), e isso compete com o contorno que queremos (ou deixa ele sutil demais). Além disso, no CSS atual o “champagne edge” é muito leve (`0.03`), então ele quase some, principalmente no light.
+No print atual, o dourado quase não aparece porque o contorno está sendo feito só com `box-shadow inset` muito sutil e ele “some” no conjunto (vidro + fundo escuro + borda interna do próprio componente). A solução mais confiável e “premium” é usar **borda por pseudo-elemento com máscara (gradient border)** — igual ao que já existe na base do projeto em `.invictus-auth-frame::after` no `src/index.css`. Isso dá um contorno fininho e sempre visível, sem precisar engrossar.
 
 ---
 
 ## Mudanças que vou implementar
 
-### 1) Contorno dourado sempre ativo (mais presente, mas clean)
+### 1) Contorno dourado “champagne”, fino e visível (sem grosso)
 **Arquivo:** `src/styles/invictus-sidebar.css`
 
-No seletor:
-- `.invictus-sidebar [data-sidebar="sidebar"] { ... }`
+- Manter um `box-shadow` bem leve para profundidade (sem depender dele para “ser o contorno”).
+- Criar **um contorno real** via `::after` com:
+  - `padding: 1px;` (borda fina e clean)
+  - `background: linear-gradient(...)` (champagne: gold-soft/gold-hot bem controlados)
+  - máscara para “cortar o centro” (`-webkit-mask` / `mask-composite: exclude`), deixando só o aro.
+- Esse contorno fica **sempre ativo**, com opacidade ajustada para ficar **mais claro** (menos amarelo/forte) e ainda **visível**.
 
-Vou ajustar o `box-shadow` para incluir um “anel dourado” constante, com aparência premium (não neon), composto por camadas:
+Também vou criar “knobs” (variáveis) específicos para o contorno:
+- `--sidebar-frame-opacity` (opacidade geral do aro)
+- `--sidebar-frame-soft` / `--sidebar-frame-hot` (força do gradiente)
 
-- **Anel externo** dourado claro (sempre visível)
-- **Um segundo anel** ainda mais suave para dar profundidade (sem glow forte)
-- **Borda interna** bem leve (metal polish)
-
-Exemplo do tipo de camadas que vou colocar (conceito):
-- `0 0 0 1px hsl(var(--gold-hot) / 0.18)` (contorno sempre ativo)
-- `0 0 0 2px hsl(var(--gold-soft) / 0.06)` (presença suave)
-- `0 0 0 1px hsl(var(--border) / 0.55) inset` (estrutura clean)
-- manter o depth shadow existente (sem exagerar)
-
-Também vou criar/ajustar 1 variável para controlar isso por tema (light/dark), algo como:
-- `--sidebar-gold-border-opacity`
-para deixar o contorno **clarinho no light** e **um pouco mais presente no dark**.
-
-Resultado: contorno dourado ativo, discreto, sofisticado, sem depender de hover.
+E ajustar separadamente para `.dark` (ligeiramente mais presente, mas ainda “champagne”).
 
 ---
 
-### 2) “Mais vidro” (glass mais evidente) sem poluir
+### 2) Fundo mais translúcido (vidro real) e mais sofisticado
 **Arquivo:** `src/styles/invictus-sidebar.css`
 
-No mesmo seletor, vou refinar a sensação de vidro:
-- aumentar levemente o `backdrop-filter` (ou adicionar `saturate(...)` bem controlado)
-- ajustar a base do gradiente do fundo para ficar um pouco mais “glass” e menos “card sólido”
-- manter o mármore bem sutil para não competir com o menu
+Hoje o fundo usa `--card` (que, no dark, é mais “sólido”). Para ficar vidro de verdade:
+- Trocar o gradiente base de `--card` para **`--background` com alpha baixo** (mais transparente).
+- Exemplo de direção estética (conceito):
+  - topo: `hsl(var(--background) / 0.18~0.24)`
+  - base: `hsl(var(--background) / 0.10~0.14)`
+- Manter `backdrop-filter` com blur/saturate, mas calibrar para não “leitoso”.
+- Deixar o mármore mais “de luxo”: reduzir um pouco contraste do grafite e manter brilho bem controlado (sem competir com o texto).
 
-A ideia é: o usuário sente que é vidro premium, mas a navegação continua limpa.
+Resultado esperado: dá para “sentir” o fundo por trás, sem perder legibilidade.
 
 ---
 
-### 3) Evitar competição com bordas do modo “inset”
+### 3) Item ativo com “capsule glass” (premium) + contorno fino dourado
+**Arquivo:** `src/styles/invictus-sidebar.css`
+
+Hoje o ativo tem:
+- leve fundo e uma barrinha dourada à esquerda.
+
+Vou evoluir para “capsule glass”:
+- No `.invictus-sidebar-item[data-active="true"]`:
+  - aplicar um **fundo glass** (mais translúcido que o hover)
+  - adicionar **um aro fininho** (também via pseudo-elemento com máscara, ou via inset suave)
+- Manter a barrinha esquerda, mas mais elegante (menos “marcador”, mais “filete”).
+- Ajustar ícone + texto:
+  - texto um pouco mais claro
+  - ícone com contraste maior
+  - sem neon, sem brilho exagerado
+
+Importante: vou reorganizar os pseudo-elementos para não conflitar:
+- Usar o `::after` do item para o **aro** (border premium)
+- Mover a barrinha para um `::before` no `.invictus-sidebar-link` (porque o link já existe e é estável), evitando “briga” de pseudo-elementos.
+
+---
+
+### 4) Garantir que o contorno não seja “comido” pelo layout
 **Arquivo:** `src/components/ui/sidebar.tsx`
 
-No branch `collapsible === "none"` você já está adicionando, quando `variant === "floating" || "inset"`:
-- `"rounded-lg border border-sidebar-border shadow"`
-
-Como agora o contorno dourado vai morar no CSS do `[data-sidebar="sidebar"]`, essa borda padrão pode:
-- “achatar” o dourado
-- ou deixar o contorno parecendo duplo
-
-Vou ajustar esse trecho para:
-- **manter o `rounded-lg` e o `shadow`**
-- **remover/neutralizar o `border border-sidebar-border`** (ou trocar por `border-transparent` se a estrutura exigir borda por layout)
-
-Assim o contorno dourado fica limpo e consistente.
+Você já tem `p-2` no wrapper quando `collapsible="none"` e `variant="inset"`/`"floating"` (isso ajuda o contorno a “respirar”).
+Vou apenas **confirmar/ajustar** se:
+- o `rounded-lg` está sendo aplicado no elemento certo (o `[data-sidebar="sidebar"]` interno)
+- não há nenhuma borda do próprio componente voltando a competir (principalmente em outros branches/variants)
 
 ---
 
-### 4) Ajuste fino por tema (dark + light)
-**Arquivo:** `src/styles/invictus-sidebar.css`
-
-- No light: contorno dourado **mais clarinho e discreto**, sem “amarelar” tudo.
-- No dark: contorno dourado **um pouco mais presente** (como você pediu), com o mármore ainda sutil.
-
-Vou manter as “tuning knobs” já existentes e adicionar a do contorno:
-- `--sidebar-marble-opacity` (já existe)
-- `--sidebar-top-highlight-opacity` (já existe)
-- `--sidebar-gold-border-opacity` (novo)
-
----
-
-## Checklist de validação (rápido)
-1) Em `/perfil` (onde você está agora): contorno dourado aparece constante e leve.
-2) Navegar `/buscar`, `/mapa`, `/admin`: nada atrapalha leitura/click.
-3) Testar em tela menor (mobile): glass continua bonito, sem ruído.
-4) Alternar light/dark: contorno permanece “clarinho” no light e “um pouco mais presente” no dark.
-5) Verificar que não existe “borda dupla” (padrão inset + contorno dourado).
+## Como vou validar (com print no preview)
+1) Abrir `/buscar` e conferir:
+   - aro dourado aparece claramente, mas fino (1px) e claro (champagne)
+   - vidro mais translúcido (dá para perceber o background do app por trás)
+2) Trocar rota (/perfil, /mapa, /admin) e verificar consistência.
+3) Verificar o item ativo:
+   - “capsule glass” visível e sofisticado
+   - sem perder legibilidade
+4) Checar responsivo: o efeito não pode ficar “sujo” no mobile.
 
 ---
 
 ## Arquivos envolvidos
-- `src/styles/invictus-sidebar.css` (principal: glass/mármore + contorno dourado ativo)
-- `src/components/ui/sidebar.tsx` (ajuste para não competir com borda padrão do inset)
+- `src/styles/invictus-sidebar.css` (principal: vidro + contorno + ativo capsule)
+- `src/components/ui/sidebar.tsx` (ajuste fino estrutural, se necessário, para garantir que o contorno sempre renderize)
 
 ---
 
-## Observação (para manter 100% clean)
-Vou evitar:
-- hover glow no contorno
-- borda grossa demais
-- qualquer “neon” dourado
-
-O objetivo é “executivo”: vidro + mármore sutil + filete dourado constante, controlado.
+## Observações de estilo (para ficar exatamente como você pediu)
+- Contorno: **mais claro**, **mais fino**, **sempre ativo**, sem hover-glow.
+- Fundo: mais “transparentão”/vidro real, sem parecer “card sólido”.
+- Ativo: “capsule glass” com contorno dourado fininho (chama atenção com elegância).

@@ -163,24 +163,41 @@ All colors MUST be HSL.
 
   /* Auth-only: extra premium glass + bold gold frame (doesn't affect rest of app) */
   .invictus-auth-surface {
-    /* More "crystal" glass: lighter alpha + specular highlights */
+    position: relative;
+    /* Make it read as "glass" over the page (more transparent than card) */
     background:
       linear-gradient(
         180deg,
-        hsl(var(--card) / 0.18) 0%,
-        hsl(var(--card) / 0.10) 100%
+        hsl(var(--background) / 0.22) 0%,
+        hsl(var(--background) / 0.14) 100%
       );
-    backdrop-filter: blur(22px);
+    backdrop-filter: blur(24px);
     box-shadow:
-      0 0 0 1px hsl(var(--foreground) / 0.08) inset,
-      0 1px 0 0 hsl(var(--foreground) / 0.06) inset,
-      0 -1px 0 0 hsl(var(--foreground) / 0.04) inset,
-      0 18px 60px -34px hsl(var(--foreground) / 0.35);
+      /* specular / polish */
+      0 1px 0 0 hsl(var(--foreground) / 0.10) inset,
+      0 0 0 1px hsl(var(--foreground) / 0.10) inset,
+      /* depth */
+      0 26px 90px -56px hsl(var(--foreground) / 0.50);
+  }
+
+  .invictus-auth-surface::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    /* internal highlights to sell the glass */
+    background:
+      radial-gradient(120% 80% at 10% 0%, hsl(var(--foreground) / 0.16), transparent 55%),
+      radial-gradient(110% 70% at 95% 10%, hsl(var(--primary) / 0.10), transparent 55%),
+      linear-gradient(180deg, hsl(var(--foreground) / 0.08), transparent 35%);
+    mix-blend-mode: screen;
+    opacity: 0.9;
   }
 
   @media (min-width: 768px) {
     .invictus-auth-surface {
-      backdrop-filter: blur(24px) saturate(140%);
+      backdrop-filter: blur(26px) saturate(160%);
     }
   }
 
@@ -188,16 +205,16 @@ All colors MUST be HSL.
     /* Refined gold line + controlled glow (premium, not neon) */
     box-shadow:
       /* outer gold line (always visible) */
-      0 0 0 1px hsl(var(--gold-hot) / 0.78),
-      /* inner warm edge (less yellow, more "metal") */
-      0 0 0 1px hsl(var(--gold-soft) / 0.22) inset,
+      0 0 0 1px hsl(var(--gold-hot) / 0.90),
+      /* inner warm edge (metal feel) */
+      0 0 0 1px hsl(var(--gold-soft) / 0.28) inset,
       /* specular polish */
       0 1px 0 0 hsl(var(--foreground) / 0.10) inset,
       0 -1px 0 0 hsl(var(--foreground) / 0.06) inset,
       /* depth */
       0 22px 90px -48px hsl(var(--foreground) / 0.32),
       /* gold glow (subtle but present) */
-      0 0 90px -44px hsl(var(--gold-hot) / 0.42);
+      0 0 110px -46px hsl(var(--gold-hot) / 0.52);
     transition:
       box-shadow 240ms ease,
       transform 240ms ease;

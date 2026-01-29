@@ -1,110 +1,93 @@
 
-## Objetivo (do jeito que você pediu)
-1) **Remover completamente a opção de abrir/fechar a lateral** (sem botão, sem atalho de teclado, sem “mini-collapsed”).  
-2) **Diminuir a largura** da sidebar para ~**240px** (desktop), com segurança para telas menores.  
-3) **Deixar o visual mais clean**, removendo o “dourado no glaze” e ficando com **fundo grafite/glass neutro** + **borda champagne sutil**.  
-4) **No mobile**, a sidebar também fica **fixa** (não drawer).
+## O que você pediu (interpretação)
+Você gostou de ter “algo por trás” na sidebar, mas quer:
+- **um dourado com gradiente misturado com preto/grafite**
+- **bem sutil**
+- com sensação de **vidro / mármore** (efeito “pedra polida” por baixo do glass)
+- aparecendo **no fundo + um leve realce no topo**
+- funcionando **no dark e no light**
 
----
+## Onde mexer (baseado no código atual)
+O visual do container da sidebar está centralizado em:
+- `src/styles/invictus-sidebar.css`
+  - `.invictus-sidebar [data-sidebar="sidebar"]` (background principal)
+  - `::before` (camada de highlights/edge)
+  - `::after` hoje está `content: none;` (pode virar a nova camada “mármore”)
+Os tokens de cor existentes já ajudam:
+- `src/index.css`: `--gold-soft`, `--gold-hot`, `--card`, `--background`, `--foreground`, `--glass`
 
-## O que existe hoje (diagnóstico rápido)
-- `AppLayout.tsx` tem um `SidebarTrigger` no header (botão de abrir/fechar).
-- `SidebarProvider` (em `src/components/ui/sidebar.tsx`) adiciona:
-  - **atalho Ctrl/Cmd+B** para toggle
-  - **cookie** para lembrar estado
-- `AppSidebar.tsx` está usando `collapsible="icon"` e muda de `w-64` para `w-14` via `useSidebar()` (expanded/collapsed).
-- `invictus-sidebar.css` ainda tem **radial gradients dourados** no background do container (`gold-soft`, `gold-hot`) — isso é o “glaze dourado” que você quer remover.
+## Estratégia visual (como vamos “fazer mármore” sem imagem)
+Vamos criar um “mármore” usando **camadas de gradientes** (barato, sem assets):
+1) **Base glass neutra** continua (para não voltar o glaze feio)
+2) **Camada “mármore” (bem sutil)** em um pseudo-elemento (provavelmente `::after`)
+   - 2–3 `radial-gradient(...)` dourados muito leves (cantos/topo)
+   - 1–2 `radial-gradient(...)` grafite/escuro para simular “veios”
+   - 1 `linear-gradient(...)` suave para orientar o fluxo do mármore
+   - `mix-blend-mode: soft-light` (ou `overlay`) + `opacity` baixa
+3) **Realce no topo** integrado no `::before`
+   - uma faixa leve de highlight (tipo “luz no vidro”)
+4) **Champagne edge** permanece, mas calibrada para não “banhar” de ouro.
 
----
+## Mudanças planejadas (passo a passo)
 
-## Mudanças propostas (alto nível)
-### A) Sidebar “sempre aberta” (sem toggle em nenhum lugar)
-- Remover o botão do header (`SidebarTrigger`) do `AppLayout.tsx`.
-- Ajustar o componente de sidebar (`src/components/ui/sidebar.tsx`) para suportar um modo “fixo”:
-  - **desabilitar toggle** (sem atalho Ctrl/Cmd+B, sem rail, sem cookie)
-  - manter o estado sempre “expanded”
-- Ajustar `AppSidebar.tsx` para **não depender mais de `collapsed`** e usar `collapsible="none"`.
+### 1) Adicionar “marble overlay” na sidebar (invictus-sidebar.css)
+Arquivo: `src/styles/invictus-sidebar.css`
 
-### B) Largura menor e responsiva (sem ficar gigante em telas pequenas)
-- No `AppSidebar.tsx`, trocar `w-64` por algo equivalente a **~240px**:
-  - `w-[15rem]` (15rem = 240px)
-  - e colocar um limitador para telas estreitas: `max-w-[80vw]` (ou similar) para não esmagar o conteúdo.
-- Como não haverá modo colapsado, manter **texto sempre visível** (sem esconder labels).
+- Manter o background atual do container como base:
+  - `background: linear-gradient(180deg, hsl(var(--card) / var(--glass)) 0%, hsl(var(--card) / 0.16) 100%);`
 
-### C) Visual mais clean: sem dourado no “glaze”, só champagne edge sutil
-- No `src/styles/invictus-sidebar.css`:
-  - Remover/zerar os `radial-gradient(...)` que puxam dourado no container.
-  - Manter um glass neutro com blur (graphite) e adicionar apenas:
-    - **borda interna champagne leve** (bem sutil, quase “metal escovado”)
-    - sombra mais discreta (sem “luxo exagerado”)
-- Ajustar o ativo para continuar claro, mas menos “ouro brilhando”:
-  - manter a barrinha do ativo, porém com **menos saturação/opacidade** (ou usando `--gold-soft` e opacidade menor).
-  - remover o divisor `invictus-gold-line` no final (ou trocar por divisor neutro), porque ele reforça “dourado interno”.
+- Trocar `.invictus-sidebar [data-sidebar="sidebar"]::after` de `content: none;` para uma camada ativa:
+  - `content: ""`
+  - `position: absolute; inset: 0; border-radius: inherit; pointer-events: none;`
+  - `opacity`: alvo “Sutil” (ex.: 0.35–0.55, ajustável)
+  - `mix-blend-mode: soft-light` (primeira tentativa) para ficar “dentro do vidro”
+  - `filter: blur(0.2px)` (opcional e mínimo) para “polir” sem pesar
+  - `background` com stack tipo:
+    - `radial-gradient(120% 90% at 15% 10%, hsl(var(--gold-hot) / 0.10), transparent 55%)`
+    - `radial-gradient(120% 90% at 90% 20%, hsl(var(--gold-soft) / 0.08), transparent 60%)`
+    - `radial-gradient(120% 110% at 40% 80%, hsl(var(--foreground) / 0.08), transparent 65%)` (veio escuro)
+    - `linear-gradient(135deg, transparent 0%, hsl(var(--gold-hot) / 0.06) 35%, transparent 70%)`
+  - Isso cria o “mármore” sem virar “glaze dourado”.
 
-### D) Mobile fixo (sem drawer)
-Hoje, no `Sidebar` (em `sidebar.tsx`), quando `isMobile` ele automaticamente vira `Sheet` (drawer). Para ficar fixo:
-- Adicionar uma opção no `SidebarProvider` (ex.: `mobileMode: "sheet" | "fixed"`) e, quando `fixed`, o `Sidebar` **não usa Sheet no mobile** — renderiza o container normal.
-- Ajustar `AppLayout.tsx` para passar `mobileMode="fixed"`.
+### 2) Realce no topo (invictus-sidebar.css)
+Ainda em `src/styles/invictus-sidebar.css`, reforçar o `::before` para “Fundo + topo”:
+- manter a borda champagne sutil
+- adicionar um highlight concentrado no topo (bem discreto), ex.:
+  - `radial-gradient(120% 60% at 50% 0%, hsl(var(--gold-soft) / 0.10), transparent 55%)`
+- manter `opacity` controlada para não competir com o conteúdo do menu
 
----
+### 3) Ajuste específico para Light theme (fallback)
+Como você pediu “Dark + light”, vamos garantir que no `:root` (light) o efeito não fique estranho:
+- No light, `--card`/`--background` são claros, então dourado pode “aparecer demais”.
+- Vamos fazer o overlay no light usar opacidades menores (no próprio CSS via seletor do tema), ex.:
+  - `:root .invictus-sidebar [data-sidebar="sidebar"]::after { opacity: ... menor }`
+  - `.dark .invictus-sidebar ... { opacity: ... um pouco maior }`
+Sem criar novos tokens obrigatórios (mas se precisar, podemos adicionar 1–2 custom properties para facilitar “tuning”).
+
+### 4) Checagens de legibilidade (ativo/hover)
+Depois do novo fundo:
+- Validar contraste de:
+  - `.invictus-sidebar-item[data-active="true"]` (fundo ativo)
+  - cor dos textos (`.invictus-sidebar-label`) e ícones
+- Se o fundo “mármore” fizer o item ativo perder leitura, ajustamos:
+  - aumentar levemente o `background` do ativo (ex.: 0.03 → 0.04/0.05)
+  - ou reduzir a opacidade do overlay só atrás da lista (opção avançada)
 
 ## Arquivos que serão alterados
-1) `src/components/AppLayout.tsx`
-   - Remover `SidebarTrigger` do header.
-   - Configurar `SidebarProvider` para modo fixo (ex.: `toggleable={false}`, `mobileMode="fixed"`).
+- `src/styles/invictus-sidebar.css` (principal; é onde o efeito vai nascer)
+(Opcional, se precisarmos de “tuning tokens”)
+- `src/index.css` (somente se a gente decidir criar variáveis do tipo `--sidebar-marble-opacity` para controlar fácil)
 
-2) `src/components/ui/sidebar.tsx`
-   - Adicionar props de configuração no `SidebarProvider`, por exemplo:
-     - `toggleable?: boolean` (default `true`)
-     - `mobileMode?: "sheet" | "fixed"` (default `"sheet"`)
-   - Se `toggleable === false`:
-     - não registrar o listener do atalho
-     - `toggleSidebar()` vira no-op
-     - impedir alteração de cookie
-     - garantir estado “expanded”
-   - Se `mobileMode === "fixed"`:
-     - no componente `Sidebar`, quando `isMobile`, renderizar a versão fixa em vez do `Sheet`.
+## Critérios de aceite (bem objetivos)
+1) Sidebar mantém o “fundo com vida”, mas:
+   - **não parece glaze dourado**
+   - é **sutil** e “dentro do vidro”
+2) Dá sensação de **mármore/vidro** (veios suaves + dourado discreto)
+3) Existe um **leve highlight no topo**
+4) Continua legível (texto/ícones/ativo) no `/buscar` e em outras rotas
+5) No tema claro, o efeito existe mas é **mais discreto** (sem estourar contraste)
 
-3) `src/components/AppSidebar.tsx`
-   - Remover `useSidebar()` e toda lógica de `collapsed`.
-   - Trocar para `collapsible="none"`.
-   - Largura fixa menor: `className="invictus-sidebar w-[15rem] max-w-[80vw]"` (ajustável).
-   - Sempre renderizar labels e section labels.
-   - Remover o `invictus-gold-line` do final (ou tornar neutro).
-
-4) `src/styles/invictus-sidebar.css`
-   - “Clean pass”:
-     - tirar gradientes dourados do background do container
-     - deixar apenas glass neutro + borda champagne mínima
-     - reduzir presença do dourado no ativo (mais sutil)
-     - revisar padding do link para ficar bom com 240px (sem parecer apertado).
-
-(Opcional) `src/index.css`
-- Se a classe `.invictus-gold-line` ficar sem uso após remover o divisor, podemos manter (não faz mal) ou limpar depois.
-
----
-
-## Critérios de aceite (pra você validar rápido)
-1) Não existe mais:
-   - botão de toggle no topo
-   - estado colapsado
-   - Ctrl/Cmd+B afetando a sidebar
-2) Sidebar fica fixa e com ~240px no desktop.
-3) Fundo interno não “doura”; fica grafite/glass **limpo** com borda champagne discreta.
-4) Mobile: sidebar aparece fixa (sem drawer).
-5) Navegação/ativo continuam claros no `/class` e nas demais rotas.
-
----
-
-## Riscos/observações (pra não te surpreender)
-- **Mobile fixo** pode apertar bastante a área de conteúdo em telas muito pequenas. Por isso vou propor o `max-w-[80vw]` e padding mais eficiente, mas se ficar ruim visualmente, a alternativa mais “padrão premium” é: fixo em tablet e drawer em celular pequeno. (Você pediu fixo em tudo; vou seguir isso.)
-
----
-
-## Sequência de implementação
-1) Implementar “modo fixo” no `SidebarProvider/Sidebar` (`sidebar.tsx`).
-2) Remover o trigger e configurar provider no `AppLayout.tsx`.
-3) Simplificar `AppSidebar.tsx` (sem collapsed, largura ~240px).
-4) Ajustar `invictus-sidebar.css` (clean glaze + borda champagne + ativo mais discreto).
-5) Revisar visual no `/class` e mais 2 rotas (ex.: `/`, `/admin`) e também no mobile.
-
+## Testes que vou fazer/te pedir para validar
+- Desktop: navegar `/buscar`, `/mapa`, `/perfil` e conferir legibilidade
+- Mobile (modo fixo): conferir se o fundo não “polui” numa tela menor (opacidade pode precisar -10% no mobile)
+- Tema claro: forçar light e confirmar que não fica “amarelado demais”

@@ -148,7 +148,13 @@ const Sidebar = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"> & {
     return (
       <div
         ref={ref}
-        className={cn("flex h-full w-[--sidebar-width] flex-col bg-transparent text-sidebar-foreground", className)}
+        className={cn(
+          "flex h-full w-[--sidebar-width] flex-col bg-transparent text-sidebar-foreground",
+          // Keep the same outer padding behavior as the desktop inset/floating variants
+          // so custom borders/shadows have room to render.
+          variant === "floating" || variant === "inset" ? "p-2" : "",
+          className,
+        )}
         data-side={side}
         data-variant={variant}
         {...props}

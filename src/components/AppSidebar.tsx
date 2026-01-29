@@ -2,7 +2,7 @@ import { useLocation } from "react-router-dom";
 import { Home as HomeIcon, MapPin, Search, MessageCircle, User, Shield, Clapperboard } from "lucide-react";
 
 import { NavLink } from "@/components/NavLink";
-import { GoldHoverText } from "@/components/GoldHoverText";
+import { cn } from "@/lib/utils";
 import {
   Sidebar,
   SidebarContent,
@@ -35,23 +35,31 @@ export function AppSidebar() {
   const isActive = (path: string) => currentPath === path;
 
   return (
-    <Sidebar className={collapsed ? "w-14" : "w-64"} collapsible="icon" variant="inset">
+    <Sidebar
+      className={cn("invictus-sidebar", collapsed ? "w-14" : "w-64")}
+      collapsible="icon"
+      variant="inset"
+    >
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.url)}
+                    tooltip={item.title}
+                    className="invictus-sidebar-item"
+                  >
                     <NavLink
                       to={item.url}
                       end={item.url === "/"}
-                      className="flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
-                      activeClassName="bg-sidebar-accent/80 text-primary ring-1 ring-primary/25"
+                      className="invictus-sidebar-link"
                       aria-current={isActive(item.url) ? "page" : undefined}
                     >
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      <item.icon className="invictus-sidebar-icon" aria-hidden="true" />
+                      {!collapsed && <span className="invictus-sidebar-label">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

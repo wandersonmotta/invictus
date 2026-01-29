@@ -1,0 +1,162 @@
+@tailwind components;
+
+@layer components {
+  /*
+    Invictus Sidebar Skin
+    - Sem bloco de marca
+    - Denso/Marcante
+    - Ativo: barra dourada + capsule glass + highlight metálico
+  */
+
+  /* Container (alvo real é o [data-sidebar="sidebar"] interno) */
+  .invictus-sidebar [data-sidebar="sidebar"] {
+    position: relative;
+    background:
+      radial-gradient(110% 70% at 18% 0%, hsl(var(--gold-soft) / 0.18), transparent 55%),
+      radial-gradient(95% 70% at 110% 20%, hsl(var(--gold-hot) / 0.10), transparent 55%),
+      linear-gradient(180deg, hsl(var(--card) / var(--glass)) 0%, hsl(var(--card) / 0.20) 100%);
+    backdrop-filter: blur(18px);
+    box-shadow:
+      /* internal frame */
+      0 0 0 1px hsl(var(--border) / 0.55) inset,
+      0 0 0 1px hsl(var(--gold-hot) / 0.10) inset,
+      /* depth */
+      0 24px 80px -60px hsl(var(--foreground) / 0.55);
+  }
+
+  .invictus-sidebar [data-sidebar="sidebar"]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background:
+      linear-gradient(180deg, hsl(var(--foreground) / 0.10), transparent 32%),
+      radial-gradient(120% 80% at 0% 0%, hsl(var(--foreground) / 0.10), transparent 60%);
+    opacity: 0.9;
+  }
+
+  /* Menu item (aplicado em SidebarMenuButton) */
+  .invictus-sidebar-item {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.75rem;
+    background: transparent;
+    transition:
+      transform 160ms ease,
+      box-shadow 180ms ease,
+      background-color 180ms ease;
+  }
+
+  /* Hover sweep (leve, executivo) */
+  .invictus-sidebar-item::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(90deg, transparent, hsl(var(--gold-soft) / 0.14), transparent),
+      radial-gradient(120% 90% at 12% 0%, hsl(var(--foreground) / 0.10), transparent 60%);
+    transform: translateX(-35%);
+    opacity: 0;
+    transition:
+      opacity 180ms ease,
+      transform 260ms ease;
+  }
+
+  .invictus-sidebar-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 40px -32px hsl(var(--gold-hot) / 0.55);
+  }
+
+  .invictus-sidebar-item:hover::after {
+    opacity: 1;
+    transform: translateX(20%);
+  }
+
+  /* Active capsule + bar */
+  .invictus-sidebar-item[data-active="true"] {
+    background:
+      linear-gradient(180deg, hsl(var(--background) / 0.22), hsl(var(--background) / 0.14)),
+      radial-gradient(120% 90% at 18% 0%, hsl(var(--gold-soft) / 0.10), transparent 60%);
+    box-shadow:
+      /* gold outline */
+      0 0 0 1px hsl(var(--gold-hot) / 0.60) inset,
+      /* specular */
+      0 1px 0 0 hsl(var(--foreground) / 0.12) inset,
+      /* depth */
+      0 18px 60px -44px hsl(var(--foreground) / 0.60),
+      /* controlled glow */
+      0 0 90px -56px hsl(var(--gold-hot) / 0.75);
+  }
+
+  .invictus-sidebar-item[data-active="true"]::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 10%;
+    bottom: 10%;
+    width: 3px;
+    border-radius: 999px;
+    background: linear-gradient(
+      180deg,
+      hsl(var(--gold-soft) / 0.85),
+      hsl(var(--gold-hot) / 0.95)
+    );
+    box-shadow:
+      0 0 0 1px hsl(var(--gold-hot) / 0.35),
+      0 0 24px -10px hsl(var(--gold-hot) / 0.85);
+  }
+
+  .invictus-sidebar-item[data-active="true"]::after {
+    opacity: 1;
+    transform: translateX(0%);
+    background:
+      linear-gradient(135deg, hsl(var(--gold-soft) / 0.08), transparent 35%),
+      linear-gradient(180deg, hsl(var(--foreground) / 0.12), transparent 40%);
+  }
+
+  /* Link interno (tipografia/alinhamento) */
+  .invictus-sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    border-radius: inherit;
+    padding-inline: 0.5rem;
+    padding-block: 0.5rem;
+    color: hsl(var(--sidebar-foreground));
+    text-decoration: none;
+  }
+
+  .invictus-sidebar-icon {
+    width: 1rem;
+    height: 1rem;
+    color: hsl(var(--sidebar-foreground) / 0.92);
+    filter: drop-shadow(0 0 10px hsl(var(--gold-hot) / 0.10));
+  }
+
+  .invictus-sidebar-label {
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    color: hsl(var(--sidebar-foreground) / 0.92);
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    line-height: 1;
+  }
+
+  /* Active text polish */
+  .invictus-sidebar-item[data-active="true"] .invictus-sidebar-label {
+    color: hsl(var(--gold-soft) / 0.92);
+    text-shadow: 0 0 18px hsl(var(--gold-hot) / 0.20);
+  }
+  .invictus-sidebar-item[data-active="true"] .invictus-sidebar-icon {
+    color: hsl(var(--gold-soft) / 0.92);
+    filter: drop-shadow(0 0 14px hsl(var(--gold-hot) / 0.25));
+  }
+
+  /* Mini (collapsed): manter mesma assinatura sem “sumir” */
+  .group[data-collapsible="icon"] .invictus-sidebar-item {
+    border-radius: 0.9rem;
+  }
+}

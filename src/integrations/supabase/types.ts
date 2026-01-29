@@ -315,6 +315,7 @@ export type Database = {
           state: string | null
           updated_at: string
           user_id: string
+          username: string | null
         }
         Insert: {
           access_status?: Database["public"]["Enums"]["access_status"]
@@ -335,6 +336,7 @@ export type Database = {
           state?: string | null
           updated_at?: string
           user_id: string
+          username?: string | null
         }
         Update: {
           access_status?: Database["public"]["Enums"]["access_status"]
@@ -355,6 +357,7 @@ export type Database = {
           state?: string | null
           updated_at?: string
           user_id?: string
+          username?: string | null
         }
         Relationships: []
       }
@@ -469,6 +472,19 @@ export type Database = {
         }
         Returns: string
       }
+      find_approved_member_by_username: {
+        Args: { p_username: string }
+        Returns: {
+          avatar_url: string
+          bio: string
+          city: string
+          display_name: string
+          region: string
+          state: string
+          user_id: string
+          username: string
+        }[]
+      }
       get_approved_member_pins: {
         Args: { p_limit?: number }
         Returns: {
@@ -506,6 +522,7 @@ export type Database = {
           avatar_url: string
           display_name: string
           user_id: string
+          username: string
         }[]
       }
       send_message: {

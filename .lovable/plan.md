@@ -1,177 +1,117 @@
 
-Objetivo (o que você pediu)
-- No Perfil: em vez de o usuário digitar “Cidade/UF”, ele informa somente o CEP e o sistema preenche automaticamente cidade + estado.
-- No Mapa (/mapa): assim que o CEP for salvo/validado, o usuário passa a aparecer como um pin no mapa (um pin por membro), com privacidade “centro + aleatório”, e o mapa permite zoom/pan no Brasil.
-- Regras confirmadas por você:
-  - Um pin por membro
-  - Somente aprovados aparecem no mapa
-  - CEP é obrigatório
-  - Privacidade: centro da cidade + pequena variação aleatória
+Objetivo
+- Deixar o mapa com a mesma “pegada Invictus” (dark executivo + glass + sofisticado), com:
+  - Base do mapa em estilo dark executivo (sem “oceano azul”)
+  - Moldura glass já existente + refinamentos (vinheta/overlay premium)
+  - Pins dourados com glow (premium, não neon)
+  - Tooltip glass (estilo card do app)
+  - Controles do Leaflet (zoom) reestilizados com glass + linha dourada
+  - Botões “Centralizar no Brasil” e “Centralizar em mim”
+  - Entrada suave dos pins (animação ao carregar)
 
-Diagnóstico do que existe hoje
-- Perfil: `ProfileForm` salva `region` (texto livre “Cidade/UF”) e outros campos em `profiles`.
-- Mapa: `/mapa` aponta para `src/pages/Index.tsx`, que hoje é só placeholder (um quadrado).
-- Banco: `profiles` tem `region`, mas não tem CEP/cidade/estado nem coordenadas.
-- Segurança atual: usuários só conseguem ver o próprio perfil; admins veem todos. Para o mapa funcionar sem abrir dados sensíveis, precisaremos de uma forma “segura” de expor somente pins (sem liberar SELECT geral na tabela profiles).
+O que existe hoje (relevante)
+- `MemberMap.tsx` usa Leaflet “puro” (imperativo) e renderiza markers padrão.
+- O container do mapa já fica dentro de `invictus-surface invictus-frame`.
+- `src/index.css` já contém o design system (graphite + gold) e import do Leaflet CSS.
 
-Abordagem proposta (simples, robusta e segura)
-1) Guardar no backend, no perfil, a localização “base” (centro da cidade) a partir do CEP:
-   - `postal_code` (CEP)
-   - `city` (cidade)
-   - `state` (UF)
-   - `location_lat` / `location_lng` (coordenada base do centro aproximado)
-2) Para privacidade, NÃO vamos entregar `location_lat/lng` direto ao app para outros membros.
-   - O mapa vai consumir um RPC (“função do backend”) que:
-     - só funciona para usuário autenticado
-     - retorna apenas membros aprovados
-     - aplica “jitter” (pequena aleatorização) determinística por `user_id` para que o pin fique estável e não revele o centro exato
-     - retorna somente os campos necessários para desenhar pins
-3) Converter CEP -> cidade/UF usando um serviço público (ViaCEP) e cidade/UF -> lat/lng usando geocoding (OpenStreetMap Nominatim), mas com cache para não depender de requisições repetidas.
+Estratégia de design (sem trocar stack, sem mexer no backend)
+1) “Dark executivo” na base do mapa
+- Opção A (mais simples e confiável): manter OSM padrão e aplicar um “map filter” CSS no container do mapa:
+  - reduzir saturação, aumentar contraste, reduzir brilho e aplicar leve hue-rotate neutro (para matar azuis)
+  - adicionar uma vinheta/overlay com gradientes do próprio design system para dar profundidade e “premium feel”
+- Opção B (melhor visual, depende de tiles externos): trocar para um tile dark (ex.: CARTO dark, Stadia, etc.). Como pode exigir chave/limites, vou implementar a Opção A como padrão e deixar a Opção B como toggle fácil no código.
 
-Parte A — Mudanças no backend (estrutura de dados)
-A1) Migração: adicionar colunas em `profiles`
-- Novas colunas sugeridas:
-  - `postal_code text` (CEP, obrigatório na UI; no banco pode ser nullable inicialmente para não quebrar perfis existentes)
-  - `city text`
-  - `state text`
-  - `location_lat double precision`
-  - `location_lng double precision`
-  - `location_updated_at timestamptz`
-- Observação: manter `region` por compatibilidade (podemos preenchê-la automaticamente como “Cidade/UF” por enquanto, para não quebrar nada que use `region` hoje).
+2) Pins dourados com glow (premium)
+- Trocar `L.marker()` padrão por `L.marker(..., { icon: L.divIcon(...) })` usando HTML/CSS:
+  - Pin/anel dourado com borda metálica (gold-soft + gold-hot)
+  - Glow suave com `drop-shadow` e “specular highlight”
+  - Tamanho confortável mobile (área de toque maior)
+- Benefícios:
+  - 100% consistente com os tokens do app
+  - Sem precisar de imagens externas
+  - Fácil de animar (entrada suave)
 
-A2) Tabela de cache de geocoding (para robustez e custo)
-- Criar uma tabela `geo_city_cache` (nome pode variar) com:
-  - `id uuid`
-  - `key text unique` (ex.: “cidade|UF|BR” normalizado)
-  - `city text`, `state text`
-  - `lat double precision`, `lng double precision`
-  - `source text` (ex.: “nominatim”)
-  - `updated_at timestamptz`
-- Isso reduz chamadas externas e melhora performance.
+3) Tooltip glass (premium)
+- Em vez do tooltip padrão com fundo branco, usar classes customizadas:
+  - `className: "invictus-map-tooltip"` no `bindTooltip`
+- Estilizar no `src/index.css`:
+  - fundo glass (hsl(var(--card)/alpha))
+  - blur, borda sutil, linha dourada fina, tipografia e sombra controlada
+  - garantir `z-index` alto e opacidade correta
 
-A3) Função segura para o mapa (RPC)
-- Criar uma função do banco (security definer) por exemplo `get_approved_member_pins()`, retornando algo como:
-  - `user_id uuid`
-  - `city text`
-  - `state text`
-  - `lat double precision` (já com jitter aplicado)
-  - `lng double precision` (já com jitter aplicado)
-- Regras dentro da função:
-  - Se não estiver autenticado: negar (ou retornar vazio)
-  - Retornar somente `profiles.access_status = 'approved'`
-  - Retornar somente perfis com `location_lat/lng` preenchidos
-  - Aplicar jitter determinístico:
-    - amplitude pequena (ex.: 0.005–0.02 graus, ajustável; ~0,5–2 km dependendo da latitude)
-    - determinístico por user_id (ex.: usando hash do uuid), para o pin não “pular” a cada reload
-  - Limite de segurança: `limit` (ex.: 5000) para evitar resposta gigante.
-- Por que RPC? Porque hoje o RLS impede “ver outros perfis” (correto). O mapa precisa de um endpoint seguro que entregue somente o que é permitido.
+4) Controles premium (zoom) + attribution discreto
+- Estilizar `.leaflet-control-zoom` e botões:
+  - fundo glass + borda + glow dourado sutil
+  - hover com aura (somente desktop via media query)
+- Attribution:
+  - reduzir impacto visual (opacidade baixa), manter legível e acessível
 
-Parte B — Backend functions (CEP + geocoding)
-B1) Criar uma função backend “resolve-location-from-cep”
-- Entrada: CEP (string)
-- Validações:
-  - manter só dígitos
-  - exigir exatamente 8 dígitos
-- Fluxo:
-  1) Consultar ViaCEP e obter `localidade` (cidade) e `uf` (estado)
-  2) Montar chave de cache (cidade+UF) e consultar `geo_city_cache`
-  3) Se não existir cache, chamar Nominatim para geocodificar (cidade, UF, Brasil) e salvar no cache
-  4) Atualizar o perfil do usuário autenticado em `profiles` com:
-     - `postal_code`, `city`, `state`, `location_lat`, `location_lng`, `location_updated_at`
-     - e também `region = city || '/' || state` (para manter compatibilidade)
-  5) Retornar para o front o resultado (city, state) + um status (“ok”/“erro”)
-- Motivo de fazer isso no backend:
-  - Evita problemas de CORS / rate-limit do Nominatim no navegador
-  - Centraliza validação
-  - Permite cache
-  - Evita expor detalhes de implementação no front
+5) Botões “Centralizar”
+- Adicionar uma camada de UI por cima do mapa (dentro do mesmo card) com botões:
+  - “Brasil” (fitBounds BRAZIL_BOUNDS)
+  - “Em mim” (se `me` tiver `location_lat/lng`, centraliza e dá zoom)
+- Onde buscar “me”:
+  - Hoje isso está no `src/pages/Index.tsx`. Vou passar `me?.location_lat/lng` para `MemberMap` como props opcionais:
+    - `centerMe?: { lat: number; lng: number } | null`
+  - `MemberMap` expõe handlers que usam `mapRef.current?.fitBounds(...)` e `mapRef.current?.setView(...)`.
 
-Parte C — Ajustes no Perfil (UI)
-C1) Trocar “Região” por “CEP”
-- No `ProfileForm`:
-  - substituir o input `region` por um input `postal_code` (CEP)
-  - UX: ao preencher e sair do campo (onBlur) ou clicar “Salvar”:
-    - chamar `resolve-location-from-cep` para validar e preencher cidade/UF
-  - mostrar cidade/UF como campos “somente leitura” (read-only) logo abaixo, para o usuário enxergar o que foi identificado
-  - se der erro (CEP inválido/Não encontrado), mostrar mensagem clara e impedir salvar (já que “CEP obrigatório”)
+6) Animação de entrada dos pins
+- No `divIcon` do marker, usar uma classe CSS (ex.: `invictus-pin`) com:
+  - animação “scale-in / fade-in”
+- Como os markers são DOM nodes criados pelo Leaflet:
+  - aplicar classe no HTML do `divIcon`
+  - CSS com keyframes (podemos reutilizar a linguagem de animação que vocês já usam; se não houver keyframes prontos no Tailwind para isso, adicionamos no CSS)
 
-C2) Legibilidade e comportamento
-- Manter o formulário clean:
-  - Campo “CEP” (obrigatório)
-  - “Cidade” e “UF” exibidos automaticamente (read-only)
-  - “Expertises” e “Bio” permanecem como estão
+Mudanças planejadas (arquivos)
+1) `src/components/map/MemberMap.tsx`
+- Adicionar props:
+  - `centerMe?: { lat: number; lng: number } | null`
+  - opcional: `onReady?` se precisarmos sinalizar que o mapa inicializou (provavelmente não necessário)
+- Trocar marker padrão por `divIcon` dourado:
+  - `L.marker([p.lat, p.lng], { icon: goldIcon }).addTo(markers)`
+- Tooltip com `className` custom:
+  - `.bindTooltip(label, { direction: "top", opacity: 1, className: "invictus-map-tooltip", sticky: true })`
+- Adicionar overlay UI (botões) dentro do wrapper do mapa, com `position: absolute`:
+  - Requer ajustar o container para `relative`.
 
-C3) Compatibilidade com perfil existente
-- Para usuários antigos que já têm `region` mas não têm CEP:
-  - ao entrar no Perfil, mostrar aviso “Para aparecer no mapa, complete seu CEP.”
-  - não bloquear uso do app, mas como você quer CEP obrigatório, vamos bloquear o “Salvar perfil” sem CEP (a partir do momento que você aprovar essa mudança).
+2) `src/pages/Index.tsx` (rota /mapa)
+- Passar `centerMe` para o `MemberMap` quando houver coords do usuário:
+  - `centerMe={me?.location_lat && me?.location_lng ? { lat: me.location_lat, lng: me.location_lng } : null }`
+- (Opcional) colocar também um botão “Centralizar em mim” no card lateral; mas a melhor UX é ficar por cima do mapa.
 
-Parte D — Mapa (/mapa) com zoom e pins
-D1) Biblioteca de mapa
-- Implementar com Leaflet + React-Leaflet (leve, padrão no React, zoom/pan fácil).
-- Importar CSS do Leaflet no app (necessário para o mapa renderizar direito).
+3) `src/index.css`
+- Adicionar um bloco de estilos “Invictus Map”:
+  - `.invictus-map` para aplicar filtro dark executivo no tile pane (ex.: `.invictus-map .leaflet-tile-pane { filter: ... }`)
+  - overlay/vinheta: pseudo-elemento no wrapper (ex.: `.invictus-map-overlay::before`)
+  - tooltip glass: `.invictus-map-tooltip` + overrides do Leaflet tooltip
+  - controles: `.invictus-map .leaflet-control-zoom a` etc.
+  - garantir fundo não transparente e `z-index` correto (especialmente tooltip/controls)
 
-D2) Nova versão do `src/pages/Index.tsx`
-- Substituir o placeholder por:
-  - um mapa do Brasil (tile do OpenStreetMap)
-  - markers (pins) carregados via `supabase.rpc('get_approved_member_pins')`
-  - comportamento:
-    - zoom/pan livre
-    - inicial: “fit bounds” no Brasil (ou zoom padrão com centro em Brasil)
-    - opcional: se o usuário tiver cidade/UF e coords, centralizar próximo dele
-- Sidebar (lado direito):
-  - status “Você aparece no mapa” (somente se aprovado e com location preenchida)
-  - contador de pins carregados
-  - (próximo passo) filtro por UF/cidade, raio etc.
+Detalhes visuais (o “padrão Invictus” aplicado ao mapa)
+- “Dark executivo”:
+  - filtro base sugerido (ajustaremos fino após ver no preview):
+    - `saturate(0.35) contrast(1.15) brightness(0.78) sepia(0.18)`
+- Vinheta/overlay:
+  - gradientes com `--primary` e `--foreground` em baixa opacidade para “luxo” e profundidade
+- Pins:
+  - ouro: `--gold-hot` e `--gold-soft`
+  - glow: `drop-shadow(0 0 16px hsl(var(--primary)/0.35))` (controlado)
 
-D3) Privacidade “centro + aleatório”
-- O jitter será aplicado no backend na função RPC, não no front.
-- Determinístico por membro (seed baseada no `user_id`) para não ficar mudando.
-- Não retornaremos coordenadas “reais”/base.
+Critérios de aceite (como você valida que ficou “do jeito do site”)
+- O mapa não parece “claro/azulado”; ele entra no mood graphite do app.
+- O card do mapa mantém o glass premium; a área do mapa ganha vinheta e contraste.
+- Pins são claramente dourados, com brilho sofisticado (sem neon).
+- Tooltip parece um mini “card invictus” (glass + borda).
+- Controles de zoom não ficam “brancos padrão”; ficam premium.
+- Botões “Brasil” e “Em mim” são intuitivos, discretos e premium.
+- Ao carregar pins, a entrada é suave (não “pipoca” agressivo).
 
-Sequência de implementação (ordem segura)
-1) Ler/ajustar schema atual e aplicar migração para colunas novas + tabela cache
-2) Criar backend function `resolve-location-from-cep` (ViaCEP + Nominatim + cache + update do perfil)
-3) Criar RPC `get_approved_member_pins` com jitter determinístico e controle de acesso
-4) Ajustar `ProfileForm`:
-   - Campo CEP obrigatório
-   - Mostra cidade/UF preenchidos automaticamente
-   - Salvar perfil inclui CEP/region (compatível)
-5) Implementar o mapa em `/mapa`:
-   - instalar Leaflet/React-Leaflet
-   - renderizar pins da RPC
-   - zoom/pan e base “Brasil”
-6) Testes end-to-end
+Riscos / observações
+- Filtro CSS em tiles é o caminho mais “garantido” sem depender de terceiros. Se você quiser um tile dark específico depois, a troca é simples.
+- No mobile, blur muito pesado pode custar performance; manteremos blur moderado e usaremos media queries para reforçar no desktop (como você já faz em `.invictus-surface`).
 
-Testes que você deve conseguir fazer no final
-- Perfil:
-  - Digitar CEP válido -> preencher cidade/UF automaticamente -> salvar -> recarregar página -> manter.
-  - CEP inválido -> mensagem clara -> não salva.
-- Aprovação:
-  - Usuário pendente não aparece no mapa.
-  - Após aprovar no Admin, ele aparece no mapa.
-- Mapa:
-  - Abre `/mapa` -> mostra Brasil -> pins sempre visíveis -> zoom/pan funciona.
-  - Pins não “pulam” a cada refresh (jitter determinístico).
-
-Riscos/limites (para alinhar expectativa)
-- Serviços públicos (ViaCEP/Nominatim) têm limites; por isso o cache é importante.
-- “Cidade/UF” pode ter ambiguidades (ex.: cidades com mesmo nome em estados diferentes). Como vamos usar (cidade + UF), melhora muito.
-- Para CEPs muito novos/áreas rurais, o ViaCEP pode retornar dados incompletos; trataremos com mensagem e fallback.
-
-Checklist do que eu vou mexer (arquivos/áreas)
-- Migrações do banco (novas colunas + tabela cache + RPC)
-- Funções do backend (resolver CEP e geocoding)
-- `src/components/profile/ProfileForm.tsx` (trocar Região por CEP + exibir cidade/UF auto)
-- `src/pages/Index.tsx` (transformar em mapa real com pins)
-- `package.json` (adicionar dependências do mapa)
-- CSS do mapa (import Leaflet CSS em algum ponto global, ex.: `src/index.css` ou `src/main.tsx`)
-
-Critérios de aceite (como “ficou do jeito que você pediu”)
-- Usuário só digita CEP; cidade/UF aparecem automaticamente
-- Salvar perfil já prepara o pin para o mapa
-- Somente aprovados aparecem no mapa
-- Um pin por membro
-- Pins têm privacidade (centro + aleatório) e são estáveis
-- Mapa do Brasil com zoom/pan funcionando
-
+Sequência de implementação
+1) Estilos base (CSS): invictus-map, tooltip, controles, overlay/vinheta
+2) Pins dourados com `divIcon` + animação
+3) Botões “Centralizar” por cima do mapa + wiring com `mapRef`
+4) Ajustes finos (contraste/brilho do filtro) com base no preview em /mapa (desktop + mobile)

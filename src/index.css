@@ -163,31 +163,41 @@ All colors MUST be HSL.
 
   /* Auth-only: extra premium glass + bold gold frame (doesn't affect rest of app) */
   .invictus-auth-surface {
-    background: linear-gradient(
+    /* More "crystal" glass: lighter alpha + specular highlights */
+    background:
+      linear-gradient(
         180deg,
-        hsl(var(--card) / calc(var(--glass) - 0.10)) 0%,
-        hsl(var(--card) / calc(var(--glass) - 0.18)) 100%
+        hsl(var(--card) / 0.18) 0%,
+        hsl(var(--card) / 0.10) 100%
       );
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(22px);
     box-shadow:
-      0 0 0 1px hsl(var(--foreground) / 0.06) inset,
-      0 12px 40px -26px hsl(var(--foreground) / 0.35);
+      0 0 0 1px hsl(var(--foreground) / 0.08) inset,
+      0 1px 0 0 hsl(var(--foreground) / 0.06) inset,
+      0 -1px 0 0 hsl(var(--foreground) / 0.04) inset,
+      0 18px 60px -34px hsl(var(--foreground) / 0.35);
   }
 
   @media (min-width: 768px) {
     .invictus-auth-surface {
-      backdrop-filter: blur(22px) saturate(120%);
+      backdrop-filter: blur(24px) saturate(140%);
     }
   }
 
   .invictus-auth-frame {
-    /* Gold line + controlled glow (premium, not neon) */
+    /* Refined gold line + controlled glow (premium, not neon) */
     box-shadow:
-      0 0 0 1px hsl(var(--gold-hot) / 0.92),
-      0 0 0 1px hsl(var(--gold-hot) / 0.18) inset,
-      0 0 0 2px hsl(var(--gold-soft) / 0.12) inset,
-      0 18px 70px -38px hsl(var(--foreground) / 0.25),
-      0 0 70px -34px hsl(var(--gold-hot) / 0.52);
+      /* outer gold line (always visible) */
+      0 0 0 1px hsl(var(--gold-hot) / 0.78),
+      /* inner warm edge (less yellow, more "metal") */
+      0 0 0 1px hsl(var(--gold-soft) / 0.22) inset,
+      /* specular polish */
+      0 1px 0 0 hsl(var(--foreground) / 0.10) inset,
+      0 -1px 0 0 hsl(var(--foreground) / 0.06) inset,
+      /* depth */
+      0 22px 90px -48px hsl(var(--foreground) / 0.32),
+      /* gold glow (subtle but present) */
+      0 0 90px -44px hsl(var(--gold-hot) / 0.42);
     transition:
       box-shadow 240ms ease,
       transform 240ms ease;
@@ -198,11 +208,12 @@ All colors MUST be HSL.
     .invictus-auth-frame:hover {
       transform: translateY(-1px);
       box-shadow:
-        0 0 0 1px hsl(var(--gold-hot) / 0.96),
-        0 0 0 1px hsl(var(--gold-hot) / 0.22) inset,
-        0 0 0 2px hsl(var(--gold-soft) / 0.14) inset,
-        0 20px 80px -38px hsl(var(--foreground) / 0.28),
-        0 0 88px -34px hsl(var(--gold-hot) / 0.62);
+        0 0 0 1px hsl(var(--gold-hot) / 0.92),
+        0 0 0 1px hsl(var(--gold-soft) / 0.28) inset,
+        0 1px 0 0 hsl(var(--foreground) / 0.12) inset,
+        0 -1px 0 0 hsl(var(--foreground) / 0.08) inset,
+        0 26px 100px -48px hsl(var(--foreground) / 0.36),
+        0 0 110px -44px hsl(var(--gold-hot) / 0.55);
     }
   }
 

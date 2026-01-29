@@ -1,143 +1,181 @@
 
-Objetivo
-- Redesenhar o site para ficar “mobile-first” sem trocar a navegação (manter menu lateral/drawer), melhorando legibilidade, espaçamento, tamanhos de toque e comportamento do layout em telas pequenas.
+Objetivo (o que você pediu)
+- Na área de autenticação (/auth) não deve existir a aba “Criar conta”.
+- A criação de conta só acontece para quem tiver um convite (vários códigos).
+- Depois de criar conta com convite, o usuário não terá acesso total: terá acesso limitado até um admin aprovar.
+- Admin inicial: definido por lista de e-mails (de forma segura, no backend, não no front-end).
 
-O que já existe hoje (estado atual)
-- Layout base: `AppLayout` com header sticky (h-12) + `SidebarProvider`/`SidebarInset`.
-- Sidebar do shadcn:
-  - Desktop: fixa/colapsável.
-  - Mobile: vira `Sheet` (drawer) com largura fixa `SIDEBAR_WIDTH_MOBILE = 18rem`.
-- Páginas já usam Tailwind responsivo em alguns pontos (`sm:grid-cols-2`, `lg:grid-cols-3`, `p-4 md:p-6`), porém:
-  - Tipografia e header podem ficar “apertados” no mobile.
-  - Alvos de toque (botões/tabs/inputs) podem ficar pequenos.
-  - Alguns layouts (carrosséis, tabelas/listas, cards longos) precisam de padrões consistentes para “não estourar” e manter leitura.
+Estado atual (o que encontrei no projeto)
+- `src/pages/Auth.tsx` hoje tem Tabs com “Entrar” e “Criar conta” e chama `signUp()` diretamente.
+- `src/auth/AuthProvider.tsx` tem `signUp(email, password)` chamando o auth padrão.
+- `RequireAuth` só checa “tem sessão”; não valida “usuário aprovado”.
+- Há tabela e função de roles (`user_roles`, `has_role`) já prontas e usadas no `Admin.tsx`.
+- Não existe tabela/fluxo de convites hoje (nenhum `INV-2026` implementado no banco/código; era só uma memória/requisito).
 
-Escopo da primeira entrega (conforme suas escolhas)
-- Navegação mobile: manter “Menu lateral (atual)”.
-- Prioridade: “Refino responsivo” (sem reestruturar tudo).
-- Controles maiores no celular.
+Decisões confirmadas (suas respostas)
+- Convite: Vários códigos
+- Aprovação: Acesso limitado
+- Admin inicial: Por lista de e-mails
 
-O que será feito (visão do usuário)
-1) No celular, o app terá:
-   - Header mais confortável (altura e espaçamento maiores), com o botão do menu mais fácil de clicar.
-   - Paddings e espaçamentos padronizados entre telas.
-   - Títulos e textos com tamanhos adaptativos (sem “gigante” e sem “miúdo”).
-   - Cards e listas com áreas de toque maiores e melhor quebra de linha.
-2) A sidebar no celular abrirá como drawer mais largo e “usável” (largura proporcional à tela), com itens mais altos para toque.
+Solução proposta (visão do usuário)
+1) Tela /auth
+- Mostra apenas “Entrar”.
+- Em vez de aba “Criar conta”, terá um botão/link “Tenho convite” que abre um modal (ou um “card” abaixo) com:
+  - Código do convite
+  - E-mail
+  - Senha
+  - Botão “Criar conta”
+- Esse “Criar conta” não vai usar o `signUp` direto; vai chamar um endpoint do backend para criar a conta somente se o convite for válido.
 
-Mudanças técnicas propostas (por arquivo / área)
+2) Fluxo de convite
+- Admin cria convites no painel Admin (nova seção “Convites”).
+- Usuário usa convite em /auth → conta é criada.
+- Após o login, se ainda não estiver aprovado:
+  - O usuário entra, mas fica em modo “Acesso limitado” (ex.: só Perfil + uma tela “Aguardando aprovação” para as demais rotas).
+  - Um admin aprova no painel Admin (nova seção “Aprovações”).
+  - Depois de aprovado, acesso normal.
 
-A) Base responsiva (tokens + utilitários)
-Arquivos:
-- `src/index.css` (ou camada @layer components/ base)
-Ações:
-- Criar utilitários/padrões para mobile:
-  - “Safe area” e padding coerente (ex.: `pb-safe`, `pt-safe` se necessário).
-  - Ajustar estilos globais para evitar overflow horizontal acidental (ex.: `body { overflow-x: hidden; }` se estiver ocorrendo).
-- Criar classes utilitárias do projeto para layout e tipografia, por exemplo:
-  - `.page` (spacing vertical consistente)
-  - `.page-header` (gap e alinhamento padronizados)
-  - `.h1`, `.lead` (tipografia responsiva)
-Observação:
-- Isso reduz a repetição e mantém todas as páginas com o mesmo “feeling” no mobile.
+Mudanças de backend (banco + regras de acesso)
+A) Ajuste na tabela profiles (status de aprovação)
+- Adicionar campos em `public.profiles`:
+  - `access_status` (ex.: 'pending' | 'approved' | 'rejected') com default 'pending'
+  - `approved_at` timestamptz (nullable)
+  - `approved_by` uuid (nullable) — referência lógica ao user_id do admin (sem FK para auth)
+- Atualizar RLS de `profiles`:
+  - Usuário continua podendo ver/editar apenas o próprio perfil (como já é hoje).
+  - Admin pode:
+    - listar perfis (para aprovar)
+    - atualizar perfis (mudar status para approved, preencher approved_at/approved_by)
+  - Importante: roles continuam em `user_roles` (não colocaremos role no profile).
 
-B) AppLayout (header + container)
-Arquivo:
-- `src/components/AppLayout.tsx`
-Ações:
-- Aumentar área de toque e conforto no mobile:
-  - Header: de `h-12` para algo como `h-14` no mobile e `h-12` no desktop, ou manter `h-14` geral.
-  - `SidebarTrigger`: garantir tamanho mínimo de toque (>=44px) no mobile (ex.: `h-10 w-10` em `sm`/mobile).
-- Melhorar espaçamento do conteúdo:
-  - Conteúdo: hoje `p-4 md:p-6`; manter, mas revisar para:
-    - `p-4 sm:p-5 md:p-6` (ou similar) e ajustar `space-y` nos headers das páginas.
-- Garantir que o header não “coma” espaço útil:
-  - Revisar altura + sticky para não reduzir leitura.
+B) Tabelas de convites
+Criar tabelas:
+1) `public.invite_codes`
+- `id uuid primary key default gen_random_uuid()`
+- `code text unique not null` (ex.: INV-XXXXXX)
+- `created_at timestamptz default now()`
+- `created_by uuid nullable` (user_id do admin)
+- `active boolean not null default true`
+- `expires_at timestamptz nullable`
+- `max_uses int not null default 1`
+- `uses_count int not null default 0`
+- `note text nullable` (opcional: “convite do João”)
 
-C) Sidebar mobile (drawer) mais “app-like”
-Arquivo:
-- `src/components/ui/sidebar.tsx`
-Ações:
-- Melhorar usabilidade do drawer no celular:
-  - Aumentar a largura do drawer de um valor fixo (18rem) para algo proporcional como `min(20rem, 85vw)` ou `85vw` (mantendo limites).
-  - Aumentar altura dos itens de menu no mobile (ex.: `h-11`/`h-12`) e padding interno.
-  - Garantir contraste e fundo sólido em menus/overlays (evitar transparência excessiva).
-- Verificar se o drawer tem fechamento intuitivo:
-  - Hoje o botão default do Sheet está oculto (`[&>button]:hidden`). Manteremos isso se o overlay fechar com toque fora; caso atrapalhe, adicionaremos um “Fechar” acessível dentro do drawer (sem duplicar `SidebarTrigger` no header).
+2) `public.invite_redemptions`
+- `id uuid primary key default gen_random_uuid()`
+- `invite_id uuid not null references public.invite_codes(id) on delete cascade`
+- `user_id uuid not null` (id do usuário autenticado)
+- `redeemed_at timestamptz default now()`
+- `unique(invite_id, user_id)`
 
-D) Padrão de tipografia e “touch targets” nas telas
-Arquivos alvo:
-- `src/pages/Home.tsx`
-- `src/pages/Index.tsx` (Mapa)
-- `src/pages/Buscar.tsx`
-- `src/pages/Mensagens.tsx`
-- `src/pages/Perfil.tsx`
-- `src/pages/Class.tsx`
-- `src/pages/Admin.tsx`
-- `src/pages/Auth.tsx` e `src/pages/ResetPassword.tsx`
-Ações (padrão aplicado em todas):
-- Títulos:
-  - Ajustar `text-2xl` para algo responsivo (ex.: `text-xl sm:text-2xl`) para evitar “quebra feia” em telas menores.
-- Parágrafos/descrições:
-  - Garantir legibilidade com `text-sm` no mobile e `md:text-sm` (ou manter) e melhorar `leading`.
-- Botões/inputs/tabs:
-  - Aumentar altura padrão no mobile:
-    - Botões principais: `h-11`/`h-12` no mobile (ex.: via variante/classe no uso).
-    - TabsList/TabsTrigger: mais altos e com padding maior.
-    - Inputs/Select/Textarea: `h-11` no mobile quando aplicável.
-- Cards e listas:
-  - Aumentar padding interno em cards no mobile quando o conteúdo for “clicável”.
-  - Melhorar quebras: aplicar `min-w-0`, `break-words`, `truncate` onde necessário.
-- Evitar overflow horizontal:
-  - Revisar seções com `-mx-4 px-4 overflow-x-auto` (Class) para garantir que não apareça scroll horizontal fora do carrossel.
+Regras (RLS) para convites
+- `invite_codes`:
+  - SELECT/INSERT/UPDATE/DELETE: apenas admin (via `has_role(auth.uid(), 'admin')`)
+- `invite_redemptions`:
+  - INSERT: apenas o próprio usuário autenticado (para registrar que usou o convite) OU feito via backend function.
+  - SELECT: admin pode ver tudo; usuário pode ver as próprias redemptions.
 
-E) Ajustes específicos por tela (refino)
-1) Class (`src/pages/Class.tsx`)
-- Carrossel:
-  - Ajustar largura dos cards no mobile (ex.: manter 168px mas revisar gaps/padding e área de toque).
-  - Tornar o card clicável com área maior (padding/rounded) e reforçar “tap”.
-- Header:
-  - Melhorar espaçamento e tipografia no mobile.
+Validação de uso do convite
+- Evitar CHECK constraints com `now()` (para não quebrar por imutabilidade). Se precisarmos validar expiração no banco, faremos por trigger/funcão; porém a validação principal ficará no backend function (mais simples e seguro).
 
-2) Admin (`src/pages/Admin.tsx`)
-- Tabs e formulários:
-  - TabsList: garantir que não “esprema” no mobile e tenha altura de toque maior.
-  - Botões “Remover”: aumentar área de toque no mobile sem ficar visualmente pesado.
-  - Linhas de listagem: garantir `min-w-0` + truncates corretos (já existe em parte) e aumentar padding em mobile.
+Mudanças de backend functions (para garantir “sem convite, sem conta”)
+1) Backend function: `auth-signup-with-invite`
+- Input: `{ email, password, inviteCode }`
+- Validações (server-side):
+  - formato do email, tamanho de senha, formato do código
+  - convite existe, `active = true`, não expirado, `uses_count < max_uses`
+- Ação:
+  - cria o usuário via credencial privilegiada do backend (não pelo client)
+  - cria/garante profile com `access_status='pending'`
+  - incrementa `uses_count` e registra em `invite_redemptions`
+- Output:
+  - sucesso + instrução de “faça login” (ou já retornar sessão se suportado; se não, manter login na tela)
 
-3) Auth / ResetPassword
-- Ajustar card para “mobile comfy”:
-  - Reduzir densidade visual, aumentar altura do botão e inputs.
-  - Garantir que o modal de “Esqueceu a senha?” caiba bem em telas pequenas (padding e largura).
+2) Backend function: `bootstrap-admin-by-email` (admin inicial por lista de e-mails)
+- Motivo: não pode ser front-end/hardcoded/localStorage.
+- Vai comparar `user.email` com uma lista segura guardada em Secret (ex.: `ADMIN_EMAIL_ALLOWLIST`).
+- Se bater, insere `user_roles(user_id, 'admin')` (idempotente).
+- Quando chamar:
+  - no login (AuthProvider), após sessão existir, chamamos essa function 1x (sem travar UI).
 
-Critérios de aceite (checklist de QA)
-1) Layout
-- Não existe scroll horizontal “involuntário” em nenhuma tela comum.
-- Header não cobre conteúdo e mantém leitura boa no mobile.
-2) Navegação
-- No mobile, o botão de menu é fácil de tocar e o drawer abre com largura confortável.
-- Itens da sidebar no mobile têm toque fácil e não ficam “apertados”.
-3) Telas principais
-- Home/Mapa/Buscar/Mensagens/Perfil/Class/Admin: títulos, cards e botões não ficam pequenos e não quebram layout.
-4) Acessibilidade básica
-- Controles principais com altura mínima de toque (meta: ~44px) no mobile.
-- Contraste preservado no tema dark + gold.
+Mudanças no front-end (UI/UX + guards)
+A) AuthPage (/auth)
+- Remover completamente a aba “Criar conta”.
+- Manter o formulário “Entrar”.
+- Adicionar:
+  - botão/link “Tenho convite” → abre Dialog com formulário (inviteCode + email + password)
+  - esse formulário chama a backend function `auth-signup-with-invite`
+  - feedbacks:
+    - convite inválido/expirado/usado → mensagem amigável
+    - sucesso → avisar “conta criada, faça login” e fechar modal
+- Manter o “Esqueceu a senha?” como está.
 
-Plano de implementação (sequência)
-1) Auditoria rápida de estilos e “pontos de quebra” (mobile 320–390px, tablet 768px, desktop).
-2) Atualizar `AppLayout` (header + padding do conteúdo) e validar todas as rotas.
-3) Ajustar `sidebar.tsx` para drawer mobile com largura proporcional e itens maiores.
-4) Aplicar padrão de tipografia/spacing nas páginas (headers, botões, tabs, cards).
-5) Ajustes finos nas telas “mais densas” (Admin, Class, Auth/Reset).
-6) Revisão final em 3 tamanhos (mobile/tablet/desktop) e correção de overflow.
+B) Guard de rotas para “Acesso limitado”
+- Evoluir `RequireAuth` para também checar `profiles.access_status`.
+- Comportamento:
+  - se não logado → /auth
+  - se logado e status = 'approved' → acesso normal
+  - se logado e status != 'approved':
+    - permitir rotas liberadas (definição abaixo)
+    - bloquear outras → redirecionar para uma nova página `/aguardando-aprovacao` (ou reutilizar uma página existente)
+- Rotas liberadas quando pendente (proposta):
+  - `/perfil` (para completar dados)
+  - `/auth` (para sair e entrar)
+  - `/reset-password` (se necessário)
+  - `/aguardando-aprovacao` (nova)
+- Ajustar `src/App.tsx` para incluir a nova rota.
 
-Notas técnicas (para manter consistência)
-- Evitar criar novos sistemas de navegação (conforme pedido).
-- Preferir classes Tailwind responsivas e utilitários reutilizáveis ao invés de custom CSS espalhado.
-- Manter a identidade visual (dark + dourado + glass) e reforçar legibilidade no mobile.
+C) Admin: Convites + Aprovação
+- Em `src/pages/Admin.tsx` (já tem tabs), adicionar novas seções:
+  1) “Convites”
+     - Criar convite: max_uses, expires_at (opcional), note (opcional)
+     - Listar convites: code, ativo, usos, expiração, botão “desativar”
+  2) “Aprovações”
+     - Listar usuários pendentes:
+       - buscar em `profiles` onde `access_status='pending'`
+       - mostrar user_id, display_name (se existir), created_at
+     - Ações:
+       - “Aprovar” → set access_status='approved', approved_at=now(), approved_by=auth.uid()
+       - “Rejeitar” (opcional) → access_status='rejected'
 
-O que eu preciso de você (nenhum bloqueio, só confirmação visual depois)
-- Depois de implementar, você vai testar visualmente em:
-  - Mobile (390x844), tablet (768x1024), desktop (1366x768)
-  - E me dizer qual tela ainda parece “apertada” para ajustarmos.
+Como vamos configurar “admin por lista de e-mails” (sem risco)
+- Criaremos uma Secret `ADMIN_EMAIL_ALLOWLIST` (string com e-mails separados por vírgula).
+- A backend function `bootstrap-admin-by-email` lê essa secret e aplica role admin no servidor.
+- Assim, mesmo que alguém tente se “dar admin” pelo front, não consegue.
 
+Passo a passo de implementação (ordem)
+1) Banco (schema)
+- Criar migração:
+  - adicionar campos de aprovação em `profiles`
+  - criar `invite_codes` e `invite_redemptions`
+  - criar/ajustar políticas RLS necessárias
+2) Backend functions
+- Implementar `auth-signup-with-invite`
+- Implementar `bootstrap-admin-by-email`
+- Adicionar a secret `ADMIN_EMAIL_ALLOWLIST`
+3) Front-end /auth
+- Remover aba “Criar conta”
+- Criar modal “Tenho convite” + validação com zod
+- Conectar ao backend function e tratar erros
+4) Guard de acesso limitado
+- Ajustar `RequireAuth` (ou criar `RequireApproved`) para checar `profiles.access_status`
+- Criar página `/aguardando-aprovacao`
+- Atualizar rotas no `App.tsx`
+5) Admin
+- Adicionar abas “Convites” e “Aprovações”
+- Usar `has_role` (já existe) para garantir que só admin veja/execute
+6) QA
+- Testar fluxo completo:
+  - usuário sem convite não consegue criar conta
+  - convite válido cria conta
+  - usuário pendente só acessa rotas liberadas
+  - admin aprova e usuário passa a acessar tudo
+  - convites respeitam max_uses/ativo/expiração
+
+Riscos e cuidados
+- Segurança: remover UI “Criar conta” não é suficiente; por isso o cadastro será movido para backend function com validação do convite.
+- Evitar loops/travamentos no AuthProvider: qualquer chamada extra após login será feita fora do callback do `onAuthStateChange` (com defer) para não travar o app.
+- Roles continuam exclusivamente em `user_roles` (não em profile).
+
+O que vou precisar de você (antes de implementar)
+- A lista de e-mails que devem ser admin no início (1–3 já resolve). Esses e-mails vão para a secret `ADMIN_EMAIL_ALLOWLIST` (ex.: `email1@... , email2@...`).

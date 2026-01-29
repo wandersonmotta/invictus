@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,15 @@ export default function Perfil() {
     user,
     signOut
   } = useAuth();
+  const [showEmail, setShowEmail] = useState(false);
+
+  const maskedEmail = (() => {
+    const email = user?.email ?? "";
+    const [local, domain] = email.split("@");
+    if (!local || !domain) return "—";
+    const safeLocal = local.length <= 2 ? `${local[0] ?? ""}*` : `${local.slice(0, 2)}***`;
+    return `${safeLocal}@${domain}`;
+  })();
   return <main className="invictus-page">
       <header className="invictus-page-header">
         <h1 className="invictus-h1">Perfil</h1>
@@ -54,7 +64,10 @@ export default function Perfil() {
         <CardContent className="space-y-3">
           <div className="text-sm text-muted-foreground">
             <p>
-              <span className="font-medium text-foreground">E-mail:</span> {user?.email ?? "—"}
+              <span className="font-medium text-foreground">E-mail:</span> {showEmail ? user?.email ?? "—" : maskedEmail}
+              {user?.email ? <Button type="button" variant="ghost" size="sm" className="ml-2 h-7 px-2" onClick={() => setShowEmail(v => !v)}>
+                  {showEmail ? "Ocultar" : "Mostrar"}
+                </Button> : null}
             </p>
             <p className="break-all">
               <span className="font-medium text-foreground">Seu ID:</span> {user?.id ?? "—"}

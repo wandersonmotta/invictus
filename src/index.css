@@ -57,43 +57,45 @@ All colors MUST be HSL.
   }
 
   .dark {
-    /* Invictus premium dark + gold (executivo, clean, glass) */
-    --background: 228 22% 6%;
+    /* Invictus premium graphite + gold (executivo, clean, 100% dark) */
+    /* Neutro (sem hue azul) para eliminar o “oceano” */
+    --background: 0 0% 7%;
     --foreground: 210 40% 98%;
 
-    --card: 230 20% 10%;
+    /* Degraus de profundidade (grafite) */
+    --card: 0 0% 11%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 230 20% 10%;
+    --popover: 0 0% 11%;
     --popover-foreground: 210 40% 98%;
 
     /* Gold forte (acento principal) */
     --primary: 42 85% 50%;
-    --primary-foreground: 228 22% 6%;
+    --primary-foreground: 0 0% 7%;
 
-    --secondary: 230 16% 14%;
+    --secondary: 0 0% 14%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 230 16% 14%;
-    --muted-foreground: 215 20% 72%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 72%;
 
     --accent: 42 85% 50%;
-    --accent-foreground: 228 22% 6%;
+    --accent-foreground: 0 0% 7%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 230 16% 18%;
-    --input: 230 16% 18%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
     --ring: 42 85% 50%;
 
-    --sidebar-background: 228 22% 6%;
+    --sidebar-background: 0 0% 7%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 42 85% 50%;
-    --sidebar-primary-foreground: 228 22% 6%;
-    --sidebar-accent: 230 16% 14%;
+    --sidebar-primary-foreground: 0 0% 7%;
+    --sidebar-accent: 0 0% 14%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 230 16% 18%;
+    --sidebar-border: 0 0% 18%;
     --sidebar-ring: 42 85% 50%;
   }
 }
@@ -128,7 +130,8 @@ All colors MUST be HSL.
   .dark {
     --gold-soft: 42 92% 62%;
     --gold-hot: 44 98% 54%;
-    --glass: 0.52;
+    /* Glass mais intenso via transparência (melhor custo que aumentar blur) */
+    --glass: 0.46;
   }
 }
 
@@ -140,7 +143,14 @@ All colors MUST be HSL.
         hsl(var(--card) / var(--glass)) 0%,
         hsl(var(--card) / calc(var(--glass) - 0.08)) 100%
       );
+    /* Mantém performance no mobile; reforça o luxo em telas maiores */
     backdrop-filter: blur(18px);
+  }
+
+  @media (min-width: 768px) {
+    .invictus-surface {
+      backdrop-filter: blur(20px);
+    }
   }
 
   .invictus-frame {

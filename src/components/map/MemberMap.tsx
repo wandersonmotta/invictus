@@ -1,6 +1,5 @@
 import * as React from "react";
 import L from "leaflet";
-import { MapContainer, Marker, TileLayer, Tooltip } from "react-leaflet";
 
 import type { ApprovedMemberPin } from "./useApprovedMemberPins";
 
@@ -19,27 +18,53 @@ const BRAZIL_BOUNDS: [[number, number], [number, number]] = [
 ];
 
 export function MemberMap({ pins }: { pins: ApprovedMemberPin[] }) {
-  // Keep the map stable; we fit Brazil by default.
-  const bounds = React.useMemo(() => BRAZIL_BOUNDS, []);
+  const mapRef = React.useRef<L.Map | null>(null);
+  const markersRef = React.useRef<L.LayerGroup | null>(null);
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+
+  // init map once
+  React.useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    const map = L.map(containerRef.current, {
+      zoomControl: true,
+      attributionControl: true,
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {}).addTo(map);
+
+    const markers = L.layerGroup().addTo(map);
+
+    map.fitBounds(BRAZIL_BOUNDS);
+
+    mapRef.current = map;
+    markersRef.current = markers;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+      markersRef.current = null;
+    };
+  }, []);
+
+  // update markers when pins change
+  React.useEffect(() => {
+    const map = mapRef.current;
+    const markers = markersRef.current;
+    if (!map || !markers) return;
+
+    markers.clearLayers();
+
+    for (const p of pins) {
+      const label = p.city && p.state ? `${p.city}/${p.state}` : "Invictus";
+      L.marker([p.lat, p.lng]).addTo(markers).bindTooltip(label, { direction: "top", opacity: 1 });
+    }
+  }, [pins]);
 
   return (
     <div className="invictus-surface invictus-frame w-full overflow-hidden rounded-lg border border-border/70">
       <div className="h-[360px] w-full sm:h-[420px] lg:h-[520px]">
-        <MapContainer
-          bounds={bounds}
-          boundsOptions={{ padding: [16, 16] }}
-          style={{ height: "100%", width: "100%" }}
-        >
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-
-          {pins.map((p) => (
-            <Marker key={p.user_id} position={[p.lat, p.lng]}>
-              <Tooltip>
-                {p.city && p.state ? `${p.city}/${p.state}` : "Invictus"}
-              </Tooltip>
-            </Marker>
-          ))}
-        </MapContainer>
+        <div ref={containerRef} className="h-full w-full" />
       </div>
     </div>
   );

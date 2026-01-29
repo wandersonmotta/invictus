@@ -1,1 +1,7 @@
 project_id = "wotwxzolgnsmzjpposua"
+
+[functions.auth-signup-with-invite]
+verify_jwt = false
+
+[functions.bootstrap-admin-by-email]
+verify_jwt = false

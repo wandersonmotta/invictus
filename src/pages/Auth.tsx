@@ -164,13 +164,16 @@ export default function AuthPage() {
       <Card className="invictus-surface invictus-frame w-full max-w-md border-border/70">
         <CardHeader className="space-y-3">
           <div className="flex items-center gap-3">
-            <img
-              src={logo}
-              alt="Logo da Invictus"
-              className="h-10 w-auto select-none"
-              draggable={false}
-              style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary) / 0.25))" }}
-            />
+            <div className="flex flex-col items-start gap-1">
+              <img
+                src={logo}
+                alt="Logo da Invictus"
+                className="h-10 w-auto select-none"
+                draggable={false}
+                style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary) / 0.25))" }}
+              />
+              <GoldHoverText className="text-[10px] font-semibold tracking-[0.35em]">FRATERNIDADE</GoldHoverText>
+            </div>
             <div>
               <CardTitle className="sr-only">Invictus</CardTitle>
               <CardDescription>Acesso exclusivo para membros</CardDescription>

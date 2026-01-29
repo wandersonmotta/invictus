@@ -1,159 +1,199 @@
 
-Objetivo (o que vamos entregar)
-- Criar um “@ de usuário” (handle) que cada membro pode definir no próprio perfil.
-- Permitir buscar membros na página **Buscar** exclusivamente pelo @.
-- Permitir usar o @ também no **Direct → Nova mensagem** (encontrar pessoas digitando @).
+# Plano: Editor de Avatar + Top Bar com Foto/Nome/Sair
 
-Decisão confirmada com você
-- O @ será **salvo no backend com o caractere “@”** (ex.: `@joao.silva`).
+## Resumo
+Implementar (1) um **editor de recorte/posicionamento de avatar** com círculo de preview maior e salvar a imagem já cortada em formato quadrado; (2) dividir o campo "Nome" no perfil em **Nome** e **Sobrenome** (2 campos); (3) adicionar no **top bar** (AppLayout) a foto circular pequena, nome + sobrenome em dourado, e um **dropdown** ao clicar na foto com a opção "Sair" em dourado metálico.
 
-Escopo funcional
-1) Perfil (Perfil → editar)
-- Adicionar campo “@ do usuário” no formulário do perfil.
-- Regras de validação (client + server):
-  - Obrigatório começar com `@`
-  - Somente `a-z`, `0-9`, `.`, `_` (sem espaços)
-  - Tamanho sugerido: 4–21 caracteres no total (ex.: `@` + 3 a 20 chars)
-  - Case-insensitive para unicidade (não pode existir `@Joao` e `@joao` ao mesmo tempo)
-- Ao salvar: persistir no backend; em caso de conflito (já existe), mostrar mensagem “Esse @ já está em uso”.
+---
 
-2) Buscar (página /buscar)
-- Trocar o placeholder atual por uma busca simples:
-  - Um input “Buscar por @” (aceita com ou sem @; a UI ajuda a formatar)
-  - Um botão “Buscar”
-  - Resultado:
-    - Se encontrado: card com avatar + display_name + @ + cidade/UF (se houver)
-    - Se não encontrado: “Nenhum membro encontrado com esse @”
-- Importante: só retornar perfis **approved** (aprovados). Mesmo que usuário pendente possa definir @, ele não aparece na busca pública de membros.
+## 1. Editor de Avatar (ProfileForm)
 
-3) Direct (Mensagens → Nova mensagem)
-- Atualizar a busca do modal “Nova mensagem” para encontrar por:
-  - display_name (como hoje)
-  - username/@ (novo)
-- Exibir o @ no item da lista (abaixo do nome), para facilitar escolher a pessoa certa.
+### Contexto atual
+- Hoje: botão "Trocar foto" (clica → abre file input → upload direto).
+- Avatar exibido em círculo de 64×64px (h-16 w-16).
 
-Exploração do que já existe (para encaixar no padrão do projeto)
-- O app já usa Lovable Cloud com funções SQL `SECURITY DEFINER` para expor dados “seguros” de perfis aprovados (ex.: `search_approved_members`).
-- Atualmente `search_approved_members` só busca por `display_name`.
-- A tabela `profiles` não tem coluna para @/username ainda.
+### O que vamos fazer
+1. **Aumentar o círculo de preview** para ~120×120px (h-30 w-30) para melhor visualização.
+2. Quando usuário selecionar imagem, **abrir um Dialog** (modal "Invictus Glass") com:
+   - Canvas de recorte circular (biblioteca `react-easy-crop` ou similar).
+   - Zoom/posicionamento via slider e arrastar.
+   - Botões "Cancelar" e "Salvar".
+3. Ao clicar "Salvar":
+   - Gerar **imagem recortada em formato quadrado** (ex.: 512×512px) via canvas.
+   - Converter para Blob (JPG ou PNG).
+   - Fazer upload para `avatars` (Supabase Storage).
+   - Atualizar `profile.avatar_url`.
 
-Mudanças no backend (Lovable Cloud) — MIGRATION (estrutura)
-A) Tabela: `public.profiles`
-- Adicionar coluna:
-  - `username text null`  (vai armazenar algo como `@joao.silva`)
-- Criar constraints e índices:
-  - Constraint de formato (imutável, segura para CHECK):
-    - `username IS NULL OR username ~ '^@[a-z0-9._]{3,20}$'`
-  - Índice único case-insensitive:
-    - `CREATE UNIQUE INDEX ... ON public.profiles (lower(username)) WHERE username IS NOT NULL;`
-  - Índice para busca rápida (opcional mas recomendado):
-    - `CREATE INDEX ... ON public.profiles (username);`
+### Biblioteca sugerida
+- `react-easy-crop` (já está instalada ou instalaremos).
+- Lógica de crop → canvas → blob já testada em projetos Lovable.
 
-B) Função existente: `public.search_approved_members(p_search, p_limit)`
-- Hoje retorna: `(user_id, display_name, avatar_url)` e filtra por display_name.
-- Vamos alterar para também retornar `username` e aceitar pesquisa por @.
-- Observação técnica importante:
-  - Alterar `RETURNS TABLE(...)` muda o tipo de retorno, então vamos fazer como em outras migrações do projeto: **DROP + CREATE OR REPLACE** (ou DROP + CREATE) para evitar erro de “cannot change return type”.
-- Novo contrato (proposto):
-  - `RETURNS TABLE(user_id uuid, display_name text, username text, avatar_url text)`
-- Nova lógica de filtro:
-  - Normalizar `p_search` para:
-    - se vier sem `@`, prefixar com `@` para comparar com `username`
-    - manter também busca por `display_name` para UX (Direct)
-  - Filtrar apenas `access_status = 'approved'`
-  - Garantir que só usuários autenticados consigam chamar (boas práticas do projeto):
-    - usar `WITH me AS (SELECT auth.uid() uid)` e `WHERE me.uid IS NOT NULL`
+### Arquivos modificados
+- `src/components/profile/ProfileForm.tsx`: aumentar avatar, adicionar estado para modal + crop, função de salvar.
+- Criar novo componente (opcional): `src/components/profile/AvatarCropDialog.tsx` (reuso em outros lugares).
 
-C) Nova função para a página Buscar (mais “exata”)
-- Criar uma função específica para busca por @, retornando um único perfil aprovado (campos “seguros”):
-  - Ex.: `public.find_approved_member_by_username(p_username text)`
-  - `RETURNS TABLE(user_id uuid, display_name text, username text, avatar_url text, bio text, city text, state text, region text)`
-- Regras:
-  - Normalizar `p_username`: se não começar com `@`, prefixar `@`
-  - Comparação case-insensitive (ex.: `lower(p.username) = lower(p_username_norm)`)
-  - Apenas `access_status = 'approved'`
-  - Apenas quando autenticado
+---
 
-Mudanças no frontend (React)
-1) `src/components/profile/ProfileForm.tsx`
-- Incluir `username` no `profileSchema` com zod:
-  - aceitar vazio (null) ou string válida `^@[a-z0-9._]{3,20}$`
-  - trim e normalização:
-    - se usuário digitar sem `@`, o front pode auto-adicionar `@` ao sair do campo (blur) ou no submit
-    - converter para lowercase (para padrão consistente)
-- No loadProfile:
-  - incluir `username` no select do perfil
-  - preencher o input com o valor salvo
-- No payload de upsert:
-  - incluir `username`
-- Tratamento de erro de unicidade:
-  - se vier erro de “duplicate key” (índice unique), mostrar toast: “Esse @ já está em uso”.
+## 2. Dividir "Nome" em 2 campos (Nome + Sobrenome)
 
-2) `src/components/messages/NewMessageDialog.tsx`
-- Atualizar `MemberRow` para incluir `username`.
-- Continuar usando `supabase.rpc("search_approved_members", ...)`, mas:
-  - a função agora retorna `username`, então vamos renderizar também:
-    - Nome
-    - Embaixo: `@...` (muted)
-- Melhorar UX:
-  - placeholder “Buscar por nome ou @”
-  - se o usuário digitar `joao`, a busca ainda pode achar por display_name
-  - se digitar `@joao`, acha direto por username
+### Contexto atual
+- Tabela `profiles`: coluna `display_name text` (nome único).
+- ProfileForm: input "Nome" (`display_name`).
 
-3) `src/pages/Buscar.tsx`
-- Substituir o placeholder “Em breve” por:
-  - Input “@ do usuário”
-  - Botão “Buscar”
-  - Um card de resultado (ou estado vazio)
-- Implementação sugerida:
-  - `useState` para o texto
-  - `useQuery` (TanStack Query) para chamar `find_approved_member_by_username`, com `enabled` quando o input tiver tamanho mínimo
-  - Exibir estados: carregando / encontrado / não encontrado / erro
-- Observação de privacidade/segurança:
-  - A página não deve expor informações além do necessário (usar somente o retorno seguro da função).
+### O que vamos fazer (backend)
+1. **Migration SQL**:
+   - Adicionar coluna `first_name text` (nome).
+   - Adicionar coluna `last_name text` (sobrenome).
+   - **Migração de dados**: popular `first_name` com a primeira palavra de `display_name`, e `last_name` com o restante (ou NULL se só tem 1 palavra).
+   - Manter `display_name` por enquanto (legado/compatibilidade com funções existentes), mas passar a compor automaticamente: `first_name || ' ' || last_name`.
+   - Criar trigger ou atualizar funções para que `display_name` seja sempre `concat(first_name, ' ', last_name)` ao salvar.
+2. **Atualizar funções RPC** (se necessário):
+   - `search_approved_members`, `find_approved_member_by_username`, `get_approved_member_pins`, `get_my_threads`: hoje retornam `display_name`; vamos continuar retornando `display_name` (computado).
+   - Garantir que `display_name` seja sempre consistente com `first_name || ' ' || last_name`.
 
-Validações e segurança (importante)
-- Client-side: zod no ProfileForm para feedback imediato.
-- Server-side:
-  - CHECK constraint de regex (formato do @).
-  - Índice unique em lower(username).
-  - Funções `SECURITY DEFINER` retornando apenas campos permitidos e sempre com exigência de usuário autenticado.
-- Sem uso de `dangerouslySetInnerHTML`.
-- Sem interpolar input em SQL dinâmico (tudo via parâmetros).
+### O que vamos fazer (frontend)
+1. **ProfileForm** (ProfileFormValues):
+   - Trocar campo `display_name` por `first_name` e `last_name`.
+   - Validação zod:
+     - `first_name`: obrigatório, trim, max 30 caracteres.
+     - `last_name`: obrigatório, trim, max 30 caracteres.
+   - Ao carregar perfil: preencher inputs com `first_name` e `last_name`.
+   - Ao salvar: enviar `first_name` e `last_name`; backend compõe `display_name`.
+2. **Outros componentes**: não mudar nada (continuam lendo `display_name` das funções).
 
-Testes (critérios de aceite)
-1) Perfil
-- Usuário consegue salvar `@meu.user_1`.
-- Se tentar salvar um @ inválido (ex.: `@meu user`), recebe erro.
-- Se tentar salvar um @ já usado, recebe mensagem clara.
+### Arquivos modificados
+- Nova migration SQL: `supabase/migrations/<timestamp>_add_first_last_name.sql`.
+- `src/components/profile/ProfileForm.tsx`: schema zod, inputs, lógica.
+- `src/integrations/supabase/types.ts`: auto-atualizado (não editar).
 
-2) Buscar
-- Buscar por `@meu.user_1` encontra o perfil aprovado correto.
-- Buscar por `meu.user_1` (sem @) também encontra (normalização).
-- Buscar por @ inexistente mostra “não encontrado”.
-- Usuário pendente não aparece no resultado.
+---
 
-3) Direct
-- Em “Nova mensagem”, digitar `@meu.user_1` lista o membro.
-- Digitar pelo nome ainda funciona como antes.
+## 3. Top Bar: Avatar + Nome + Menu "Sair"
 
-Arquivos que serão modificados
-- Backend (migrações):
-  - `supabase/migrations/<nova_migration>.sql` (adicionar coluna + índices + funções)
+### Contexto atual
+- `src/components/AppLayout.tsx`: header com logo + texto "FRATERNIDADE".
+- Não há perfil do usuário exibido.
+
+### O que vamos fazer
+1. **Buscar dados do usuário logado**:
+   - Usar `useAuth()` para pegar `user.id`.
+   - Criar hook ou query para buscar `profiles.first_name`, `profiles.last_name`, `profiles.avatar_url` do usuário logado.
+   - Cache com TanStack Query (staleTime 60s).
+2. **Layout do header** (AppLayout):
+   - À **direita** do logo + "FRATERNIDADE", adicionar:
+     - Avatar circular pequeno (32×32px).
+     - Nome + Sobrenome em **dourado** (`text-primary`, efeito metálico via `GoldHoverText` ou classe customizada).
+     - Ao clicar no avatar ou nome: abrir **Dropdown Menu** (Radix `DropdownMenu`).
+3. **Dropdown** (conteúdo):
+   - Item "Sair" com ícone `LogOut` (lucide).
+   - Estilo dourado metálico (mesma cor de hover do GoldHoverText).
+   - Ao clicar "Sair": chamar `signOut()` do `useAuth()`.
+
+### Design visual (top bar)
+- Fundo: `invictus-surface` + `backdrop-blur-xl` (como hoje).
+- Separador inferior sutil (gradiente) mantido.
+- Novo agrupamento à direita:
+  - `<Avatar />` (h-8 w-8).
+  - Texto nome (`<GoldHoverText>` ou `<span className="text-primary font-semibold">`)
+  - Clicar em qualquer um abre menu.
+- Menu dropdown: fundo `invictus-modal-glass`, item "Sair" com hover dourado.
+
+### Arquivos modificados
+- `src/components/AppLayout.tsx`: adicionar query de perfil, renderizar avatar + nome + dropdown.
+- `src/components/ui/dropdown-menu.tsx`: já existe (Radix).
+- Possível novo componente: `src/components/UserMenu.tsx` (reuso em vários layouts).
+
+---
+
+## Sequência de implementação
+
+1. **Migration SQL** (first_name + last_name):
+   - Criar migration.
+   - Aguardar aprovação do sistema.
+   - Testar no backend (perfil salva e `display_name` é computado).
+2. **ProfileForm** (2 campos):
+   - Atualizar schema zod.
+   - Ajustar inputs.
+   - Testar salvar e exibir.
+3. **Editor de Avatar** (ProfileForm):
+   - Instalar `react-easy-crop` (se necessário).
+   - Criar modal de crop.
+   - Aumentar círculo de preview.
+   - Implementar lógica de crop → blob → upload.
+   - Testar fluxo completo.
+4. **Top Bar** (AppLayout):
+   - Criar query para buscar perfil do usuário logado.
+   - Adicionar avatar + nome à direita do logo.
+   - Implementar dropdown "Sair".
+   - Testar em desktop e mobile.
+
+---
+
+## Validações e segurança
+
+- **RLS**: `profiles` já tem RLS; usuários podem atualizar apenas o próprio perfil.
+- **Storage**: bucket `avatars` já é público; imagens recortadas seguem mesmo padrão de path (`userId/avatar-timestamp.ext`).
+- **Crop**: toda lógica de recorte é client-side (canvas); imagem final enviada ao backend já cortada.
+- **SQL**: trigger ou função para compor `display_name` a partir de `first_name || ' ' || last_name` garante consistência.
+
+---
+
+## Testes (critérios de aceite)
+
+1. **Editor de Avatar**:
+   - Usuário clica "Trocar foto" → modal abre com preview grande.
+   - Pode arrastar/zoom na imagem.
+   - Ao salvar, imagem é recortada em círculo e armazenada em formato quadrado.
+   - Avatar atualiza no perfil e no top bar.
+2. **Nome + Sobrenome**:
+   - Formulário exibe 2 campos.
+   - Ao salvar, backend compõe `display_name`.
+   - Buscas e listagens continuam mostrando nome completo.
+3. **Top Bar**:
+   - Avatar pequeno + nome completo (dourado) aparecem à direita do logo.
+   - Clicar no avatar abre dropdown com "Sair".
+   - "Sair" funciona e desloga.
+   - Layout responsivo (mobile: talvez esconder texto do nome e deixar só avatar + dropdown).
+
+---
+
+## Arquivos principais a modificar
+
+- Backend:
+  - `supabase/migrations/<nova_migration>.sql` (first_name, last_name, trigger/função para display_name).
 - Frontend:
-  - `src/components/profile/ProfileForm.tsx`
-  - `src/components/messages/NewMessageDialog.tsx`
-  - `src/pages/Buscar.tsx`
+  - `src/components/profile/ProfileForm.tsx` (2 campos + editor de avatar).
+  - `src/components/AppLayout.tsx` (top bar: avatar + nome + dropdown).
+  - (Opcional) `src/components/profile/AvatarCropDialog.tsx` (modal de crop).
+  - (Opcional) `src/components/UserMenu.tsx` (dropdown reutilizável).
 
-Riscos / cuidados
-- Alterar assinatura de `search_approved_members` exige cuidado (DROP + recriar) para não quebrar chamadas.
-- Como `profiles` tem RLS restritiva, a página Buscar precisa obrigatoriamente usar a nova função “segura” para ler perfis aprovados.
-- Garantir que o @ salvo com “@” não gere inconsistências na UI (vamos sempre exibir exatamente o que está salvo, e normalizar input do usuário).
+---
 
-Sequência de implementação (ordem)
-1) Criar migration: coluna `profiles.username`, constraints/índices, atualizar `search_approved_members`, criar `find_approved_member_by_username`.
-2) Atualizar `ProfileForm` para ler/salvar username.
-3) Atualizar `NewMessageDialog` para exibir e buscar por username.
-4) Implementar a UI real de `/buscar` consumindo a função por @.
-5) Testar end-to-end (perfil → salvar @ → buscar → direct).
+## Riscos/cuidados
 
+- **Display_name legado**: manter `display_name` como coluna computada (ou via trigger) garante que funções/views existentes continuam funcionando sem quebrar.
+- **Crop de imagem**: biblioteca `react-easy-crop` pode adicionar ~30kb ao bundle; aceitável para a funcionalidade.
+- **Mobile**: testar top bar em telas pequenas (avatar + nome pode ficar apertado; considerar esconder texto do nome em <640px e deixar só avatar + dropdown).
+
+---
+
+## Nota técnica (display_name)
+
+Duas abordagens possíveis:
+1. **Coluna computada** (Postgres 12+):
+   ```sql
+   ALTER TABLE profiles
+     ADD COLUMN display_name text GENERATED ALWAYS AS (first_name || ' ' || last_name) STORED;
+   ```
+2. **Trigger** (mais flexível):
+   - Ao INSERT/UPDATE, preencher `display_name` com `first_name || ' ' || last_name`.
+
+Recomendação: **coluna computada** (mais simples, sempre consistente).
+
+---
+
+Fim do plano. Arquivos a serem modificados:
+- `supabase/migrations/<timestamp>_add_first_last_name.sql`
+- `src/components/profile/ProfileForm.tsx`
+- `src/components/AppLayout.tsx`
+- `src/integrations/supabase/types.ts` (auto-atualizado)

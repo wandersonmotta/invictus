@@ -44,6 +44,19 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
     );
   }
 
+  if (profileQuery.isError) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center px-4">
+        <div className="max-w-md text-center">
+          <div className="text-sm font-medium text-foreground">Não foi possível carregar seu acesso</div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            Recarregue a página. Se persistir, tente sair e entrar novamente.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const status = profileQuery.data?.access_status ?? "pending";
   const path = location.pathname;
   const allowedWhenPending = new Set(["/perfil", "/aguardando-aprovacao", "/reset-password", "/auth"]);

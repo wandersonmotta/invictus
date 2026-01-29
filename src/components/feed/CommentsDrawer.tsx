@@ -151,9 +151,7 @@ export function CommentsDrawer({ postId, count }: { postId: string; count: numbe
                       }}
                       onSaveEdit={() => editMutation.mutate({ commentId: c.comment_id, newBody: editBody })}
                       onDelete={() => {
-                        if (confirm("Apagar este comentário?")) {
-                          deleteMutation.mutate(c.comment_id);
-                        }
+                        deleteMutation.mutate(c.comment_id);
                       }}
                       onToggleLike={() => likeMutation.mutate(c.comment_id)}
                       likeDisabled={likeMutation.isPending}

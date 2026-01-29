@@ -3,6 +3,7 @@ import { Home as HomeIcon, MapPin, Search, MessageCircle, User, Shield, Clapperb
 
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
+import invictusLogo from "@/assets/invictus-logo.png";
 import {
   Sidebar,
   SidebarContent,
@@ -37,6 +38,10 @@ export function AppSidebar() {
   return (
     <Sidebar
       className={cn("invictus-sidebar", collapsed ? "w-14" : "w-64")}
+      style={{
+        // used by invictus-sidebar.css for the watermark (unique brand signature)
+        ["--invictus-mark" as any]: `url(${invictusLogo})`,
+      }}
       collapsible="icon"
       variant="inset"
     >

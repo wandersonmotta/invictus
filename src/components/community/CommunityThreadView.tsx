@@ -56,6 +56,7 @@ export function CommunityThreadView({ threadId, onBack }: Props) {
   const qc = useQueryClient();
   const [body, setBody] = React.useState("");
   const [pendingFiles, setPendingFiles] = React.useState<File[]>([]);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [nowTick, setNowTick] = React.useState(() => Date.now());
   const [meId, setMeId] = React.useState<string | null>(null);
   const [activeUsers, setActiveUsers] = React.useState<
@@ -272,18 +273,28 @@ export function CommunityThreadView({ threadId, onBack }: Props) {
           />
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              <Input
+            <div className="flex items-center gap-3">
+              <input
+                ref={fileInputRef}
                 type="file"
                 multiple
+                className="hidden"
                 onChange={(e) => {
                   const files = Array.from(e.target.files ?? []);
                   setPendingFiles(files.slice(0, 10));
                 }}
               />
-              {pendingFiles.length ? (
-                <div className="text-xs text-muted-foreground">{pendingFiles.length} arquivo(s)</div>
-              ) : null}
+              <Button
+                type="button"
+                size="sm"
+                variant="goldOutline"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Anexar arquivos
+              </Button>
+              <div className="text-xs text-muted-foreground">
+                {pendingFiles.length ? `${pendingFiles.length} arquivo(s) selecionado(s)` : "Nenhum arquivo selecionado"}
+              </div>
             </div>
             <Button
               onClick={() => createPostMutation.mutate()}
@@ -385,7 +396,7 @@ function PostItem({
             {canModify ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="secondary">
+                  <Button size="sm" variant="goldOutline">
                     Ações
                   </Button>
                 </DropdownMenuTrigger>

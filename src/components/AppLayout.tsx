@@ -13,7 +13,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <AppSidebar />
 
         <SidebarInset>
-          <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b bg-background/35 px-3 sm:px-4 backdrop-blur-xl">
+          <header
+            className={
+              "sticky top-0 z-20 flex h-14 items-center gap-2 px-3 sm:px-4 backdrop-blur-xl " +
+              // volta ao padrão glass (sem a barra clara do border-b)
+              "invictus-surface " +
+              // separador sutil usando tokens (evita linha branca forte)
+              "shadow-[0_1px_0_0_hsl(var(--border)_/_0.45)]"
+            }
+          >
             <div className="flex-1">
               <div className="flex items-center gap-3">
                 <img

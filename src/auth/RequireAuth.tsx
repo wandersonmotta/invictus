@@ -12,14 +12,27 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
     queryKey: ["profile_access", session?.user.id],
     enabled: !!session?.user.id,
     queryFn: async () => {
-      if (!session?.user.id) return { access_status: "pending" as const };
+      if (!session?.user.id)
+        return {
+          access_status: "pending" as const,
+          first_name: null as string | null,
+          last_name: null as string | null,
+        };
       const { data, error } = await supabase
         .from("profiles")
-        .select("access_status")
+        .select("access_status, first_name, last_name")
         .eq("user_id", session.user.id)
         .maybeSingle();
       if (error) throw error;
-      return (data ?? { access_status: "pending" }) as { access_status: "pending" | "approved" | "rejected" };
+      return (data ?? {
+        access_status: "pending",
+        first_name: null,
+        last_name: null,
+      }) as {
+        access_status: "pending" | "approved" | "rejected";
+        first_name: string | null;
+        last_name: string | null;
+      };
     },
     staleTime: 10_000,
   });
@@ -59,6 +72,17 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
   const status = profileQuery.data?.access_status ?? "pending";
   const path = location.pathname;
+  const allowedWhenIncomplete = new Set(["/perfil", "/reset-password", "/auth"]);
+
+  const firstName = (profileQuery.data?.first_name ?? "").trim();
+  const lastName = (profileQuery.data?.last_name ?? "").trim();
+  const profileComplete = Boolean(firstName && lastName);
+
+  // Obrigatório: sem Nome + Sobrenome, bloqueia navegação e força /perfil.
+  if (!profileComplete && !allowedWhenIncomplete.has(path)) {
+    return <Navigate to="/perfil" replace state={{ from: path }} />;
+  }
+
   const allowedWhenPending = new Set(["/perfil", "/aguardando-aprovacao", "/reset-password", "/auth"]);
 
   if (status !== "approved" && !allowedWhenPending.has(path)) {

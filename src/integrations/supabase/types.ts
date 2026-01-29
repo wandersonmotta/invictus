@@ -226,6 +226,32 @@ export type Database = {
         }
         Relationships: []
       }
+      feed_comment_likes: {
+        Row: {
+          comment_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_comment_likes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "feed_post_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feed_post_comments: {
         Row: {
           author_id: string
@@ -1017,6 +1043,8 @@ export type Database = {
           body: string
           comment_id: string
           created_at: string
+          like_count: number
+          liked_by_me: boolean
         }[]
       }
       list_feed_posts: {
@@ -1085,6 +1113,10 @@ export type Database = {
       send_message: {
         Args: { p_body: string; p_conversation_id: string }
         Returns: string
+      }
+      toggle_feed_comment_like: {
+        Args: { p_comment_id: string }
+        Returns: boolean
       }
       toggle_feed_post_like: { Args: { p_post_id: string }; Returns: boolean }
       toggle_follow: { Args: { p_target_user_id: string }; Returns: boolean }

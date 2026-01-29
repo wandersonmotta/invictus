@@ -21,11 +21,8 @@ export function ChannelList({ value, onChange }: Props) {
     staleTime: 60_000,
   });
 
-  React.useEffect(() => {
-    if (!value && channelsQuery.data?.length) {
-      onChange(channelsQuery.data[0]);
-    }
-  }, [value, channelsQuery.data, onChange]);
+  // Importante: não auto-selecionar um canal ao abrir /comunidade.
+  // A seleção deve ocorrer apenas por ação do usuário (clique).
 
   return (
     <div className="h-full">

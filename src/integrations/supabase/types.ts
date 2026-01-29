@@ -785,10 +785,12 @@ export type Database = {
         }
         Returns: string
       }
-      create_feed_post: {
-        Args: { p_caption: string; p_media: Json }
-        Returns: string
-      }
+      create_feed_post:
+        | { Args: { p_caption: string; p_media: Json }; Returns: string }
+        | {
+            Args: { p_caption: string; p_media: Json; p_post_id: string }
+            Returns: string
+          }
       delete_community_post: { Args: { p_post_id: string }; Returns: string }
       delete_feed_post_comment: {
         Args: { p_comment_id: string }

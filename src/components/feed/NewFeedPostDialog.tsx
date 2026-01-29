@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { FeedImageCropDialog } from "@/components/feed/FeedImageCropDialog";
+import { SelectedMediaItemCard, type SelectedMedia } from "@/components/feed/SelectedMediaItemCard";
 
 const MAX_FILES = 10;
 const MAX_BYTES = 20 * 1024 * 1024;
@@ -24,16 +25,6 @@ type MediaMeta = {
   size_bytes: number;
   trim_start_seconds?: number | null;
   trim_end_seconds?: number | null;
-};
-
-type SelectedMedia = {
-  id: string;
-  file: File;
-  previewUrl: string;
-  isVideo: boolean;
-  duration?: number;
-  trimStart?: number;
-  trimEnd?: number;
 };
 
 function sanitizeFileName(name: string) {
@@ -58,6 +49,11 @@ export function NewFeedPostDialog() {
 
   const cropTarget = React.useMemo(() => items.find((i) => i.id === cropTargetId) ?? null, [items, cropTargetId]);
 
+  const hasUncroppedImages = React.useMemo(
+    () => items.some((it) => !it.isVideo && it.isCropped !== true),
+    [items],
+  );
+
   const publishMutation = useMutation({
     mutationFn: async () => {
       const { data: auth } = await supabase.auth.getUser();
@@ -77,6 +73,10 @@ export function NewFeedPostDialog() {
           if (typeof it.trimStart === "number" && typeof it.trimEnd === "number" && it.trimEnd <= it.trimStart)
             throw new Error("Fim precisa ser maior que o início");
         }
+      }
+
+      if (hasUncroppedImages) {
+        throw new Error("Recorte obrigatório: recorte todas as fotos antes de publicar.");
       }
 
       const postId = crypto.randomUUID();
@@ -102,6 +102,7 @@ export function NewFeedPostDialog() {
       }
 
       const { data, error } = await supabase.rpc("create_feed_post", {
+        p_post_id: postId,
         p_caption: caption,
         p_media: uploaded,
       });
@@ -151,7 +152,7 @@ export function NewFeedPostDialog() {
                 const next: SelectedMedia[] = list.map((f) => {
                   const previewUrl = URL.createObjectURL(f);
                   const isVideo = f.type.startsWith("video/");
-                  return { id: crypto.randomUUID(), file: f, previewUrl, isVideo };
+                  return { id: crypto.randomUUID(), file: f, previewUrl, isVideo, isCropped: isVideo ? true : false };
                 });
                 setItems(next);
               }}
@@ -166,79 +167,25 @@ export function NewFeedPostDialog() {
               <div className="text-sm font-medium">Prévia / Ajustes</div>
               <div className="space-y-3">
                 {items.map((it) => (
-                  <div key={it.id} className="rounded-lg border border-border/60 p-3">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                      <div className="w-full sm:w-40">
-                        {it.isVideo ? (
-                          <video src={it.previewUrl} className="w-full rounded-md border border-border/60" controls />
-                        ) : (
-                          <img
-                            src={it.previewUrl}
-                            alt="Prévia"
-                            className="w-full rounded-md border border-border/60 object-cover"
-                            loading="lazy"
-                          />
-                        )}
-                      </div>
-
-                      <div className="flex-1 space-y-2">
-                        <div className="text-xs text-muted-foreground break-all">{it.file.name}</div>
-
-                        {!it.isVideo ? (
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => {
-                              setCropTargetId(it.id);
-                              setCropOpen(true);
-                            }}
-                          >
-                            Recortar imagem
-                          </Button>
-                        ) : (
-                          <div className="grid gap-2 sm:grid-cols-2">
-                            <div>
-                              <div className="text-xs text-muted-foreground">Início (s)</div>
-                              <Input
-                                inputMode="decimal"
-                                placeholder="0"
-                                value={it.trimStart ?? ""}
-                                onChange={(e) => {
-                                  const v = e.target.value;
-                                  setItems((prev) =>
-                                    prev.map((x) =>
-                                      x.id === it.id ? { ...x, trimStart: v === "" ? undefined : Number(v) } : x,
-                                    ),
-                                  );
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <div className="text-xs text-muted-foreground">Fim (s)</div>
-                              <Input
-                                inputMode="decimal"
-                                placeholder="(opcional)"
-                                value={it.trimEnd ?? ""}
-                                onChange={(e) => {
-                                  const v = e.target.value;
-                                  setItems((prev) =>
-                                    prev.map((x) =>
-                                      x.id === it.id ? { ...x, trimEnd: v === "" ? undefined : Number(v) } : x,
-                                    ),
-                                  );
-                                }}
-                              />
-                            </div>
-                            <div className="sm:col-span-2 text-xs text-muted-foreground">
-                              Recorte de vídeo é aplicado na reprodução (Reels) — o arquivo enviado continua inteiro.
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  <SelectedMediaItemCard
+                    key={it.id}
+                    item={it}
+                    onCropClick={() => {
+                      setCropTargetId(it.id);
+                      setCropOpen(true);
+                    }}
+                    onTrimChange={(next) => {
+                      setItems((prev) => prev.map((x) => (x.id === it.id ? { ...x, ...next } : x)));
+                    }}
+                  />
                 ))}
               </div>
+
+              {hasUncroppedImages ? (
+                <div className="text-sm text-destructive">
+                  Recorte obrigatório: recorte todas as fotos antes de publicar.
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -247,7 +194,11 @@ export function NewFeedPostDialog() {
           <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
             Cancelar
           </Button>
-          <Button type="button" onClick={() => publishMutation.mutate()} disabled={publishMutation.isPending}>
+          <Button
+            type="button"
+            onClick={() => publishMutation.mutate()}
+            disabled={publishMutation.isPending || hasUncroppedImages}
+          >
             {publishMutation.isPending ? "Publicando…" : "Publicar"}
           </Button>
         </DialogFooter>
@@ -268,7 +219,7 @@ export function NewFeedPostDialog() {
             prev.map((x) => {
               if (x.id !== cropTarget.id) return x;
               URL.revokeObjectURL(x.previewUrl);
-              return { ...x, file: nextFile, previewUrl: nextUrl, isVideo: false };
+              return { ...x, file: nextFile, previewUrl: nextUrl, isVideo: false, isCropped: true };
             }),
           );
         }}

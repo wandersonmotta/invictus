@@ -61,6 +61,8 @@ export function ReelsMedia({
     };
   }, [isVideo, trimStartSeconds, trimEndSeconds, url]);
 
+  const ratio = isVideo ? 9 / 16 : 4 / 5;
+
   return (
     <button
       type="button"
@@ -71,7 +73,7 @@ export function ReelsMedia({
         className,
       )}
     >
-      <AspectRatio ratio={9 / 16}>
+      <AspectRatio ratio={ratio}>
         <div className="h-full w-full bg-muted">
           {isVideo ? (
             <video

@@ -1,115 +1,96 @@
 
-Objetivo (o que você pediu agora)
-1) O mapa precisa ficar “Invictus”: mais escuro, com sensação de vidro (glaze) no “oceano/área ao redor”, e com os países/terra puxando para dourado (não cinza genérico).
-2) Pins precisam virar foto circular da pessoa, com destaque cromado/metálico nas bordas (premium).
-3) Remover controles confusos:
-   - Tirar “Brasil” e “Em mim” (texto/botões)
-   - Tirar zoom +/− (ou substituir por algo bem discreto)
-   - Manter só 1 botão “localizar” (geo referência) como ação principal.
-4) Manter privacidade: localização aproximada (jitter) continua.
+Objetivo
+- Tirar o aspecto “genérico” da navegação lateral e criar um visual 100% Invictus (glass + dourado + metálico), mantendo legibilidade e performance.
+- Você escolheu: **sem bloco de marca no topo**, visual **marcante**, e item ativo com **barra dourada + capsule**.
 
-Diagnóstico rápido do estado atual
-- O mapa está usando tiles padrão OSM + filtro CSS. Isso tende a ficar “cinza genérico”, porque tile raster não separa “água”/“terra” de forma controlável.
-- Os pins hoje são um divIcon dourado; não usam foto.
-- A RPC `get_approved_member_pins` (backend) não retorna `avatar_url`, então o front não tem como renderizar a foto no pin sem mudar essa função.
+O que vou mudar (resultado esperado)
+1) Sidebar com identidade “Invictus”
+- Fundo com glass (mais “profundo” que o resto do app), vinheta sutil e uma “aura” dourada bem controlada.
+- Borda/recorte premium: linha dourada interna + sombra de profundidade (sem neon).
 
-Estratégia para ficar realmente “Invictus” (sem virar gambiarra)
-A) Visual do mapa (único, Invictus, com glaze + países dourados)
-- Você escolheu “Mapa premium (com chave)”. Vou implementar assim:
-  1) Trocar a camada de tiles por um provedor premium (ex.: Mapbox/MapTiler) com um “style” próprio voltado para: fundo escuro + terra dourada.
-  2) Por cima, manter o “Invictus overlay” (pattern microgrid + sweep gold + vinheta) para dar assinatura da marca.
-  3) “Glaze/vidro” no oceano: em mapa raster não existe transparência real por camada, então faremos a sensação de vidro por composição:
-     - reduzir opacidade dos tiles para deixar o background “glass” do container aparecer
-     - aplicar overlays com gradientes e blur (já existe parte disso) para parecer água vitrificada
-     - ajustar blend modes para não “lavar” o dourado.
+2) Itens de navegação (o que deixa de ser genérico)
+- Estado normal: ícone + texto com leve brilho dourado no hover (sem exagero).
+- Estado hover: “sweep” dourado sutil + elevação mínima.
+- Estado ativo: 
+  - **Barra dourada** na esquerda (indicador forte)
+  - **Capsule glass** envolvendo o item (com moldura dourada + highlight metálico)
+  - Glow sutil (premium, não chamativo)
 
-Importante (dependência para o “países dourados” ficar perfeito)
-- Para países realmente dourados (terra) e água vitrificada, precisamos de um “map style” próprio do provedor premium.
-- Vou preparar o app para receber um `MAP_STYLE_URL` (ou `STYLE_ID`) + `TOKEN`.
-- Se você já tiver um style pronto: me passa o style URL/ID.
-- Se você não tiver: eu implemento com um style premium recomendado como base + filtro Invictus por cima; depois refinamos quando você me passar o style final.
+3) Experiência quando colapsada (mini)
+- Continua com os ícones (como já está).
+- Tooltip por item (para não ficar “mudo” quando só tiver ícone).
+- Mantém o mesmo destaque de ativo (barra + capsule) adaptado ao tamanho mini.
 
-B) Pins com foto circular + borda cromada/metálica (obrigatório ter foto)
-1) Backend: atualizar a função `public.get_approved_member_pins` para também retornar:
-   - `avatar_url` (da tabela `profiles`)
-   - opcional: `display_name` (para tooltip, se você quiser)
-2) Como a foto é obrigatória:
-   - A função vai filtrar apenas membros aprovados com `avatar_url IS NOT NULL` (assim não aparecem pins “quebrados”).
-   - Se existir aprovado sem foto hoje, ele simplesmente não aparece no mapa até preencher (isso bate com o “obrigatório”).
-3) Frontend:
-   - Ajustar `ApprovedMemberPin` para incluir `avatar_url`.
-   - No `MemberMap`, trocar o `goldIcon` “genérico” por um `divIcon` que renderiza:
-     - `<img src="...">` circular
-     - anel cromado metálico + detalhe dourado (uma borda dupla: chrome + gold line)
-     - glow sutil e sombra de profundidade
-   - O tooltip pode continuar glass; opcionalmente mostrar nome/cidade.
+Exploração do que já existe (base atual)
+- `src/components/AppSidebar.tsx`: hoje cada item usa `NavLink` com classes simples e `activeClassName`.
+- `src/components/ui/sidebar.tsx`: já oferece `data-active`, estados de colapso e estrutura consistente para estilizar via CSS/Tailwind.
+- Tokens já existem em `src/index.css` (gold-soft / gold-hot / glass / sidebar-*).
 
-C) Controles (simplificar para “um único localizar”)
-- No `MemberMap.tsx`:
-  - Remover o bloco do zoom +/− (Plus/Minus) completamente.
-  - Manter apenas 1 botão: ícone “Localizar” (LocateFixed).
-  - O comportamento do botão:
-    1) Se existir `centerMe` (local aproximado do perfil), centraliza nele.
-    2) Se não existir, tenta `navigator.geolocation` (caso o usuário permita).
-- Zoom fica via:
-  - mouse wheel / trackpad no desktop
-  - pinch no mobile
-  - double tap / double click (Leaflet já suporta), deixando a UI limpa e premium.
+Implementação (passo a passo)
+A) Ajustar a composição da sidebar (AppSidebar)
+1. Migrar o highlight de ativo para usar também os estados do componente do Sidebar:
+   - Passar `tooltip={item.title}` no `SidebarMenuButton` quando colapsado (ou sempre, já que ele só mostra no collapsed).
+   - Informar “ativo” tanto via `NavLink` quanto via `SidebarMenuButton` (para conseguir estilo mais rico com `data-active=true`).
+2. Centralizar as classes em 2 “camadas”:
+   - Uma classe de “container do item” (capsule) aplicada no `SidebarMenuButton` (ou wrapper).
+   - Uma classe de “link interno” aplicada no `NavLink` para tipografia e alinhamento.
+3. Garantir acessibilidade:
+   - `aria-current="page"` continua.
+   - Foco visível com ring dourado já existe via tokens; vamos reforçar.
 
-Mudanças planejadas (arquivos / backend)
-1) Backend (migração SQL)
-- Alterar `public.get_approved_member_pins`:
-  - RETURNS TABLE passa a incluir `avatar_url text` (e opcionalmente `display_name text`)
-  - SELECT passa a pegar esses campos de `public.profiles`
-  - Adicionar filtro `p.avatar_url IS NOT NULL` (já que foto é obrigatória)
-- Manter `SECURITY DEFINER` + `GRANT EXECUTE` como está.
-- Não mexer em RLS de `profiles` (a função já faz o papel de expor somente o necessário).
+Arquivos afetados:
+- `src/components/AppSidebar.tsx`
 
-2) Frontend (TypeScript/React)
-- `src/components/map/useApprovedMemberPins.ts`
-  - Atualizar tipo `ApprovedMemberPin` para incluir `avatar_url` (+ opcional display_name).
-- `src/components/map/MemberMap.tsx`
-  - Remover controles de zoom (+ e −).
-  - Manter só o botão de localizar (um único controle).
-  - Criar `iconForPin(p)` (memoized) para gerar `divIcon` com `<img ...>` e classes novas.
-  - Ajustar tooltip para continuar premium (pode mostrar city/state e, se desejar, nome).
-- `src/styles/invictus-map.css`
-  - Criar um “avatar pin” novo:
-    - `.invictus-map-avatar-pin`, `.invictus-map-avatar-img`, `.invictus-map-avatar-ring`
-    - “chrome ring” (efeito metálico) com gradient frio (cinza) + highlights, e um filet dourado interno.
-  - Ajustar o mapa para ficar menos “cinza” e mais “Invictus”:
-    - se tile premium for aplicado, reduzir dependência do filtro cinza e usar tonalização dourada + overlays.
-  - Aumentar a sensação de glaze:
-    - reforçar background do container com “glass ocean”
-    - diminuir opacidade do tile pane e recalibrar contrast para não perder leitura.
+B) Criar o “skin Invictus” via CSS (sem mexer na lib)
+1. Adicionar classes utilitárias/estilos em `src/index.css` dentro de `@layer components`:
+   - `.invictus-sidebar` para o container do Sidebar (glass + aura + borda dourada).
+   - `.invictus-sidebar-item` para o item base.
+   - `.invictus-sidebar-item--active` (ou via seletores `[data-active=true]`) para:
+     - capsule glass
+     - barra dourada à esquerda (pseudo-elemento `::before`)
+     - highlight metálico (pseudo `::after` com gradiente “champagne/chrome”)
+   - `.invictus-sidebar-icon` e `.invictus-sidebar-label` para micro-ajustes (tracking, opacidade, brilho).
+2. Estilizar usando seletores já existentes do shadcn sidebar:
+   - `[data-sidebar="sidebar"]` para o container.
+   - `[data-sidebar="menu-button"][data-active="true"]` para o ativo.
+   - `group-data-[collapsible=icon]` para adaptar ao modo colapsado.
 
-3) Configuração de chave (necessária para “mapa premium”)
-- Adicionar 1 variável de ambiente (segura e simples):
-  - `VITE_MAP_PROVIDER_TOKEN` (ex.: Mapbox/MapTiler token)
-  - e `VITE_MAP_STYLE_URL` (ou `VITE_MAP_STYLE_ID`)
-- Eu vou solicitar esses valores no chat quando for implementar.
-- Observação: token de mapa normalmente é “publicável” (não é segredo ultra sensível), mas ainda assim é melhor ficar como variável, não hardcoded.
+Arquivos afetados:
+- `src/index.css`
 
-Como vamos validar que ficou “padrão Invictus”
-Checklist visual
-- Mapa visivelmente mais dark (graphite), sem ficar “cinza morto”.
-- Terra/países puxando para dourado (não amarelo neon).
-- “Água”/área ao redor com sensação de vidro/glaze (profundidade e transparência).
-- Overlay Invictus (pattern + sweep) aparece sutil, não polui.
-Checklist de UX
-- Só existe 1 controle: “Localizar”.
-- Sem botões “Brasil/Em mim” e sem +/−.
-- Clique em localizar centraliza corretamente (perfil primeiro; fallback para geolocalização do navegador).
-Checklist de pins
-- Pins são fotos circulares (obrigatório) e parecem “joia”: borda cromada metálica + detalhe dourado + glow sutil.
-- Sem imagens quebradas (quem não tem foto não aparece).
+C) Ajustes finos (para ficar “marcante” sem perder classe)
+1. Ajustar o “tom do dourado” no ativo:
+   - Usar `--gold-hot` para o outline/linha forte e `--gold-soft` para gradientes.
+2. Controlar “glow”:
+   - Glow apenas no ativo/hover e sempre com opacidade baixa (evitar neon).
+3. Garantir que o fundo do item (capsule) não fique transparente demais:
+   - A capsule deve ter background real (glass), para não “vazar” e ficar feio (especialmente em dark).
 
-Riscos / dependências
-- “Países dourados + água transparente de verdade” depende do style premium do provedor. Sem style custom, dá para aproximar com filtros/overlays, mas o resultado máximo vem com o style certo.
-- Se houver membros aprovados sem foto hoje, eles vão sumir do mapa até colocar foto (alinhado ao “obrigatório”).
+Checklist de validação (o que vamos testar no Preview)
+1) Visual
+- Sidebar parece “premium”: profundidade + vidro + dourado metálico.
+- Item ativo tem claramente: barra dourada + capsule (sem poluir).
+- Hover é “vivo”, mas executivo (sem neon).
 
-Sequência de implementação
-1) Backend: atualizar a RPC `get_approved_member_pins` para retornar `avatar_url` (e filtrar `NOT NULL`).
-2) Frontend: atualizar tipos + hook + renderização dos pins com `<img>`.
-3) UI: remover zoom +/− e manter apenas o botão “localizar”.
-4) Trocar tiles para provedor premium com token + style e recalibrar o glaze/dourado (overlay final “Invictus”).
+2) UX
+- Com sidebar expandida: texto legível, bom contraste.
+- Com sidebar colapsada: tooltips aparecem; ícones continuam claros.
+- Navegação entre rotas atualiza o ativo corretamente (ex.: /admin, /mapa, /perfil).
+
+3) Responsivo
+- Mobile: sidebar como drawer não perde estilos (sem transparência ruim).
+- Toques: áreas clicáveis continuam confortáveis.
+
+Riscos / cuidados
+- Evitar excesso de blur e sombras pesadas para não degradar performance em mobile.
+- Garantir que o “glass” não deixe o texto com pouco contraste (vamos calibrar opacidades).
+- Não quebrar a lógica de colapso do Sidebar (vamos respeitar `data-*` e padrões existentes).
+
+Entrega incremental
+1) Aplicar “skin Invictus” no container da sidebar + itens base.
+2) Implementar estado ativo (barra + capsule) e hover.
+3) Ajustar collapsed (tooltips + estilos adaptados).
+4) Polimento: contraste, espessuras, sombras.
+
+Observação (sobre o que você pediu)
+- Como você quer “sem bloco de marca”, não vou duplicar logo/nome dentro da sidebar. Toda a assinatura vai vir do material/efeitos do próprio menu (o que deixa mais “clean” e ainda assim único).

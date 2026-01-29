@@ -14,7 +14,7 @@ type Props = {
   onSave: (blob: Blob) => Promise<void> | void;
 };
 
-// Reels: prioriza 9:16 (vertical)
+// Fotos no feed: prioriza 4:5 (1080x1350)
 export function FeedImageCropDialog({ open, onOpenChange, imageSrc, onCancel, onSave }: Props) {
   const [crop, setCrop] = React.useState({ x: 0, y: 0 });
   const [zoom, setZoom] = React.useState(1);
@@ -34,12 +34,12 @@ export function FeedImageCropDialog({ open, onOpenChange, imageSrc, onCancel, on
     if (!imageSrc || !cropPixels) return;
     setSaving(true);
     try {
-      // 1080x1920 (9:16)
+      // 1080x1350 (4:5)
       const blob = await getCroppedImageBlob({
         imageSrc,
         cropPixels,
         outputWidth: 1080,
-        outputHeight: 1920,
+        outputHeight: 1350,
         mimeType: "image/jpeg",
         quality: 0.9,
       });
@@ -56,7 +56,9 @@ export function FeedImageCropDialog({ open, onOpenChange, imageSrc, onCancel, on
         <div className="invictus-surface invictus-frame border-border/70 rounded-xl p-4 sm:p-5">
           <DialogHeader className="mb-3">
             <DialogTitle>Recortar imagem</DialogTitle>
-            <DialogDescription>Arraste para posicionar e use o zoom para ajustar (formato 9:16).</DialogDescription>
+            <DialogDescription>
+              Arraste para posicionar e use o zoom para ajustar (formato 4:5 — 1080x1350).
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -67,7 +69,7 @@ export function FeedImageCropDialog({ open, onOpenChange, imageSrc, onCancel, on
                     image={imageSrc}
                     crop={crop}
                     zoom={zoom}
-                    aspect={9 / 16}
+                    aspect={4 / 5}
                     cropShape="rect"
                     showGrid={false}
                     onCropChange={setCrop}

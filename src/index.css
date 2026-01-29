@@ -2,6 +2,7 @@
 @import "./styles/invictus-map.css";
 @import "./styles/invictus-map-pins.css";
 @import "./styles/invictus-sidebar.css";
+@import "./styles/invictus-topbar.css";
 
 @tailwind base;
 @tailwind components;

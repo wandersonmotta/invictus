@@ -574,6 +574,42 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          actor_id: string | null
+          conversation_id: string | null
+          created_at: string
+          data: Json
+          entity_id: string | null
+          id: string
+          read_at: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          data?: Json
+          entity_id?: string | null
+          id?: string
+          read_at?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          data?: Json
+          entity_id?: string | null
+          id?: string
+          read_at?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           access_status: Database["public"]["Enums"]["access_status"]
@@ -752,6 +788,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _notify: {
+        Args: {
+          p_actor_id: string
+          p_conversation_id?: string
+          p_data?: Json
+          p_entity_id?: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       add_community_post_attachment: {
         Args: {
           p_content_type?: string
@@ -769,6 +816,7 @@ export type Database = {
       can_view_author: { Args: { p_author_id: string }; Returns: boolean }
       can_view_feed_media: { Args: { p_object_name: string }; Returns: boolean }
       can_view_post: { Args: { p_post_id: string }; Returns: boolean }
+      count_unread_notifications: { Args: never; Returns: number }
       create_community_post: {
         Args: { p_body: string; p_thread_id: string }
         Returns: string
@@ -979,6 +1027,22 @@ export type Database = {
           post_id: string
         }[]
       }
+      list_my_notifications: {
+        Args: { p_before?: string; p_limit?: number }
+        Returns: {
+          actor_avatar_url: string
+          actor_display_name: string
+          actor_user_id: string
+          actor_username: string
+          conversation_id: string
+          created_at: string
+          data: Json
+          entity_id: string
+          id: string
+          read_at: string
+          type: string
+        }[]
+      }
       list_profile_feed_posts: {
         Args: { p_before?: string; p_limit?: number; p_user_id: string }
         Returns: {
@@ -1000,6 +1064,7 @@ export type Database = {
           username: string
         }[]
       }
+      mark_notifications_read: { Args: { p_before: string }; Returns: number }
       search_approved_members: {
         Args: { p_limit?: number; p_search?: string }
         Returns: {

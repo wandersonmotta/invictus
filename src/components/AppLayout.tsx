@@ -2,6 +2,7 @@ import * as React from "react";
 
 import { AppSidebar } from "@/components/AppSidebar";
 import { GoldHoverText } from "@/components/GoldHoverText";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { UserMenu } from "@/components/UserMenu";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
@@ -34,7 +35,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <GoldHoverText className="text-[10px] font-semibold tracking-[0.35em]">FRATERNIDADE</GoldHoverText>
             </div>
 
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-1">
+              <NotificationBell />
               <UserMenu />
             </div>
           </header>

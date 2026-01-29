@@ -1,137 +1,123 @@
 
-## Objetivo
-Ajustar o “User menu” do top bar (foto + nome + dropdown “Sair”) para ficar **clean, luxuoso e sofisticado**, removendo o amarelo “chapado” e trazendo:
-- **Glass premium** no menu e no hover/ativo do trigger
-- **Fade/desvanecer** suave no hover (foto + nome)
-- **Metálico dourado** no nome ao hover e principalmente quando o menu estiver aberto (click/ativo)
-- Item **“Sair”** com estética metálica dourada e hover glass (sem fundo amarelo)
+## Objetivo (o que você descreveu)
+1) O nome no topo deve ser **sempre Nome + Sobrenome** (não pode aparecer “Perfil”).  
+2) Isso deve ser **obrigatório**: se a pessoa não preencheu Nome e Sobrenome, ela fica **bloqueada** e é levada para `/perfil`.  
+3) O visual do menu do usuário no top bar precisa ficar **clean / luxuoso / sofisticado**:
+   - Sem “amarelo chapado”
+   - Hover/ativo com **glass sutil**
+   - Nome com metálico **seguindo o mouse** (igual o “FRATERNIDADE”), mas **mais legível**
+   - Dropdown “Sair” com **glass premium**, porém **sem chanfro** (sem cut-corners)
 
 ---
 
-## Diagnóstico (por que está “amarelo” hoje)
-- O botão do trigger usa `Button variant="ghost"`, cujo estilo padrão é:
-  - `hover:bg-accent hover:text-accent-foreground`
-- No tema atual, `--accent` é dourado (`--primary`), então ao passar o mouse o botão fica **amarelo**.
-- No dropdown, os itens usam `focus:bg-accent`, o que também dá “amarelo” ao navegar/hover/focus.
+## Diagnóstico rápido do que está acontecendo hoje
+- O “Perfil” ainda aparece porque o `UserMenu.tsx` usa fallback: `fullName || display_name || "Perfil"`.
+- O chanfro que você não gostou vem do uso de `invictus-modal-glass` no dropdown, que aplica `clip-path` (cut corners).
+- O nome metálico hoje está em overlay via `GoldHoverText`, mas:
+  - ele está aplicado como “camada por cima” do texto base
+  - e o estado “ativo” está mais “ring” do que “metal + borda champagne”
+- A obrigatoriedade hoje existe só no formulário (validação), mas não existe um “guard” que bloqueia navegação quando os campos estão vazios.
 
 ---
 
-## Ajuste de Design (o que vamos mudar)
-### 1) Trigger (foto + nome)
-- **Remover o hover amarelo** do `ghost` com overrides no `className`:
-  - trocar `hover:bg-accent` por um **glass escuro sutil**, por exemplo:
-    - `hover:bg-[hsl(var(--foreground)_/_0.04)]`
-    - `hover:text-foreground`
-- Criar um efeito “premium” quando:
-  - **hover**: leve desvanecer (opacity) e micro brilho
-  - **menu aberto** (`data-state="open"`): metálico dourado e moldura sutil (gold frame controlado)
+## Mudança 1 — “Obrigatório”: bloquear navegação até completar Nome + Sobrenome
+### O que será feito
+- Ajustar o guard de rota `RequireAuth.tsx` (que já valida `access_status`) para também validar **completude do perfil**:
+  - buscar `first_name` e `last_name` junto com `access_status`
+  - se `first_name` ou `last_name` estiver vazio:
+    - permitir apenas um conjunto mínimo de rotas (ex.: `/perfil`, `/auth`, `/reset-password`)
+    - redirecionar qualquer outra rota automaticamente para `/perfil`
+- Benefício: o usuário nunca verá “Perfil” como label no topo porque ele nem consegue navegar sem preencher.
 
-### 2) Nome metálico sem mexer globalmente no GoldHoverText
-Hoje o `GoldHoverText` já nasce com aparência dourada. Para ficar mais “clean” e “executivo”:
-- Vamos renderizar o nome com **duas camadas**:
-  1) Base (sempre): texto neutro (`text-muted-foreground` ou `text-foreground/90`)
-  2) Overlay metálico: `GoldHoverText` ou um novo estilo `invictus-metal-text`
-- A overlay fica com `opacity-0` e aparece com transição em:
-  - `group-hover:opacity-100`
-  - `group-data-[state=open]:opacity-100`
+### Arquivos envolvidos
+- `src/auth/RequireAuth.tsx` (principal)
+- (opcional) `src/pages/Perfil.tsx` para exibir uma mensagem mais “executiva” quando o guard estiver bloqueando: “Complete Nome e Sobrenome para continuar.”
 
-Resultado: em repouso fica sofisticado e discreto; no hover/click vira metálico.
-
-### 3) Foto (avatar) com “fade over”
-- No hover do conjunto:
-  - `group-hover:opacity-85`
-  - `group-hover:saturate-125` (leve)
-  - opcional: `group-hover:brightness-110`
-- No estado aberto:
-  - volta para `opacity-100` e ganha um “ring” dourado sutil para indicar ativo.
-
-### 4) Dropdown (glass verdadeiro, sem transparência feia)
-- Em vez de `invictus-surface` no menu, usar `invictus-modal-glass` + `invictus-frame`:
-  - Isso dá recorte chamfer + vidro + moldura champagne
-- Garantir que o menu não fique “see-through”:
-  - `invictus-modal-glass` já tem background e blur bons
-  - manter `z-50` e acrescentar `shadow` refinada se necessário
-
-### 5) Item “Sair” metálico dourado
-- Remover `focus:bg-accent` (amarelo) sobrescrevendo classes do `DropdownMenuItem`:
-  - `focus:bg-[hsl(var(--foreground)_/_0.06)]`
-  - `focus:text-foreground`
-  - `cursor-pointer`
-- Aplicar dourado metálico no texto “Sair” e no ícone:
-  - texto: `GoldHoverText` (já ok) ou `invictus-metal-text`
-  - ícone: `text-[hsl(var(--gold-hot)_/_0.95)]` e hover com leve glow
+### Critérios de aceite
+- Usuário loga, tenta ir para qualquer tela sem nome/sobrenome -> cai em `/perfil`.
+- Depois de salvar nome/sobrenome -> navegação libera automaticamente.
 
 ---
 
-## Implementação (passo a passo)
-### Passo A — Criar classes utilitárias “Invictus Topbar”
-**Arquivo:** `src/index.css` (em `@layer components`)
-Adicionar 2 classes (nomes sugeridos):
-1) `.invictus-topbar-user-trigger`
-   - glass no hover
-   - transição suave
-   - ring/control no estado aberto via atributo:
-     - `[data-state="open"]` (Radix coloca no Trigger; com `asChild`, cai no `Button`)
-2) `.invictus-metal-text`
-   - gradient metálico mais “luxo” (linear, não tão “neon”)
-   - `background-clip: text; -webkit-text-fill-color: transparent;`
-   - um drop-shadow bem sutil para profundidade
+## Mudança 2 — Top bar: nome “metal follow mouse” (legível) + hover glass sofisticado (sem amarelo)
+Você pediu “padrão igual ao FRATERNIDADE”, mas legível. O “FRATERNIDADE” usa `GoldHoverText` com brilho e radial gradient seguindo o mouse. Vamos reutilizar isso com intensidade menor.
 
-(Alternativa: se preferir, podemos fazer tudo só com Tailwind inline no `UserMenu.tsx`; mas a classe CSS deixa o design consistente e fácil de ajustar.)
+### O que será feito no `UserMenu.tsx`
+1) **Remover o fallback “Perfil”**
+   - Como teremos bloqueio por guard, o fallback fica praticamente desnecessário.
+   - Mesmo assim, vamos trocar por algo neutro e premium enquanto carrega (ex.: `""` + skeleton / placeholder “—”), para nunca aparecer “Perfil”.
 
-### Passo B — Ajustar `UserMenu.tsx` (trigger + label + dropdown)
-**Arquivo:** `src/components/UserMenu.tsx`
-1) Trocar classes do `Button variant="ghost"`:
-   - adicionar `group` e overrides:
-     - `hover:bg-[hsl(var(--foreground)_/_0.04)]`
-     - `hover:text-foreground`
-     - `data-[state=open]:bg-[hsl(var(--foreground)_/_0.05)]`
-     - `data-[state=open]:ring-1 data-[state=open]:ring-[hsl(var(--gold-hot)_/_0.30)]`
-   - adicionar `rounded-full` e padding mais “premium”
-2) Avatar:
-   - `className="h-8 w-8 transition ... group-hover:opacity-85 ... group-data-[state=open]:opacity-100"`
-   - opcional ring no aberto: `group-data-[state=open]:ring-1 ...`
-3) Nome:
-   - trocar o `GoldHoverText` atual por um wrapper com:
-     - base text (clean) + overlay metálico (aparece no hover/open)
-   - manter `hidden sm:block` para não quebrar o mobile
-4) Dropdown content:
-   - mudar `className` para: `invictus-modal-glass invictus-frame z-50 min-w-52 border-border/40`
-5) Dropdown item “Sair”:
-   - sobrescrever focus/hover para não amarelar:
-     - `focus:bg-[hsl(var(--foreground)_/_0.06)]`
-     - `hover:bg-[hsl(var(--foreground)_/_0.05)]`
-   - `GoldHoverText` no texto, e ícone dourado.
+2) **Nome com efeito “segue o mouse” mais sutil**
+   - Trocar a camada overlay atual por:
+     - texto base clean (neutro, sempre legível)
+     - `GoldHoverText` aplicado ao nome com `intensity` menor (ex.: 0.55–0.7)
+   - Ajustar o `GoldHoverText` para ficar “mais acetinado”:
+     - reduzir drop-shadow no estado ativo
+     - manter opacidade base mais alta (para legibilidade)
 
-### Passo C — Garantir consistência do dropdown global (se necessário)
-Se houver outros dropdowns ficando amarelos por padrão, poderemos:
-- ajustar `src/components/ui/dropdown-menu.tsx` para usar um focus background padrão mais neutro
-- ou manter alterações só no `UserMenu` (menor risco)
+3) **Hover do trigger (avatar + nome)**
+   - Manter sem amarelo chapado.
+   - Refinar o hover para parecer “glass” e “champagne edge”:
+     - background bem sutil
+     - leve borda interna (inset) dourada com opacidade baixa, em vez de ring chamativo
+   - Efeito de desvanecer:
+     - avatar e base text levemente mais opacos no hover
+     - ao abrir (data-state=open) mantém a sensação “metálico ativo” sem ficar gritando.
+
+### Arquivos envolvidos
+- `src/components/UserMenu.tsx`
+- `src/components/GoldHoverText.tsx` (ajuste fino de legibilidade, sem quebrar usos existentes)
 
 ---
 
-## Critérios de aceite (como você valida)
-1) No top bar:
-   - Em repouso: **sem amarelo chapado**, aparência clean.
-   - Hover em foto/nome: elementos **desvanecem** suavemente e o nome ganha “metal”.
-   - Clique para abrir: estado **metálico dourado** claro + ring sutil, e permanece até fechar.
-2) Dropdown:
-   - Fundo glass chamfer + moldura premium.
-   - Item “Sair” não fica amarelo; hover/focus fica glass escuro sutil.
-   - Texto e ícone “Sair” dourados metálicos.
-3) Responsivo:
-   - Em mobile, fica só avatar (e menu), sem quebrar layout.
+## Mudança 3 — Dropdown “Sair”: glass premium SEM chanfro (sem cut corners)
+Você escolheu “Sem chanfro no menu”.
+
+### O que será feito
+- Criar um estilo específico para dropdown do top bar, com:
+  - glass premium (blur + transparência controlada)
+  - moldura champagne sutil (linear gradient no border)
+  - **border-radius normal** (sem `clip-path`)
+- Aplicar isso apenas no `DropdownMenuContent` do `UserMenu`, para não mudar outros modais do app.
+
+### Arquivos envolvidos
+- `src/styles/invictus-topbar.css`:
+  - adicionar uma classe nova, por exemplo:
+    - `.invictus-topbar-menu-glass` (rounded, sem clip-path)
+- `src/components/UserMenu.tsx`:
+  - trocar `invictus-modal-glass` por `invictus-topbar-menu-glass` no menu
+  - manter z-index alto e background não-transparente
+
+### Critérios de aceite
+- Ao abrir o dropdown: sem cantos chanfrados, mas ainda com vidro premium e borda dourada bem discreta.
+- Item “Sair”: hover/focus sem amarelo, com glass sutil e texto metálico dourado.
 
 ---
 
-## Arquivos que serão alterados
-- `src/components/UserMenu.tsx` (principal)
-- `src/index.css` (novas classes de estilo premium para top bar)
-- (Opcional, só se precisar padronizar tudo) `src/components/ui/dropdown-menu.tsx`
+## Ajustes finais (acabamento)
+- Ajustar transições para ficar “executivo”:
+  - tempos (160–200ms)
+  - menos glow, mais “polish”
+- Garantir contraste:
+  - nome legível em repouso
+  - efeito metálico aparece no hover sem “sumir” o texto
 
 ---
 
-## Observação sobre o screenshot (“Perfil”)
-O texto “Perfil” aparece quando o usuário ainda não tem `first_name/last_name` preenchidos. Assim que você salvar Nome/Sobrenome no perfil, o label vira o nome completo.
-Se quiser, podemos também trocar o fallback de “Perfil” para algo mais premium (ex.: “Minha conta”) e com estilo neutro.
+## Sequência de implementação (ordem)
+1) `RequireAuth.tsx`: adicionar bloqueio por perfil incompleto (first_name/last_name).
+2) `UserMenu.tsx`: remover fallback “Perfil” e ajustar rendering/hover.
+3) `invictus-topbar.css`: criar estilo do dropdown sem chanfro (novo glass).
+4) `GoldHoverText.tsx`: ajuste fino de legibilidade (intensity + sombra) mantendo compatibilidade.
+5) Testes manuais end-to-end:
+   - usuário sem perfil -> bloqueado em /perfil
+   - salvar -> top bar mostra Nome Sobrenome
+   - hover -> metálico “segue o mouse” sutil, sem amarelo chapado
+   - click -> dropdown sem chanfro + “Sair” metálico dourado
+
+---
+
+## Observações técnicas importantes
+- Vamos manter os estilos do restante do app intactos: o “sem chanfro” será apenas para o dropdown do top bar (não vamos mexer no padrão de modais “Invictus Glass” do resto do sistema).
+- A obrigatoriedade será aplicada no guard (front-end). Se você quiser também “blindar” isso no backend (ex.: impedir `approved` sem nome), dá para evoluir depois com validação server-side/triggers, mas não é necessário para entregar a experiência agora.
 

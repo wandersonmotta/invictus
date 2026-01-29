@@ -9,12 +9,12 @@
   */
 
   /* Container (alvo real é o [data-sidebar="sidebar"] interno)
-     Assinatura: vinheta + microtextura (sem glow) + “champagne edge”. */
+     Assinatura: vinheta + marca d’água (monograma) + “champagne edge” (sem textura). */
   .invictus-sidebar [data-sidebar="sidebar"] {
     position: relative;
     background:
-      radial-gradient(120% 80% at 18% 0%, hsl(var(--gold-soft) / 0.08), transparent 58%),
-      radial-gradient(110% 80% at 110% 14%, hsl(var(--gold-hot) / 0.05), transparent 62%),
+      radial-gradient(120% 80% at 18% 0%, hsl(var(--gold-soft) / 0.06), transparent 58%),
+      radial-gradient(110% 80% at 110% 14%, hsl(var(--gold-hot) / 0.04), transparent 62%),
       linear-gradient(180deg, hsl(var(--card) / var(--glass)) 0%, hsl(var(--card) / 0.18) 100%);
     backdrop-filter: blur(18px);
     box-shadow:
@@ -42,61 +42,35 @@
     opacity: 0.95;
   }
 
+  /* Monograma / marca d’água (exclusivo Invictus) */
   .invictus-sidebar [data-sidebar="sidebar"]::after {
     content: "";
     position: absolute;
     inset: 0;
     pointer-events: none;
     border-radius: inherit;
-    /* microtexture: diagonal + faint grid (static, very low opacity) */
-    background:
-      repeating-linear-gradient(
-        135deg,
-        hsl(var(--foreground) / 0.04) 0px,
-        hsl(var(--foreground) / 0.04) 1px,
-        transparent 1px,
-        transparent 10px
-      ),
-      repeating-linear-gradient(
-        90deg,
-        hsl(var(--foreground) / 0.03) 0px,
-        hsl(var(--foreground) / 0.03) 1px,
-        transparent 1px,
-        transparent 14px
-      );
-    opacity: 0.22;
-    mix-blend-mode: overlay;
+    background-image: var(--invictus-mark);
+    background-repeat: no-repeat;
+    background-position: 50% 35%;
+    background-size: min(220px, 70%);
+    opacity: 0.035;
+    filter: saturate(0) contrast(1.15);
+    mix-blend-mode: screen;
   }
 
   /* Menu item (aplicado em SidebarMenuButton)
-     Motif: “Invictus Cut Plate” (cantos chanfrados + friso interno). */
+     Motif: “Crest discreto” (placa limpa + friso interno), sem recortes. */
   .invictus-sidebar-item {
-    --inv-cut: 10px;
     position: relative;
     overflow: hidden;
     isolation: isolate;
-    border-radius: 0.95rem; /* fallback */
+    border-radius: 0.9rem;
     background: transparent;
     transition:
       transform 160ms ease,
       box-shadow 180ms ease,
       background-color 180ms ease,
       filter 180ms ease;
-  }
-
-  @supports (clip-path: polygon(0 0)) {
-    .invictus-sidebar-item {
-      clip-path: polygon(
-        var(--inv-cut) 0%,
-        calc(100% - var(--inv-cut)) 0%,
-        100% var(--inv-cut),
-        100% calc(100% - var(--inv-cut)),
-        calc(100% - var(--inv-cut)) 100%,
-        var(--inv-cut) 100%,
-        0% calc(100% - var(--inv-cut)),
-        0% var(--inv-cut)
-      );
-    }
   }
 
   /* Friso interno (quase invisível, mas “caro”) */
@@ -127,10 +101,10 @@
   .invictus-sidebar-item[data-active="true"] {
     background:
       linear-gradient(180deg, hsl(var(--background) / 0.26), hsl(var(--background) / 0.14)),
-      radial-gradient(120% 90% at 18% 0%, hsl(var(--gold-soft) / 0.07), transparent 64%);
+      radial-gradient(120% 90% at 18% 0%, hsl(var(--gold-soft) / 0.05), transparent 64%);
     box-shadow:
       /* champagne ring */
-      0 0 0 1px hsl(var(--gold-hot) / 0.70) inset,
+      0 0 0 1px hsl(var(--gold-hot) / 0.62) inset,
       0 0 0 1px hsl(var(--border) / 0.55) inset,
       /* specular */
       0 1px 0 0 hsl(var(--foreground) / 0.12) inset,
@@ -215,48 +189,14 @@
   }
 
   /* Icon plate metálico (SÓ no ativo) */
-  .invictus-sidebar-item[data-active="true"] .invictus-sidebar-iconWrap::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background:
-      linear-gradient(180deg, hsl(var(--background) / 0.30), hsl(var(--background) / 0.18)),
-      radial-gradient(120% 80% at 25% 10%, hsl(var(--foreground) / 0.18), transparent 60%);
-    box-shadow:
-      0 1px 0 0 hsl(var(--foreground) / 0.12) inset,
-      0 0 0 1px hsl(var(--gold-hot) / 0.32) inset;
-    opacity: 0.98;
-  }
-
-  .invictus-sidebar-item[data-active="true"] .invictus-sidebar-iconWrap::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(
-      135deg,
-      hsl(var(--gold-soft) / 0.18),
-      hsl(var(--gold-hot) / 0.75) 35%,
-      hsl(var(--gold-soft) / 0.20) 70%,
-      hsl(var(--gold-hot) / 0.55)
-    );
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0.95;
-  }
-
+  /* (Crest discreto) sem medalhão: ícone só ganha contraste no ativo */
   .invictus-sidebar-item[data-active="true"] .invictus-sidebar-icon {
     position: relative;
     z-index: 1;
-    color: hsl(var(--gold-soft) / 0.94);
+    color: hsl(var(--gold-soft) / 0.92);
     filter:
-      drop-shadow(0 0 10px hsl(var(--gold-hot) / 0.18))
-      drop-shadow(0 10px 22px hsl(var(--foreground) / 0.18));
+      drop-shadow(0 0 10px hsl(var(--gold-hot) / 0.12))
+      drop-shadow(0 10px 22px hsl(var(--foreground) / 0.16));
   }
 
   /* Tooltip com skin (para estado colapsado ficar “Invictus”) */

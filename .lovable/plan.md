@@ -1,117 +1,115 @@
 
-Objetivo
-- Deixar o mapa com a mesma “pegada Invictus” (dark executivo + glass + sofisticado), com:
-  - Base do mapa em estilo dark executivo (sem “oceano azul”)
-  - Moldura glass já existente + refinamentos (vinheta/overlay premium)
-  - Pins dourados com glow (premium, não neon)
-  - Tooltip glass (estilo card do app)
-  - Controles do Leaflet (zoom) reestilizados com glass + linha dourada
-  - Botões “Centralizar no Brasil” e “Centralizar em mim”
-  - Entrada suave dos pins (animação ao carregar)
+Objetivo (o que você pediu agora)
+1) O mapa precisa ficar “Invictus”: mais escuro, com sensação de vidro (glaze) no “oceano/área ao redor”, e com os países/terra puxando para dourado (não cinza genérico).
+2) Pins precisam virar foto circular da pessoa, com destaque cromado/metálico nas bordas (premium).
+3) Remover controles confusos:
+   - Tirar “Brasil” e “Em mim” (texto/botões)
+   - Tirar zoom +/− (ou substituir por algo bem discreto)
+   - Manter só 1 botão “localizar” (geo referência) como ação principal.
+4) Manter privacidade: localização aproximada (jitter) continua.
 
-O que existe hoje (relevante)
-- `MemberMap.tsx` usa Leaflet “puro” (imperativo) e renderiza markers padrão.
-- O container do mapa já fica dentro de `invictus-surface invictus-frame`.
-- `src/index.css` já contém o design system (graphite + gold) e import do Leaflet CSS.
+Diagnóstico rápido do estado atual
+- O mapa está usando tiles padrão OSM + filtro CSS. Isso tende a ficar “cinza genérico”, porque tile raster não separa “água”/“terra” de forma controlável.
+- Os pins hoje são um divIcon dourado; não usam foto.
+- A RPC `get_approved_member_pins` (backend) não retorna `avatar_url`, então o front não tem como renderizar a foto no pin sem mudar essa função.
 
-Estratégia de design (sem trocar stack, sem mexer no backend)
-1) “Dark executivo” na base do mapa
-- Opção A (mais simples e confiável): manter OSM padrão e aplicar um “map filter” CSS no container do mapa:
-  - reduzir saturação, aumentar contraste, reduzir brilho e aplicar leve hue-rotate neutro (para matar azuis)
-  - adicionar uma vinheta/overlay com gradientes do próprio design system para dar profundidade e “premium feel”
-- Opção B (melhor visual, depende de tiles externos): trocar para um tile dark (ex.: CARTO dark, Stadia, etc.). Como pode exigir chave/limites, vou implementar a Opção A como padrão e deixar a Opção B como toggle fácil no código.
+Estratégia para ficar realmente “Invictus” (sem virar gambiarra)
+A) Visual do mapa (único, Invictus, com glaze + países dourados)
+- Você escolheu “Mapa premium (com chave)”. Vou implementar assim:
+  1) Trocar a camada de tiles por um provedor premium (ex.: Mapbox/MapTiler) com um “style” próprio voltado para: fundo escuro + terra dourada.
+  2) Por cima, manter o “Invictus overlay” (pattern microgrid + sweep gold + vinheta) para dar assinatura da marca.
+  3) “Glaze/vidro” no oceano: em mapa raster não existe transparência real por camada, então faremos a sensação de vidro por composição:
+     - reduzir opacidade dos tiles para deixar o background “glass” do container aparecer
+     - aplicar overlays com gradientes e blur (já existe parte disso) para parecer água vitrificada
+     - ajustar blend modes para não “lavar” o dourado.
 
-2) Pins dourados com glow (premium)
-- Trocar `L.marker()` padrão por `L.marker(..., { icon: L.divIcon(...) })` usando HTML/CSS:
-  - Pin/anel dourado com borda metálica (gold-soft + gold-hot)
-  - Glow suave com `drop-shadow` e “specular highlight”
-  - Tamanho confortável mobile (área de toque maior)
-- Benefícios:
-  - 100% consistente com os tokens do app
-  - Sem precisar de imagens externas
-  - Fácil de animar (entrada suave)
+Importante (dependência para o “países dourados” ficar perfeito)
+- Para países realmente dourados (terra) e água vitrificada, precisamos de um “map style” próprio do provedor premium.
+- Vou preparar o app para receber um `MAP_STYLE_URL` (ou `STYLE_ID`) + `TOKEN`.
+- Se você já tiver um style pronto: me passa o style URL/ID.
+- Se você não tiver: eu implemento com um style premium recomendado como base + filtro Invictus por cima; depois refinamos quando você me passar o style final.
 
-3) Tooltip glass (premium)
-- Em vez do tooltip padrão com fundo branco, usar classes customizadas:
-  - `className: "invictus-map-tooltip"` no `bindTooltip`
-- Estilizar no `src/index.css`:
-  - fundo glass (hsl(var(--card)/alpha))
-  - blur, borda sutil, linha dourada fina, tipografia e sombra controlada
-  - garantir `z-index` alto e opacidade correta
+B) Pins com foto circular + borda cromada/metálica (obrigatório ter foto)
+1) Backend: atualizar a função `public.get_approved_member_pins` para também retornar:
+   - `avatar_url` (da tabela `profiles`)
+   - opcional: `display_name` (para tooltip, se você quiser)
+2) Como a foto é obrigatória:
+   - A função vai filtrar apenas membros aprovados com `avatar_url IS NOT NULL` (assim não aparecem pins “quebrados”).
+   - Se existir aprovado sem foto hoje, ele simplesmente não aparece no mapa até preencher (isso bate com o “obrigatório”).
+3) Frontend:
+   - Ajustar `ApprovedMemberPin` para incluir `avatar_url`.
+   - No `MemberMap`, trocar o `goldIcon` “genérico” por um `divIcon` que renderiza:
+     - `<img src="...">` circular
+     - anel cromado metálico + detalhe dourado (uma borda dupla: chrome + gold line)
+     - glow sutil e sombra de profundidade
+   - O tooltip pode continuar glass; opcionalmente mostrar nome/cidade.
 
-4) Controles premium (zoom) + attribution discreto
-- Estilizar `.leaflet-control-zoom` e botões:
-  - fundo glass + borda + glow dourado sutil
-  - hover com aura (somente desktop via media query)
-- Attribution:
-  - reduzir impacto visual (opacidade baixa), manter legível e acessível
+C) Controles (simplificar para “um único localizar”)
+- No `MemberMap.tsx`:
+  - Remover o bloco do zoom +/− (Plus/Minus) completamente.
+  - Manter apenas 1 botão: ícone “Localizar” (LocateFixed).
+  - O comportamento do botão:
+    1) Se existir `centerMe` (local aproximado do perfil), centraliza nele.
+    2) Se não existir, tenta `navigator.geolocation` (caso o usuário permita).
+- Zoom fica via:
+  - mouse wheel / trackpad no desktop
+  - pinch no mobile
+  - double tap / double click (Leaflet já suporta), deixando a UI limpa e premium.
 
-5) Botões “Centralizar”
-- Adicionar uma camada de UI por cima do mapa (dentro do mesmo card) com botões:
-  - “Brasil” (fitBounds BRAZIL_BOUNDS)
-  - “Em mim” (se `me` tiver `location_lat/lng`, centraliza e dá zoom)
-- Onde buscar “me”:
-  - Hoje isso está no `src/pages/Index.tsx`. Vou passar `me?.location_lat/lng` para `MemberMap` como props opcionais:
-    - `centerMe?: { lat: number; lng: number } | null`
-  - `MemberMap` expõe handlers que usam `mapRef.current?.fitBounds(...)` e `mapRef.current?.setView(...)`.
+Mudanças planejadas (arquivos / backend)
+1) Backend (migração SQL)
+- Alterar `public.get_approved_member_pins`:
+  - RETURNS TABLE passa a incluir `avatar_url text` (e opcionalmente `display_name text`)
+  - SELECT passa a pegar esses campos de `public.profiles`
+  - Adicionar filtro `p.avatar_url IS NOT NULL` (já que foto é obrigatória)
+- Manter `SECURITY DEFINER` + `GRANT EXECUTE` como está.
+- Não mexer em RLS de `profiles` (a função já faz o papel de expor somente o necessário).
 
-6) Animação de entrada dos pins
-- No `divIcon` do marker, usar uma classe CSS (ex.: `invictus-pin`) com:
-  - animação “scale-in / fade-in”
-- Como os markers são DOM nodes criados pelo Leaflet:
-  - aplicar classe no HTML do `divIcon`
-  - CSS com keyframes (podemos reutilizar a linguagem de animação que vocês já usam; se não houver keyframes prontos no Tailwind para isso, adicionamos no CSS)
+2) Frontend (TypeScript/React)
+- `src/components/map/useApprovedMemberPins.ts`
+  - Atualizar tipo `ApprovedMemberPin` para incluir `avatar_url` (+ opcional display_name).
+- `src/components/map/MemberMap.tsx`
+  - Remover controles de zoom (+ e −).
+  - Manter só o botão de localizar (um único controle).
+  - Criar `iconForPin(p)` (memoized) para gerar `divIcon` com `<img ...>` e classes novas.
+  - Ajustar tooltip para continuar premium (pode mostrar city/state e, se desejar, nome).
+- `src/styles/invictus-map.css`
+  - Criar um “avatar pin” novo:
+    - `.invictus-map-avatar-pin`, `.invictus-map-avatar-img`, `.invictus-map-avatar-ring`
+    - “chrome ring” (efeito metálico) com gradient frio (cinza) + highlights, e um filet dourado interno.
+  - Ajustar o mapa para ficar menos “cinza” e mais “Invictus”:
+    - se tile premium for aplicado, reduzir dependência do filtro cinza e usar tonalização dourada + overlays.
+  - Aumentar a sensação de glaze:
+    - reforçar background do container com “glass ocean”
+    - diminuir opacidade do tile pane e recalibrar contrast para não perder leitura.
 
-Mudanças planejadas (arquivos)
-1) `src/components/map/MemberMap.tsx`
-- Adicionar props:
-  - `centerMe?: { lat: number; lng: number } | null`
-  - opcional: `onReady?` se precisarmos sinalizar que o mapa inicializou (provavelmente não necessário)
-- Trocar marker padrão por `divIcon` dourado:
-  - `L.marker([p.lat, p.lng], { icon: goldIcon }).addTo(markers)`
-- Tooltip com `className` custom:
-  - `.bindTooltip(label, { direction: "top", opacity: 1, className: "invictus-map-tooltip", sticky: true })`
-- Adicionar overlay UI (botões) dentro do wrapper do mapa, com `position: absolute`:
-  - Requer ajustar o container para `relative`.
+3) Configuração de chave (necessária para “mapa premium”)
+- Adicionar 1 variável de ambiente (segura e simples):
+  - `VITE_MAP_PROVIDER_TOKEN` (ex.: Mapbox/MapTiler token)
+  - e `VITE_MAP_STYLE_URL` (ou `VITE_MAP_STYLE_ID`)
+- Eu vou solicitar esses valores no chat quando for implementar.
+- Observação: token de mapa normalmente é “publicável” (não é segredo ultra sensível), mas ainda assim é melhor ficar como variável, não hardcoded.
 
-2) `src/pages/Index.tsx` (rota /mapa)
-- Passar `centerMe` para o `MemberMap` quando houver coords do usuário:
-  - `centerMe={me?.location_lat && me?.location_lng ? { lat: me.location_lat, lng: me.location_lng } : null }`
-- (Opcional) colocar também um botão “Centralizar em mim” no card lateral; mas a melhor UX é ficar por cima do mapa.
+Como vamos validar que ficou “padrão Invictus”
+Checklist visual
+- Mapa visivelmente mais dark (graphite), sem ficar “cinza morto”.
+- Terra/países puxando para dourado (não amarelo neon).
+- “Água”/área ao redor com sensação de vidro/glaze (profundidade e transparência).
+- Overlay Invictus (pattern + sweep) aparece sutil, não polui.
+Checklist de UX
+- Só existe 1 controle: “Localizar”.
+- Sem botões “Brasil/Em mim” e sem +/−.
+- Clique em localizar centraliza corretamente (perfil primeiro; fallback para geolocalização do navegador).
+Checklist de pins
+- Pins são fotos circulares (obrigatório) e parecem “joia”: borda cromada metálica + detalhe dourado + glow sutil.
+- Sem imagens quebradas (quem não tem foto não aparece).
 
-3) `src/index.css`
-- Adicionar um bloco de estilos “Invictus Map”:
-  - `.invictus-map` para aplicar filtro dark executivo no tile pane (ex.: `.invictus-map .leaflet-tile-pane { filter: ... }`)
-  - overlay/vinheta: pseudo-elemento no wrapper (ex.: `.invictus-map-overlay::before`)
-  - tooltip glass: `.invictus-map-tooltip` + overrides do Leaflet tooltip
-  - controles: `.invictus-map .leaflet-control-zoom a` etc.
-  - garantir fundo não transparente e `z-index` correto (especialmente tooltip/controls)
-
-Detalhes visuais (o “padrão Invictus” aplicado ao mapa)
-- “Dark executivo”:
-  - filtro base sugerido (ajustaremos fino após ver no preview):
-    - `saturate(0.35) contrast(1.15) brightness(0.78) sepia(0.18)`
-- Vinheta/overlay:
-  - gradientes com `--primary` e `--foreground` em baixa opacidade para “luxo” e profundidade
-- Pins:
-  - ouro: `--gold-hot` e `--gold-soft`
-  - glow: `drop-shadow(0 0 16px hsl(var(--primary)/0.35))` (controlado)
-
-Critérios de aceite (como você valida que ficou “do jeito do site”)
-- O mapa não parece “claro/azulado”; ele entra no mood graphite do app.
-- O card do mapa mantém o glass premium; a área do mapa ganha vinheta e contraste.
-- Pins são claramente dourados, com brilho sofisticado (sem neon).
-- Tooltip parece um mini “card invictus” (glass + borda).
-- Controles de zoom não ficam “brancos padrão”; ficam premium.
-- Botões “Brasil” e “Em mim” são intuitivos, discretos e premium.
-- Ao carregar pins, a entrada é suave (não “pipoca” agressivo).
-
-Riscos / observações
-- Filtro CSS em tiles é o caminho mais “garantido” sem depender de terceiros. Se você quiser um tile dark específico depois, a troca é simples.
-- No mobile, blur muito pesado pode custar performance; manteremos blur moderado e usaremos media queries para reforçar no desktop (como você já faz em `.invictus-surface`).
+Riscos / dependências
+- “Países dourados + água transparente de verdade” depende do style premium do provedor. Sem style custom, dá para aproximar com filtros/overlays, mas o resultado máximo vem com o style certo.
+- Se houver membros aprovados sem foto hoje, eles vão sumir do mapa até colocar foto (alinhado ao “obrigatório”).
 
 Sequência de implementação
-1) Estilos base (CSS): invictus-map, tooltip, controles, overlay/vinheta
-2) Pins dourados com `divIcon` + animação
-3) Botões “Centralizar” por cima do mapa + wiring com `mapRef`
-4) Ajustes finos (contraste/brilho do filtro) com base no preview em /mapa (desktop + mobile)
+1) Backend: atualizar a RPC `get_approved_member_pins` para retornar `avatar_url` (e filtrar `NOT NULL`).
+2) Frontend: atualizar tipos + hook + renderização dos pins com `<img>`.
+3) UI: remover zoom +/− e manter apenas o botão “localizar”.
+4) Trocar tiles para provedor premium com token + style e recalibrar o glaze/dourado (overlay final “Invictus”).

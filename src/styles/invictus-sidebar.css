@@ -42,27 +42,33 @@
     opacity: 0.95;
   }
 
-  /* Command Deck: spine/trilho contínuo (a identidade) */
+  /* Remove “spine” do Command Deck (padrão do print é lista limpa) */
   .invictus-sidebar [data-sidebar="sidebar"]::after {
-    content: "";
-    position: absolute;
-    left: 14px;
-    top: 12px;
-    bottom: 12px;
-    width: 2px;
-    pointer-events: none;
-    border-radius: 999px;
-    background: linear-gradient(
-      180deg,
-      hsl(var(--gold-soft) / 0.10),
-      hsl(var(--foreground) / 0.08) 35%,
-      hsl(var(--foreground) / 0.06) 70%,
-      hsl(var(--gold-hot) / 0.10)
-    );
-    box-shadow:
-      0 0 0 1px hsl(var(--border) / 0.50) inset,
-      0 12px 42px -34px hsl(var(--foreground) / 0.55);
-    opacity: 0.85;
+    content: none;
+  }
+
+  /* Seções (como no print) */
+  .invictus-sidebar-section {
+    padding-top: 0.25rem;
+  }
+
+  .invictus-sidebar-section + .invictus-sidebar-section {
+    margin-top: 0.75rem;
+  }
+
+  .invictus-sidebar-sectionLabel {
+    height: auto;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+    color: hsl(var(--sidebar-foreground) / 0.78);
+    opacity: 1 !important;
+    margin: 0;
+  }
+
+  .invictus-sidebar-menu {
+    gap: 0.25rem;
   }
 
   /* Menu item (aplicado em SidebarMenuButton)
@@ -109,26 +115,22 @@
     box-shadow: none;
   }
 
-  /* Notch dourado no trilho (identidade) */
+  /* Active discreto (como lista do print): barra fina + leve fundo */
   .invictus-sidebar-item[data-active="true"]::after {
     content: "";
     position: absolute;
-    left: 10px; /* aligns with spine at 14px */
-    top: 50%;
-    width: 10px;
-    height: 18px;
-    transform: translateY(-50%);
+    left: 0.65rem;
+    top: 22%;
+    bottom: 22%;
+    width: 2px;
     border-radius: 999px;
-    background: linear-gradient(
-      180deg,
-      hsl(var(--gold-soft) / 0.92),
-      hsl(var(--gold-hot) / 0.98)
-    );
-    box-shadow:
-      0 0 0 1px hsl(var(--gold-hot) / 0.32),
-      0 10px 28px -22px hsl(var(--gold-hot) / 0.55);
-    opacity: 1;
+    background: linear-gradient(180deg, hsl(var(--gold-soft)), hsl(var(--gold-hot)));
+    opacity: 0.9;
     z-index: 0;
+  }
+
+  .invictus-sidebar-item[data-active="true"] {
+    background: hsl(var(--foreground) / 0.04);
   }
 
   /* Link interno (tipografia/alinhamento) */
@@ -138,10 +140,10 @@
     gap: 0.65rem;
     width: 100%;
     border-radius: inherit;
-    /* reserve space for spine */
-    padding-left: 1.55rem;
-    padding-right: 0.65rem;
-    padding-block: 0.6rem;
+    /* roomy like the reference */
+    padding-left: 1.35rem;
+    padding-right: 0.85rem;
+    padding-block: 0.85rem;
     color: hsl(var(--sidebar-foreground));
     text-decoration: none;
   }
@@ -157,8 +159,8 @@
     position: relative;
     display: grid;
     place-items: center;
-    width: 1.9rem;
-    height: 1.9rem;
+    width: 2rem;
+    height: 2rem;
     flex: 0 0 auto;
     border-radius: 0.85rem;
   }
@@ -166,22 +168,22 @@
   .invictus-sidebar-icon {
     width: 1.1rem;
     height: 1.1rem;
-    color: hsl(var(--sidebar-foreground) / 0.82);
+    color: hsl(var(--sidebar-foreground) / 0.60);
   }
 
   .invictus-sidebar-label {
     letter-spacing: 0.015em;
-    font-weight: 620;
-    color: hsl(var(--sidebar-foreground) / 0.92);
+    font-weight: 560;
+    color: hsl(var(--sidebar-foreground) / 0.72);
     text-transform: none;
-    font-size: 0.9rem;
-    line-height: 1.05;
+    font-size: 0.95rem;
+    line-height: 1.1;
   }
 
   /* Active text polish */
   .invictus-sidebar-item[data-active="true"] .invictus-sidebar-label {
-    color: hsl(var(--gold-soft) / 0.92);
-    text-shadow: 0 0 14px hsl(var(--gold-hot) / 0.14);
+    color: hsl(var(--sidebar-foreground) / 0.92);
+    text-shadow: none;
   }
 
   /* Icon plate metálico (SÓ no ativo) */
@@ -189,19 +191,17 @@
   .invictus-sidebar-item[data-active="true"] .invictus-sidebar-icon {
     position: relative;
     z-index: 1;
-    color: hsl(var(--gold-soft) / 0.92);
-    filter:
-      drop-shadow(0 0 10px hsl(var(--gold-hot) / 0.12))
-      drop-shadow(0 10px 22px hsl(var(--foreground) / 0.16));
+    color: hsl(var(--sidebar-foreground) / 0.86);
+    filter: none;
   }
 
   /* Hover/Focus: comportamento “deck” (contraste, não efeito) */
   .invictus-sidebar-item:hover .invictus-sidebar-label {
-    color: hsl(var(--sidebar-foreground));
+    color: hsl(var(--sidebar-foreground) / 0.88);
   }
 
   .invictus-sidebar-item:hover .invictus-sidebar-icon {
-    color: hsl(var(--sidebar-foreground) / 0.92);
+    color: hsl(var(--sidebar-foreground) / 0.78);
   }
 
   /* Tooltip com skin (para estado colapsado ficar “Invictus”) */

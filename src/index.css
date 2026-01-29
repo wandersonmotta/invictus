@@ -142,11 +142,13 @@ All colors MUST be HSL.
   :root {
     --gold-soft: 42 90% 60%;
     --gold-hot: 44 95% 52%;
+    --gold-badge-foreground: 0 0% 100%;
     --glass: 0.55;
   }
   .dark {
     --gold-soft: 42 92% 62%;
     --gold-hot: 44 98% 54%;
+    --gold-badge-foreground: 0 0% 100%;
     /* Glass mais intenso via transparência (melhor custo que aumentar blur) */
     --glass: 0.46;
   }

@@ -1,105 +1,150 @@
 
 Objetivo
-- No Feed, permitir clicar no avatar/nome/@ do autor para abrir o perfil público dele.
-- Em /perfil, adicionar uma aba “Ver como fica” com um layout estilo Instagram, exibindo: avatar, nome, @, bio, expertises em chips e grid de posts com visualizador.
-- No perfil público: manter “Seguir + Mensagem” para outros membros (como já existe em /membro/:username) e, quando for o próprio usuário, mostrar “Editar perfil” levando para /perfil.
+- Na tela /mapa, adicionar um “modo proximidade” opcional, onde o usuário escolhe um raio (10 a 200 km) baseado na localização em tempo real do dispositivo.
+- Preservar privacidade: não exibir a localização exata do usuário (nem um pin preciso), apenas uma referência aproximada e um círculo de raio.
+- Mostrar quem está próximo dentro do raio, permitindo clicar para ver detalhes (expertise, bio) e fazer ações (ver perfil, seguir, iniciar mensagem).
+- Manter também o modo “Mapa global” (todos os membros) como já existe hoje.
 
-Contexto encontrado no projeto (estado atual)
-- Já existe rota de perfil público: /membro/:username (src/pages/Membro.tsx) com layout tipo Instagram, bio, contadores, grid e viewer.
-- O Feed renderiza cada post em src/components/feed/FeedPostCard.tsx e hoje não tem link no header (avatar/nome/@).
-- O perfil do usuário (/perfil) hoje é focado em edição (ProfileForm) e sessão, mas não tem um preview “instagram-style”.
-- A bio e expertises já são campos no profiles e já aparecem em /membro/:username (bio aparece; expertises ainda não estão em chips no layout do Membro).
+O que vou verificar/usar do que já existe
+- /mapa está em `src/pages/Index.tsx` e usa:
+  - `useApprovedMemberPins()` -> RPC `get_approved_member_pins` (já traz pins com jitter e respeita privacidade).
+  - `MemberMap` (Leaflet) que renderiza pins e tem botão de geolocalização.
+- Já existe RPC `get_public_profile(p_user_id)` retornando `bio`, `city/state`, `expertises`, `username`, etc. (ideal para carregar detalhes ao clicar em um membro).
+- Já existe follow: RPC `toggle_follow` e stats via `get_follow_stats` (usado em /membro e /buscar).
+- Já existe iniciar conversa: RPC `create_conversation` (usado em `NewMessageDialog`).
 
-Decisão do usuário (confirmada)
-- “Perfil estilo Instagram”: Abas dentro de /perfil.
-- “Cliques no Feed”: Tornar clicável (avatar/nome/@).
-- Elementos desejados: Seguir + Mensagem (para outros), Editar perfil (meu), Grid + visualizador, Expertises em chips.
+Regras de acesso (conforme pedido)
+- Modo proximidade: disponível apenas para membros aprovados.
+  - Se o usuário não for aprovado, mostrar um card explicando que o recurso fica disponível após aprovação (sem quebrar o mapa global).
+- Os pins já vêm somente de aprovados e com filtros de visibilidade (members/mutuals/private) via backend; manter essa regra.
 
-Plano de implementação (frontend)
-1) Tornar autor do post clicável no Feed
-   - Arquivo: src/components/feed/FeedPostCard.tsx
-   - Alterações:
-     - Importar Link e/ou useNavigate do react-router-dom.
-     - Transformar o bloco do cabeçalho (avatar + nome + @) em um link clicável quando post.author_username existir.
-       - URL: `/membro/${encodeURIComponent(post.author_username.replace(/^@/, ""))}`
-     - Se author_username for null:
-       - Manter como texto/sem link (sem navegação).
-     - Ajustar classes (cursor-pointer, hover/focus states) para ficar “instagram-like” e acessível (focus-visible, aria-label).
-   - Resultado: no Feed, tocar no avatar/nome/@ abre o perfil público do autor.
+UX (como vai ficar na prática)
+1) Toggle de modo
+- No painel lateral da página /mapa (onde hoje tem “Seu status” e “Pins”), adicionar uma seção “Proximidade”.
+- Um seletor simples:
+  - “Mapa global” (padrão): mostra todos os pins como hoje.
+  - “Perto de mim”: ativa geolocalização do dispositivo e habilita o slider de raio.
 
-2) Criar “view de perfil estilo Instagram” para o próprio usuário (reutilizável)
-   - Objetivo: renderizar um layout semelhante ao de src/pages/Membro.tsx, mas para “meu perfil”, sem depender de :username na URL.
-   - Abordagem:
-     - Criar um componente novo (ex.: src/components/profile/MyPublicProfilePreview.tsx ou src/pages/MeuPerfilPreviewSection.tsx) que:
-       - Recebe userId (do AuthProvider).
-       - Faz query no backend para pegar meus dados (profiles) via SELECT (permitido pela RLS “Users can view own profile”):
-         - Campos: display_name, username, avatar_url, bio, city, state, expertises, profile_visibility (se necessário para UI).
-       - Faz query dos meus posts:
-         - Reaproveitar RPC list_profile_feed_posts (como em Membro.tsx) com p_user_id = meu userId.
-         - Reutilizar createSignedUrl para thumbs e viewer (mesmo padrão do Membro.tsx).
-       - Renderiza:
-         - Header: avatar grande, display_name, @
-         - Contadores:
-           - Para “meu perfil”, podem ser carregados usando o mesmo RPC get_follow_stats com p_user_id = meu userId (para followers/following).
-           - “Posts” = quantidade do retorno do RPC de posts (ou um contador do backend se existir; por agora, tamanho do array).
-         - Ações:
-           - Botão “Editar perfil” que navega para /perfil (ou alterna para a aba “Editar” diretamente).
-         - Bio (texto) e Expertises em chips:
-           - Renderizar expertises como badges/chips (ex.: usando componente Badge ou classes utilitárias), com wrap.
-         - Grid de posts + visualizador:
-           - Mesmo comportamento do /membro/:username (Dialog + ReelsMedia + CommentsDrawer + Curtir).
-   - Observação importante:
-     - Não exibir e-mail (não faz parte do profiles e já está mascarado no /perfil).
-     - Manter somente informações “públicas” (bio, @, nome, avatar, city/state, expertises).
+2) Slider de raio (10–200 km)
+- Slider com step de 10 km, min 10, max 200.
+- Exibir texto: “Raio: 80 km” e “Encontrados: 12 membros”.
+- Atualizar em tempo real o filtro e o círculo no mapa ao mover o slider.
 
-3) Adicionar abas em /perfil: “Editar perfil” e “Ver como fica”
-   - Arquivo: src/pages/Perfil.tsx
-   - Alterações:
-     - Introduzir Tabs (já existe em src/components/ui/tabs.tsx e é usado no Feed).
-     - Estrutura sugerida:
-       - Aba 1: “Editar perfil” -> renderiza <ProfileForm userId={user.id} /> (como hoje).
-       - Aba 2: “Ver como fica” -> renderiza o novo componente de preview “instagram-style” do próprio usuário.
-     - Manter as seções atuais (Alterar senha e Sessão) dentro da aba “Editar perfil” (para não poluir o preview).
-     - Opcional: Se quiser, um botão “Ver como fica” pode também estar dentro do formulário para alternar de aba (UX).
+3) Solicitação de GPS (permissão)
+- Ao ativar “Perto de mim”, pedir permissão do navegador usando Geolocation API.
+- Usar `watchPosition` para atualizar em tempo real (se a pessoa se mover, os resultados mudam).
+- Se negar permissão, mostrar mensagem clara e um botão “Tentar novamente”.
 
-4) Expertises em chips no perfil público (outros membros também)
-   - Arquivo: src/pages/Membro.tsx
-   - Alterações:
-     - Abaixo da bio (ou abaixo do bloco de localização), renderizar p.expertises como chips/badges quando existir.
-     - Mantém consistência com o preview do próprio usuário.
+4) Privacidade da localização do usuário
+- Guardar internamente a localização exata apenas em memória (state), somente para cálculo de distância.
+- Para exibição no mapa:
+  - Não criar “marker” do usuário.
+  - Desenhar apenas um círculo de proximidade centrado em uma coordenada aproximada do usuário:
+    - Ex.: arredondar lat/lng para 2 casas decimais (aprox. 1 km) antes de desenhar o círculo e antes de qualquer reverse-geocode.
+- Texto no UI: “Sua localização é aproximada (privacidade).”
 
-5) Polimento de UX (Instagram feel)
-   - Hover/press feedback nos links do Feed (subtle underline/opacity).
-   - Loading states:
-     - Usar Skeleton (já existe src/components/ui/skeleton.tsx) para avatar/nome/grid enquanto carrega (opcional, mas recomendado).
-   - Estados vazios:
-     - Sem posts: mostrar “Ainda não há posts” na aba preview.
-   - Mobile:
-     - Garantir que o header de perfil quebre bem (stack em coluna, botões com largura total quando necessário).
+5) Lista de “membros próximos”
+- Abaixo do slider (ou em um Card dedicado), renderizar uma lista dos membros dentro do raio (ordenados por distância).
+- Cada item:
+  - Avatar + nome + cidade/UF + distância (ex.: “23 km”).
+  - Clique abre um mini-modal/painel com detalhes (bio + expertises) carregados via `get_public_profile`.
+  - Ações:
+    - “Ver perfil” (vai para `/membro/:username`).
+    - “Seguir/Seguindo” (toggle follow).
+    - “Mensagem” (cria conversa DM e navega para `/mensagens/:conversationId`).
 
-Plano de validação (teste end-to-end)
-- Feed:
-  - Abrir /feed, clicar no avatar/nome/@ de um post com @ definido e verificar que abre /membro/:username correto.
-  - Testar post cujo author_username esteja vazio (se existir) e confirmar que não navega.
-- Perfil:
-  - Ir em /perfil:
-    - Aba “Editar” continua salvando bio/expertises.
-    - Aba “Ver como fica” mostra a bio e expertises em chips imediatamente após salvar (pode exigir refresh/refetch; vamos alinhar para refetch ao salvar).
-- Perfil público:
-  - Em /membro/:username confirmar que expertises agora aparecem como chips.
-  - Abrir um post no grid e validar viewer, curtidas e comentários.
+Implementação técnica (frontend)
+A) Criar um hook para localização do dispositivo
+- Novo hook (por ex. `src/components/map/useDeviceLocation.ts`):
+  - `status`: "idle" | "requesting" | "granted" | "denied" | "error"
+  - `exact`: { lat, lng } | null  (apenas em memória)
+  - `approx`: { lat, lng } | null  (arredondada)
+  - `start()` para iniciar `watchPosition`
+  - `stop()` para limpar o watch
+  - Guardar `watchId` em ref
+  - Configurar options: `{ enableHighAccuracy: true, maximumAge: 60_000, timeout: 10_000 }`
 
-Notas técnicas (para implementação)
-- Sincronização após salvar perfil:
-  - O ProfileForm hoje salva via upsert e mantém estado local, mas a aba preview precisa refazer fetch para refletir mudanças.
-  - Solução: após “Perfil salvo”, invalidar queries do react-query relacionadas ao perfil (ex.: queryKey ["my-profile", userId] e a query do preview), ou passar um callback onSaved para disparar refetch/invalidate.
-- Roteamento:
-  - Usar Link para navegação no Feed (melhor acessibilidade) com fallback quando não houver username.
-- Reuso de código:
-  - Reaproveitar ao máximo o código de viewer/grid de src/pages/Membro.tsx para não duplicar lógica e manter comportamento idêntico.
+B) Cálculo de distância e filtro por raio
+- Função util (pode ficar no próprio hook ou em `src/lib/geo.ts`):
+  - Haversine (km) entre `exact` (user) e `pin.lat/lng`.
+- No `Index.tsx`:
+  - `mode: "global" | "nearby"`
+  - `radiusKm` state (default 80)
+  - `nearbyPins = pins.filter(distance <= radiusKm)` (usando `exact`)
+  - `nearbySorted = nearbyPins.map(withDistance).sort(distance asc)`
 
-Entregáveis
-- FeedPostCard com header clicável para perfil.
-- /perfil com Tabs: Editar | Ver como fica.
-- Componente de preview do próprio perfil (instagram-style) com grid + viewer + chips.
-- /membro/:username exibindo expertises em chips.
+C) Atualizar `MemberMap` para suportar:
+- Mostrar círculo do raio (sem marker do usuário)
+  - Props novas:
+    - `radiusCenter?: { lat; lng } | null` (usar approx)
+    - `radiusKm?: number | null`
+    - `showRadius?: boolean`
+- Detectar mudanças e atualizar um `L.Circle` via refs:
+  - criar circle uma vez quando `showRadius && radiusCenter`
+  - atualizar `setLatLng` e `setRadius(radiusKm * 1000)` quando mudar
+  - remover circle quando sair do modo proximidade
+- Seleção de membro
+  - Adicionar prop `onSelectPin?: (userId: string) => void`
+  - Nos markers: registrar `marker.on("click", () => onSelectPin?.(p.user_id))`
+
+D) Modal/Painel de detalhes do membro
+- Criar componente (ex.: `src/components/map/MemberQuickProfileDialog.tsx`):
+  - Recebe `userId` selecionado (ou null)
+  - Query (React Query) chamando `supabase.rpc("get_public_profile", { p_user_id: userId })`
+  - Renderiza:
+    - Avatar, display_name, @username, cidade/UF
+    - Chips de expertises (reusar `ExpertisesChips` se encaixar)
+    - Bio
+  - Botões:
+    - Ver perfil: usa `username` para navegar
+    - Seguir: `toggle_follow`
+    - Mensagem: `create_conversation` tipo “dm” com `[userId]`, navegar para rota da conversa
+  - Estado de loading/erro com toasts.
+
+E) Ajustes no `Index.tsx` (/mapa)
+- UI:
+  - No `<aside>` adicionar Card “Proximidade”
+    - Se `me?.access_status !== "approved"`: mostrar bloqueio.
+    - Se aprovado:
+      - Toggle “Mapa global / Perto de mim”
+      - Ao ativar “Perto de mim”: chamar `start()` do hook
+      - Slider (Radix Slider já existe em `src/components/ui/slider.tsx`)
+      - Contagem de resultados e lista curta
+- Map render:
+  - Se modo global: `pins={pins}`
+  - Se modo proximidade: `pins={nearbyPins}` (ou oferecer um switch “Filtrar pins no mapa”)
+  - Passar `showRadius`, `radiusCenter={approx}`, `radiusKm`
+  - Passar `centerMe` como hoje (se existir no profile) mas quando modo proximidade estiver ativo, dar prioridade à localização do dispositivo para “centralizar”.
+
+F) (Opcional, mas recomendado) “cidade/estado aproximado” do usuário sem expor precisão
+- Fazer reverse geocode usando lat/lng aproximados (arredondados) para obter um texto “Perto de: Cidade/UF”.
+- Implementar com caching em memória e debounce (ex.: 1 chamada por mudança relevante).
+- Se falhar: mostrar apenas “Perto de você”.
+
+Cuidados e edge cases
+- Permissão negada: manter mapa global funcional e mostrar “Você negou o acesso ao GPS”.
+- Sem suporte no navegador: mostrar mensagem “Seu dispositivo não suporta geolocalização”.
+- Performance: não disparar queries por membro; só buscar `get_public_profile` do membro selecionado (1 por vez).
+- Privacidade: nunca renderizar marker do usuário, nunca salvar localização no backend, e usar apenas coordenada aproximada para UI/overlay.
+
+Checklist de testes (end-to-end)
+- /mapa com usuário aprovado:
+  - Alternar para “Perto de mim” -> pedir permissão -> resultados aparecem.
+  - Mover slider 10/80/200 -> pins filtram e círculo muda.
+  - Clicar em pin -> abre painel -> mostra bio/expertises -> “Seguir” funciona -> “Mensagem” abre conversa.
+- /mapa com usuário não aprovado:
+  - Seção proximidade bloqueada, mapa global continua ok.
+- Negar permissão:
+  - Mensagem clara e opção de tentar novamente, sem quebrar o resto.
+
+Arquivos que provavelmente serão alterados/criados
+- Editar:
+  - `src/pages/Index.tsx` (UI do modo proximidade + slider + lista + integração com mapa)
+  - `src/components/map/MemberMap.tsx` (círculo de raio + clique em pin)
+- Criar:
+  - `src/components/map/useDeviceLocation.ts` (watchPosition + estado + approx)
+  - `src/components/map/MemberQuickProfileDialog.tsx` (detalhes + ações)
+  - (Opcional) `src/lib/geo.ts` para haversine e arredondamento
+
+Sem mudanças no backend
+- Para o que você pediu (raio + clique + detalhes + conexões), dá para fazer usando os RPCs já existentes (`get_approved_member_pins`, `get_public_profile`, `toggle_follow`, `create_conversation`) sem mexer no banco.

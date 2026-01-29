@@ -306,7 +306,9 @@ export type Database = {
           created_at: string
           display_name: string | null
           expertises: string[]
+          first_name: string | null
           id: string
+          last_name: string | null
           location_lat: number | null
           location_lng: number | null
           location_updated_at: string | null
@@ -327,7 +329,9 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           expertises?: string[]
+          first_name?: string | null
           id?: string
+          last_name?: string | null
           location_lat?: number | null
           location_lng?: number | null
           location_updated_at?: string | null
@@ -348,7 +352,9 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           expertises?: string[]
+          first_name?: string | null
           id?: string
+          last_name?: string | null
           location_lat?: number | null
           location_lng?: number | null
           location_updated_at?: string | null

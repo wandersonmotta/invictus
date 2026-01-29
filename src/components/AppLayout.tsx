@@ -2,6 +2,7 @@ import * as React from "react";
 
 import { AppSidebar } from "@/components/AppSidebar";
 import { GoldHoverText } from "@/components/GoldHoverText";
+import { UserMenu } from "@/components/UserMenu";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 import logo from "@/assets/invictus-logo.png";
@@ -22,8 +23,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               "after:bg-gradient-to-r after:from-transparent after:via-[hsl(var(--foreground)_/_0.10)] after:to-transparent"
             }
           >
-            <div className="flex-1">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-1 items-center gap-3">
                 <img
                   src={logo}
                   alt="Logo da Fraternidade Invictus"
@@ -32,7 +32,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary) / 0.25))" }}
                 />
                 <GoldHoverText className="text-[10px] font-semibold tracking-[0.35em]">FRATERNIDADE</GoldHoverText>
-              </div>
+            </div>
+
+            <div className="ml-auto">
+              <UserMenu />
             </div>
           </header>
 

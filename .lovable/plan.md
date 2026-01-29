@@ -1,71 +1,65 @@
 
 Objetivo
-- Na tela **/perfil**, adicionar um bloco “Alterar senha” com 3 campos:
-  1) Senha atual
-  2) Nova senha
-  3) Repetir nova senha
-- Validar tudo no cliente (zod + react-hook-form) e executar a troca com segurança via autenticação do backend.
+- Reproduzir e corrigir o bug do modal “Tenho um convite” na autenticação, onde o formulário “anda” (muda de posição) enquanto o usuário digita/abre/fecha o modal.
+- Eliminar também o warning do console sobre “Function components cannot be given refs… DialogFooter”, que pode estar contribuindo para comportamento estranho do Dialog (foco/medidas).
 
-O que já existe e como vamos reaproveitar
-- Já existe a tela `src/pages/ResetPassword.tsx` que usa:
-  - `zod` + `react-hook-form`
-  - `supabase.auth.updateUser({ password })` (troca de senha)
-  - `toast` para feedback
-- Vamos reutilizar o mesmo padrão visual e de validação, só que dentro de `/perfil`.
+O que eu identifiquei até agora (com base no código e no teste)
+1) O Dialog atual (src/components/ui/dialog.tsx) usa o padrão “centrado por transform”:
+   - `position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%)`
+   - Isso faz o modal ficar sempre centralizado, mas tem um efeito colateral: se a altura do conteúdo muda (ex.: mensagens de erro surgem/desaparecem, teclado virtual em mobile, autofill, mudança de fonte, etc.), a posição recalcula e o modal “anda” para manter o centro.
+2) Em páginas com conteúdo centralizado (como /auth), abrir um modal frequentemente mexe no scrollbar do body (travamento de scroll). Se o navegador remove/adiciona a barra de rolagem, a largura útil da página muda e dá “pulo” horizontal perceptível (parece que tudo “caminha”).
+3) O console mostra warning específico envolvendo `DialogFooter`:
+   - Isso indica que algum componente está recebendo `ref` indevidamente (ou o Radix está tentando focar/medir algo e encontra um componente que não suporta ref).
+   - Mesmo que não seja a causa principal do “andar”, vale corrigir para estabilizar o comportamento do Dialog.
 
-Como a troca de senha vai funcionar (fluxo seguro)
-1) Usuário digita a **senha atual** + **nova senha** + **confirmação**.
-2) Antes de trocar a senha, o app faz uma “reconfirmação” da senha atual:
-   - `supabase.auth.signInWithPassword({ email: user.email, password: currentPassword })`
-   - Isso garante que a senha atual está correta e também renova a sessão (muitos provedores exigem “login recente” para troca de senha).
-3) Se a reconfirmação der certo, executar:
-   - `supabase.auth.updateUser({ password: newPassword })`
-4) Mostrar toast de sucesso e limpar os campos do formulário.
+Hipóteses mais prováveis para o “form andando”
+A) Reposicionamento por mudança de altura do conteúdo do modal
+- Qualquer variação de altura (erro de validação, layout reflow, font fallback, etc.) desloca o modal porque ele está preso ao “centro” via translate.
+B) “Layout shift” por barra de rolagem (scrollbar) ao abrir/fechar o Dialog
+- Quando o scroll do body é bloqueado, a scrollbar some e o layout muda alguns pixels.
+- Isso pode dar sensação de “andar” mesmo sem alterar o modal.
 
-Validações (client-side) e mensagens
-- Senha atual: obrigatória (min 1, ou min 8 se você quiser manter padrão)
-- Nova senha: mínimo 8 caracteres (mantendo o padrão do app)
-- Confirmar nova senha: precisa ser igual à nova senha
-- Extras que vou incluir para evitar erros comuns:
-  - Bloquear submit enquanto estiver salvando
-  - Mensagens claras:
-    - “Senha atual incorreta”
-    - “Não foi possível atualizar a senha: …”
+Solução proposta (o que será implementado)
+Parte 1 — Tornar o Dialog “estável” na tela (sem “andar” com a altura)
+- Ajustar o layout do Dialog em `src/components/ui/dialog.tsx` para não depender de `translateY(-50%)` do conteúdo.
+- Trocar para um container “fixed inset-0 flex” no Portal, e posicionar o Content com margem/topo fixo:
+  - Portal wrapper: `fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-6`
+  - Content: `w-full max-w-lg` com `mt-[10vh]` (ou `mt-16 sm:mt-24`) e `max-h-[calc(100vh-…)] overflow-y-auto`
+- Resultado: o modal não recalcula a posição vertical quando o conteúdo muda; ele só cresce para baixo e, se precisar, ganha scroll interno.
 
-Onde ficará no layout do Perfil
-- `src/pages/Perfil.tsx`
-  - Abaixo do `ProfileForm` e acima/antes do card de “Sessão” (ou logo após “Sessão”, dependendo do seu gosto visual).
-  - Será um `Card` seguindo o padrão `invictus-surface invictus-frame border-border/70` para manter a estética consistente.
+Parte 2 — Evitar “pulo” horizontal ao abrir/fechar o modal (scrollbar-gutter)
+- Adicionar CSS global (em `src/index.css`) para manter o espaço da scrollbar estável:
+  - Preferência moderna: `html { scrollbar-gutter: stable; }`
+  - Fallback se necessário: `html { overflow-y: scroll; }` (força scrollbar sempre presente)
+- Resultado: abrir o Dialog não altera a largura útil da página, reduzindo o “andar” lateral do conteúdo.
 
-Implementação (arquivos)
-1) Criar componente novo:
-   - `src/components/profile/ChangePasswordCard.tsx`
-   - Conteúdo:
-     - Form com 3 Inputs type="password"
-     - Schema zod (nova senha + confirmação) e campo de senha atual
-     - Chamadas:
-       - `supabase.auth.signInWithPassword(...)`
-       - `supabase.auth.updateUser(...)`
-     - `useToast()` para feedback
-     - Reset do form em sucesso
+Parte 3 — Corrigir o warning de ref no DialogFooter (estabilidade do Radix)
+- Em `src/components/ui/dialog.tsx`, mudar `DialogFooter` para `React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>` (mesmo padrão de outros componentes).
+- Isso elimina o warning e garante compatibilidade com qualquer mecanismo interno que tente passar ref para o footer (direta ou indiretamente via composição).
 
-2) Integrar no Perfil:
-   - `src/pages/Perfil.tsx`
-   - Renderizar `<ChangePasswordCard />` quando `user?.email` existir.
-   - Se por algum motivo não tiver email, mostrar uma mensagem “Sua conta não suporta troca de senha aqui” (fallback seguro).
+Parte 4 — Verificação prática do bug (antes/depois)
+- Reproduzir no preview:
+  1) Abrir /auth
+  2) Clicar “Tenho um convite”
+  3) Digitar nos campos, alternar foco, e causar erros (ex.: submeter com invite curto) para ver se há variação de altura
+  4) Confirmar que o modal permanece estável (não “anda”).
+- Testar também:
+  - Mobile (teclado virtual costuma piorar reposicionamento)
+  - Chrome e Safari (Safari é mais sensível a viewport/keyboard)
 
-Edge cases importantes que vou tratar
-- Usuário sem `user.email` (raro, mas possível dependendo do provedor): não mostrar o form.
-- Erro de credenciais ao reautenticar: mostrar toast específico e não tentar atualizar.
-- Erro “requires recent login”: o fluxo de reconfirmação tende a evitar isso; se ainda acontecer, mostrar instrução para sair/entrar e tentar novamente.
-- Garantir que não logamos senha em console (nunca).
+Arquivos que serão alterados
+- src/components/ui/dialog.tsx
+  - Refactor do posicionamento do DialogContent (container flex + scroll interno)
+  - DialogFooter com forwardRef
+- src/index.css
+  - `scrollbar-gutter: stable` (e fallback se necessário)
 
-Checklist de validação manual (você)
-- Em `/perfil`, testar:
-  - senha atual errada => erro claro
-  - nova senha diferente da confirmação => validação no formulário
-  - troca com sucesso => toast + campos limpam
-- Testar no mobile (layout e teclado).
+Riscos e cuidados
+- Garantir que o “glass” continue intacto (as classes existentes `invictus-auth-surface invictus-auth-frame` continuam no Content).
+- Garantir z-index alto (já existe z-50) e overlay cobrindo tudo.
+- Garantir acessibilidade/foco: Radix continuará gerenciando foco; o ref warning removido ajuda.
 
-Sem mudanças no banco de dados
-- Isso é puramente autenticação; não precisa migration nem alteração de tabelas/RLS.
+Critério de aceite (o que você deve perceber)
+- Ao abrir o modal e digitar, o modal não “caminha” para cima/baixo (mesmo com mensagens de erro).
+- Ao abrir/fechar, o fundo não dá “pulo” lateral por causa da scrollbar.
+- O warning “Function components cannot be given refs… DialogFooter” some do console.

@@ -130,11 +130,13 @@ export function CommunityThreadView({ threadId, onBack }: Props) {
           ) : null}
           <div className="min-w-0">
             <div className="text-sm font-medium">
-              {threadQuery.isLoading ? "Carregando…" : threadQuery.data?.title ?? "Tema"}
+              {threadQuery.isLoading
+                ? "Carregando…"
+                : threadQuery.data?.channel_name
+                  ? `#${threadQuery.data.channel_name}`
+                  : "Canal"}
             </div>
-            {threadQuery.data?.channel_name ? (
-              <div className="mt-1 text-xs text-muted-foreground">#{threadQuery.data.channel_name}</div>
-            ) : null}
+            <div className="mt-1 text-xs text-muted-foreground">Mensagens do canal</div>
           </div>
         </div>
       </div>
@@ -143,9 +145,9 @@ export function CommunityThreadView({ threadId, onBack }: Props) {
         {postsQuery.isLoading ? (
           <div className="text-sm text-muted-foreground">Carregando posts…</div>
         ) : postsQuery.isError ? (
-          <div className="text-sm text-muted-foreground">Não foi possível carregar este tema.</div>
+          <div className="text-sm text-muted-foreground">Não foi possível carregar este canal.</div>
         ) : !postsQuery.data?.length ? (
-          <div className="text-sm text-muted-foreground">Ainda não há mensagens neste tema.</div>
+          <div className="text-sm text-muted-foreground">Ainda não há mensagens neste canal.</div>
         ) : (
           <div className="grid gap-3">
             {postsQuery.data.map((p) => (

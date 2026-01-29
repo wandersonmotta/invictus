@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 type Props = {
   value: string | null;
-  onChange: (channelId: string) => void;
+  onChange: (channel: CommunityChannel) => void;
 };
 
 export function ChannelList({ value, onChange }: Props) {
@@ -23,7 +23,7 @@ export function ChannelList({ value, onChange }: Props) {
 
   React.useEffect(() => {
     if (!value && channelsQuery.data?.length) {
-      onChange(channelsQuery.data[0].id);
+      onChange(channelsQuery.data[0]);
     }
   }, [value, channelsQuery.data, onChange]);
 
@@ -31,7 +31,7 @@ export function ChannelList({ value, onChange }: Props) {
     <div className="h-full">
       <div className="p-3 sm:p-4 border-b border-border/60">
         <div className="text-sm font-medium">Canais</div>
-        <div className="mt-1 text-xs text-muted-foreground">Escolha um canal para ver os temas.</div>
+        <div className="mt-1 text-xs text-muted-foreground">Escolha um canal para ver as mensagens.</div>
       </div>
 
       <div className="p-2">
@@ -49,7 +49,7 @@ export function ChannelList({ value, onChange }: Props) {
                 <button
                   key={c.id}
                   type="button"
-                  onClick={() => onChange(c.id)}
+                  onClick={() => onChange(c)}
                   className={cn(
                     "w-full text-left rounded-lg border px-3 py-2 transition-colors",
                     "invictus-surface invictus-frame border-border/60",

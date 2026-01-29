@@ -28,10 +28,19 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? Deno.env.get("VITE_SUPABASE_URL");
-  const ANON = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("VITE_SUPABASE_PUBLISHABLE_KEY");
+  // Prefer the standard env var names injected in the function runtime.
+  // Keep fallbacks for compatibility with older setups.
+  const ANON =
+    Deno.env.get("SUPABASE_ANON_KEY") ??
+    Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ??
+    Deno.env.get("VITE_SUPABASE_PUBLISHABLE_KEY");
   const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!SUPABASE_URL || !ANON || !SERVICE_ROLE) {
-    console.error("Missing SUPABASE env vars");
+    console.error("Missing SUPABASE env vars", {
+      hasUrl: Boolean(SUPABASE_URL),
+      hasAnon: Boolean(ANON),
+      hasServiceRole: Boolean(SERVICE_ROLE),
+    });
     return json(500, { error: "server_misconfigured" });
   }
 

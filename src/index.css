@@ -202,22 +202,47 @@ All colors MUST be HSL.
   }
 
   .invictus-auth-frame {
+    position: relative;
     /* Refined gold line + controlled glow (premium, not neon) */
     box-shadow:
-      /* outer gold line (always visible) */
-      0 0 0 1px hsl(var(--gold-hot) / 0.90),
+      /* ALWAYS-ON gold ring (thicker so it's clearly visible) */
+      0 0 0 2px hsl(var(--gold-hot) / 0.88),
       /* inner warm edge (metal feel) */
       0 0 0 1px hsl(var(--gold-soft) / 0.28) inset,
       /* specular polish */
-      0 1px 0 0 hsl(var(--foreground) / 0.10) inset,
-      0 -1px 0 0 hsl(var(--foreground) / 0.06) inset,
+      0 1px 0 0 hsl(var(--foreground) / 0.12) inset,
+      0 -1px 0 0 hsl(var(--foreground) / 0.08) inset,
       /* depth */
       0 22px 90px -48px hsl(var(--foreground) / 0.32),
       /* gold glow (subtle but present) */
-      0 0 110px -46px hsl(var(--gold-hot) / 0.52);
+      0 0 120px -46px hsl(var(--gold-hot) / 0.55);
     transition:
       box-shadow 240ms ease,
       transform 240ms ease;
+  }
+
+  /* Adds a "real" premium border look (champagne gradient) that is visible all the time */
+  .invictus-auth-frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    padding: 2px;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--gold-soft) / 0.10),
+      hsl(var(--gold-hot) / 0.65) 35%,
+      hsl(var(--gold-soft) / 0.25) 70%,
+      hsl(var(--gold-hot) / 0.55)
+    );
+    /* cut the center, keep only the border */
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.95;
   }
 
   /* Desktop-only aura hover (keeps mobile clean/perf) */
@@ -225,7 +250,7 @@ All colors MUST be HSL.
     .invictus-auth-frame:hover {
       transform: translateY(-1px);
       box-shadow:
-        0 0 0 1px hsl(var(--gold-hot) / 0.92),
+        0 0 0 2px hsl(var(--gold-hot) / 0.94),
         0 0 0 1px hsl(var(--gold-soft) / 0.28) inset,
         0 1px 0 0 hsl(var(--foreground) / 0.12) inset,
         0 -1px 0 0 hsl(var(--foreground) / 0.08) inset,

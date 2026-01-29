@@ -82,7 +82,7 @@ export function ChangePasswordCard({ email }: { email: string }) {
   };
 
   return (
-    <Card className="invictus-surface invictus-frame border-border/70">
+    <Card className="invictus-modal-glass">
       <CardHeader className="space-y-1">
         <CardTitle className="text-base">Alterar senha</CardTitle>
         <CardDescription>Confirme sua senha atual e defina uma nova.</CardDescription>

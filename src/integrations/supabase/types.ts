@@ -284,7 +284,9 @@ export type Database = {
       get_approved_member_pins: {
         Args: { p_limit?: number }
         Returns: {
+          avatar_url: string
           city: string
+          display_name: string
           lat: number
           lng: number
           state: string

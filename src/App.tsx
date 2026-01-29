@@ -79,6 +79,16 @@ const App = () => (
               }
             />
             <Route
+              path="/mensagens/:conversationId"
+              element={
+                <RequireAuth>
+                  <AppLayout>
+                    <Mensagens />
+                  </AppLayout>
+                </RequireAuth>
+              }
+            />
+            <Route
               path="/perfil"
               element={
                 <RequireAuth>

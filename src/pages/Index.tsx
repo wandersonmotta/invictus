@@ -6,9 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { MemberMap } from "@/components/map/MemberMap";
 import { useApprovedMemberPins } from "@/components/map/useApprovedMemberPins";
 import { useDeviceLocation } from "@/components/map/useDeviceLocation";
-import { haversineKm } from "@/lib/geo";
 import { MemberQuickProfileDialog } from "@/components/map/MemberQuickProfileDialog";
 import { MAPBOX_PREMIUM } from "@/config/invictusMap";
+import { useNearbyLivePins } from "@/components/map/useNearbyLivePins";
 
 // Update this page (the content is just a fallback if you fail to update the page)
 
@@ -64,21 +64,60 @@ const Index = () => {
 
   const gpsReady = deviceLocation.status === "granted" && !!deviceLocation.exact;
 
+  // Auto-share an approximate live location while in "nearby" mode.
+  // Privacy: only sends rounded coords (approx) and expires quickly.
+  React.useEffect(() => {
+    if (mode !== "nearby") return;
+    if (!canUseProximity) return;
+    if (!gpsReady) return;
+    if (!deviceLocation.approx) return;
+
+    let stopped = false;
+
+    const push = async () => {
+      const approx = deviceLocation.approx;
+      if (!approx || stopped) return;
+      await supabase.rpc("upsert_my_live_location", {
+        p_lat: approx.lat,
+        p_lng: approx.lng,
+        p_approx_decimals: 2,
+        p_expires_in_seconds: 300,
+      });
+    };
+
+    void push();
+    const id = window.setInterval(() => {
+      void push();
+    }, 20_000);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(id);
+    };
+  }, [mode, canUseProximity, gpsReady, deviceLocation.approx]);
+
+  const { loading: nearbyLoading, pins: nearbyPinsLive, reload: reloadNearby } = useNearbyLivePins({
+    enabled: mode === "nearby" && canUseProximity && gpsReady,
+    lat: deviceLocation.exact?.lat ?? null,
+    lng: deviceLocation.exact?.lng ?? null,
+    radiusKm,
+    limit: 5000,
+  });
+
   const nearby = React.useMemo(() => {
     if (mode !== "nearby") return null;
     if (!gpsReady) return null;
-    const meLoc = deviceLocation.exact;
 
-    const list = pins
+    // In "nearby" mode we rely on live-shared locations (opt-in).
+    const list = (nearbyPinsLive ?? [])
       .map((p) => ({
         pin: p,
-        distanceKm: haversineKm(meLoc, { lat: p.lat, lng: p.lng }),
+        distanceKm: typeof p.distance_km === "number" ? p.distance_km : 0,
       }))
-      .filter((x) => x.distanceKm <= radiusKm)
       .sort((a, b) => a.distanceKm - b.distanceKm);
 
     return list;
-  }, [mode, deviceLocation.exact, pins, radiusKm]);
+  }, [mode, gpsReady, nearbyPinsLive]);
 
   const pinsForMap = React.useMemo(() => {
     if (mode !== "nearby") return pins;
@@ -198,7 +237,10 @@ const Index = () => {
                           </div>
 
                           <div className="text-sm text-muted-foreground">
-                            Encontrados: <span className="text-foreground">{nearby ? nearby.length : "—"}</span>
+                            Encontrados:{" "}
+                            <span className="text-foreground">
+                              {mode === "nearby" && gpsReady && nearbyLoading ? "…" : nearby ? nearby.length : "—"}
+                            </span>
                           </div>
 
                           {nearby && nearby.length ? (
@@ -280,6 +322,16 @@ const Index = () => {
               >
                 Recarregar
               </button>
+
+              {mode === "nearby" && canUseProximity ? (
+                <button
+                  type="button"
+                  className="text-sm font-medium text-primary underline underline-offset-4"
+                  onClick={() => void reloadNearby()}
+                >
+                  Atualizar proximidade
+                </button>
+              ) : null}
             </CardContent>
           </Card>
         </aside>

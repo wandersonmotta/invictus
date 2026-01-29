@@ -24,18 +24,18 @@ export function FeedPostCard({ post }: { post: FeedPost & { media_urls: { url: s
   const primary = post.media_urls[0] as any;
 
   return (
-    <Card className="invictus-surface invictus-frame border-border/70">
-      <CardContent className="space-y-3 p-4">
-        <div className="flex items-center gap-3">
+    <Card className="invictus-surface invictus-frame border-border/70 mx-auto w-full max-w-[480px] overflow-hidden">
+      <CardContent className="p-0">
+        <div className="flex items-center gap-3 px-4 py-3">
           {post.author_avatar_url ? (
             <img
               src={post.author_avatar_url}
               alt={`Avatar de ${post.author_display_name}`}
-              className="h-9 w-9 rounded-full border border-border/70 object-cover"
+              className="h-8 w-8 rounded-full border border-border/70 object-cover"
               loading="lazy"
             />
           ) : (
-            <div className="h-9 w-9 rounded-full border border-border/70 invictus-surface" />
+            <div className="h-8 w-8 rounded-full border border-border/70 invictus-surface" />
           )}
 
           <div className="min-w-0 flex-1">
@@ -51,17 +51,22 @@ export function FeedPostCard({ post }: { post: FeedPost & { media_urls: { url: s
             trimStartSeconds={primary.trimStartSeconds ?? null}
             trimEndSeconds={primary.trimEndSeconds ?? null}
             alt={`Mídia de ${post.author_display_name}`}
+            className="rounded-none border-0"
           />
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 px-4 py-3">
           <Button type="button" variant={post.liked_by_me ? "secondary" : "ghost"} onClick={() => likeMutation.mutate()}>
             Curtir ({post.like_count})
           </Button>
           <CommentsDrawer postId={post.post_id} count={post.comment_count} />
         </div>
 
-        {post.caption ? <div className="text-sm text-foreground whitespace-pre-wrap">{post.caption}</div> : null}
+        {post.caption ? (
+          <div className="px-4 pb-4 text-sm text-foreground whitespace-pre-wrap">{post.caption}</div>
+        ) : (
+          <div className="pb-2" />
+        )}
       </CardContent>
     </Card>
   );

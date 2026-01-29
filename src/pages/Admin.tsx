@@ -25,6 +25,25 @@ type Training = {
   created_at: string;
 };
 
+type InviteCode = {
+  id: string;
+  code: string;
+  active: boolean;
+  expires_at: string | null;
+  max_uses: number;
+  uses_count: number;
+  note: string | null;
+  created_at: string;
+};
+
+type PendingProfile = {
+  id: string;
+  user_id: string;
+  display_name: string | null;
+  created_at: string;
+  access_status: "pending" | "approved" | "rejected";
+};
+
 export default function Admin() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -68,6 +87,33 @@ export default function Admin() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Training[];
+    },
+  });
+
+  const { data: invites } = useQuery({
+    queryKey: ["invite_codes"],
+    enabled: !!isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("invite_codes")
+        .select("id,code,active,expires_at,max_uses,uses_count,note,created_at")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as InviteCode[];
+    },
+  });
+
+  const { data: pendingProfiles } = useQuery({
+    queryKey: ["pending_profiles"],
+    enabled: !!isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id,user_id,display_name,created_at,access_status")
+        .eq("access_status", "pending")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as PendingProfile[];
     },
   });
 
@@ -175,6 +221,72 @@ export default function Admin() {
     ]);
   };
 
+  // --- Invites ---
+  const [inviteNote, setInviteNote] = React.useState("");
+  const [inviteMaxUses, setInviteMaxUses] = React.useState(1);
+  const [inviteExpiresAt, setInviteExpiresAt] = React.useState<string>("");
+  const [creatingInvite, setCreatingInvite] = React.useState(false);
+
+  const genInviteCode = () => {
+    // Simple, readable format. Admin can regenerate if needed.
+    const raw = crypto.getRandomValues(new Uint32Array(2));
+    const part = (n: number) => n.toString(16).toUpperCase().padStart(8, "0");
+    return `INV-${part(raw[0]).slice(0, 4)}${part(raw[1]).slice(0, 4)}`;
+  };
+
+  const createInvite = async () => {
+    if (creatingInvite) return;
+    setCreatingInvite(true);
+    try {
+      const code = genInviteCode();
+      const max_uses = Math.max(1, Math.min(999, Number(inviteMaxUses) || 1));
+      const expires_at = inviteExpiresAt ? new Date(inviteExpiresAt).toISOString() : null;
+
+      const { error } = await supabase.from("invite_codes").insert({
+        code,
+        max_uses,
+        expires_at,
+        note: inviteNote.trim() || null,
+        created_by: user?.id ?? null,
+      });
+      if (error) throw error;
+
+      toast({ title: "Convite criado", description: code });
+      setInviteNote("");
+      setInviteMaxUses(1);
+      setInviteExpiresAt("");
+      await qc.invalidateQueries({ queryKey: ["invite_codes"] });
+    } catch (e: any) {
+      toast({ title: "Erro ao criar convite", description: e?.message ?? String(e), variant: "destructive" });
+    } finally {
+      setCreatingInvite(false);
+    }
+  };
+
+  const setInviteActive = async (id: string, active: boolean) => {
+    const { error } = await supabase.from("invite_codes").update({ active }).eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao atualizar convite", description: error.message, variant: "destructive" });
+      return;
+    }
+    await qc.invalidateQueries({ queryKey: ["invite_codes"] });
+  };
+
+  // --- Approvals ---
+  const approveUser = async (profileId: string) => {
+    if (!user?.id) return;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ access_status: "approved", approved_at: new Date().toISOString(), approved_by: user.id })
+      .eq("id", profileId);
+    if (error) {
+      toast({ title: "Erro ao aprovar", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Usuário aprovado" });
+    await qc.invalidateQueries({ queryKey: ["pending_profiles"] });
+  };
+
   return (
     <main className="invictus-page">
       <header className="invictus-page-header">
@@ -187,29 +299,116 @@ export default function Admin() {
           <CardHeader>
             <CardTitle>Sem permissão</CardTitle>
             <CardDescription>
-              Você precisa da role <span className="font-medium text-foreground">admin</span> para gerenciar a aba Class.
+              Você precisa da role <span className="font-medium text-foreground">admin</span> para acessar esta área.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>
-              Para habilitar, adicione uma linha em <span className="font-medium text-foreground">user_roles</span> com:
-            </p>
-            <ul className="list-disc pl-5">
-              <li>
-                <span className="font-medium text-foreground">user_id</span>: {user?.id}
-              </li>
-              <li>
-                <span className="font-medium text-foreground">role</span>: admin
-              </li>
-            </ul>
+            <p>Se você deveria ser admin, peça para um administrador validar sua conta e permissões.</p>
           </CardContent>
         </Card>
       ) : (
-        <Tabs defaultValue="categories" className="w-full">
-          <TabsList className="grid h-11 w-full grid-cols-2">
+        <Tabs defaultValue="approvals" className="w-full">
+          <TabsList className="grid h-11 w-full grid-cols-4">
+            <TabsTrigger value="approvals">Aprovações</TabsTrigger>
+            <TabsTrigger value="invites">Convites</TabsTrigger>
             <TabsTrigger value="categories">Categorias</TabsTrigger>
             <TabsTrigger value="trainings">Treinamentos</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="approvals" className="mt-4 space-y-4">
+            <Card className="invictus-surface invictus-frame border-border/70">
+              <CardHeader>
+                <CardTitle className="text-base">Fila de aprovação</CardTitle>
+                <CardDescription>Usuários criados com convite ficam com acesso limitado até aprovação.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {(pendingProfiles ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum usuário pendente no momento.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {pendingProfiles?.map((p) => (
+                      <div key={p.id} className="flex flex-col gap-2 rounded-lg border border-border/60 p-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{p.display_name || "Sem nome"}</p>
+                          <p className="break-all text-xs text-muted-foreground">{p.user_id}</p>
+                        </div>
+                        <Button className="h-9" onClick={() => void approveUser(p.id)}>
+                          Aprovar
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="invites" className="mt-4 space-y-4">
+            <Card className="invictus-surface invictus-frame border-border/70">
+              <CardHeader>
+                <CardTitle className="text-base">Novo convite</CardTitle>
+                <CardDescription>Crie códigos para liberar cadastro.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-3">
+                <div className="grid gap-2">
+                  <Label htmlFor="inv-note">Nota (opcional)</Label>
+                  <Input id="inv-note" value={inviteNote} onChange={(e) => setInviteNote(e.target.value)} />
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="inv-uses">Máx. usos</Label>
+                    <Input
+                      id="inv-uses"
+                      type="number"
+                      min={1}
+                      max={999}
+                      value={inviteMaxUses}
+                      onChange={(e) => setInviteMaxUses(Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="inv-exp">Expira em (opcional)</Label>
+                    <Input id="inv-exp" type="datetime-local" value={inviteExpiresAt} onChange={(e) => setInviteExpiresAt(e.target.value)} />
+                  </div>
+                </div>
+
+                <Button className="h-11" onClick={() => void createInvite()} disabled={creatingInvite}>
+                  {creatingInvite ? "Criando…" : "Gerar convite"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="invictus-surface invictus-frame border-border/70">
+              <CardHeader>
+                <CardTitle className="text-base">Convites</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {(invites ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum convite criado ainda.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {invites?.map((inv) => (
+                      <div key={inv.id} className="flex flex-col gap-2 rounded-lg border border-border/60 p-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{inv.code}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {inv.uses_count}/{inv.max_uses} usos {inv.expires_at ? `• expira ${new Date(inv.expires_at).toLocaleString()}` : ""}
+                            {inv.note ? ` • ${inv.note}` : ""}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">{inv.active ? "ativo" : "inativo"}</span>
+                          <Button variant="outline" size="sm" onClick={() => void setInviteActive(inv.id, !inv.active)}>
+                            {inv.active ? "Desativar" : "Ativar"}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="categories" className="mt-4 space-y-4">
             <Card className="invictus-surface invictus-frame border-border/70">

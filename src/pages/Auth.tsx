@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
 import { useAuth } from "@/auth/AuthProvider";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -17,16 +18,23 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/invictus-logo.png";
 
-const schema = z.object({
-  email: z.string().email("Informe um e-mail válido"),
-  password: z.string().min(8, "Senha precisa ter pelo menos 8 caracteres"),
+const loginSchema = z.object({
+  email: z.string().trim().max(255, "E-mail muito longo").email("Informe um e-mail válido"),
+  password: z.string().min(8, "Senha precisa ter pelo menos 8 caracteres").max(72, "Senha muito longa"),
 });
 
-type FormValues = z.infer<typeof schema>;
+type LoginFormValues = z.infer<typeof loginSchema>;
+
+const inviteSchema = z.object({
+  inviteCode: z.string().trim().min(4, "Informe o código do convite").max(64, "Código inválido"),
+  email: z.string().trim().max(255, "E-mail muito longo").email("Informe um e-mail válido"),
+  password: z.string().min(8, "Senha precisa ter pelo menos 8 caracteres").max(72, "Senha muito longa"),
+});
+
+type InviteFormValues = z.infer<typeof inviteSchema>;
 
 const resetSchema = z.object({
   email: z.string().trim().max(255, "E-mail muito longo").email("Informe um e-mail válido"),
@@ -36,10 +44,11 @@ type ResetFormValues = z.infer<typeof resetSchema>;
 
 export default function AuthPage() {
   const { toast } = useToast();
-  const { session, signIn, signUp, resetPassword } = useAuth();
-  const [mode, setMode] = React.useState<"login" | "signup">("login");
+  const { session, signIn, resetPassword } = useAuth();
   const [resetOpen, setResetOpen] = React.useState(false);
   const [resetLoading, setResetLoading] = React.useState(false);
+  const [inviteOpen, setInviteOpen] = React.useState(false);
+  const [inviteLoading, setInviteLoading] = React.useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -49,9 +58,14 @@ export default function AuthPage() {
     if (session) navigate(from, { replace: true });
   }, [session, navigate, from]);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+  const loginForm = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
+  });
+
+  const inviteForm = useForm<InviteFormValues>({
+    resolver: zodResolver(inviteSchema),
+    defaultValues: { inviteCode: "", email: "", password: "" },
   });
 
   const resetForm = useForm<ResetFormValues>({
@@ -59,9 +73,8 @@ export default function AuthPage() {
     defaultValues: { email: "" },
   });
 
-  const onSubmit = async (values: FormValues) => {
-    const fn = mode === "login" ? signIn : signUp;
-    const { error } = await fn(values.email, values.password);
+  const onLoginSubmit = async (values: LoginFormValues) => {
+    const { error } = await signIn(values.email, values.password);
     if (error) {
       toast({
         title: "Não foi possível autenticar",
@@ -72,12 +85,52 @@ export default function AuthPage() {
     }
 
     toast({
-      title: mode === "login" ? "Bem-vindo" : "Conta criada",
-      description:
-        mode === "login"
-          ? "Você entrou com sucesso."
-          : "Se necessário, verifique seu e-mail para confirmar o acesso.",
+      title: "Bem-vindo",
+      description: "Você entrou com sucesso.",
     });
+  };
+
+  const onInviteSubmit = async (values: InviteFormValues) => {
+    if (inviteLoading) return;
+    setInviteLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("auth-signup-with-invite", {
+        body: {
+          inviteCode: values.inviteCode,
+          email: values.email,
+          password: values.password,
+        },
+      });
+
+      if (error) {
+        const msg = String((error as any)?.message ?? "");
+        const hint = String((data as any)?.error ?? "");
+        const key = hint || msg;
+
+        const friendly =
+          key.includes("invite_expired")
+            ? "Esse convite expirou."
+            : key.includes("invite_used")
+              ? "Esse convite já foi utilizado."
+              : key.includes("invite_invalid")
+                ? "Convite inválido."
+                : key.includes("email_already_registered")
+                  ? "Este e-mail já está cadastrado."
+                  : "Não foi possível criar sua conta.";
+
+        toast({ title: "Falha no convite", description: friendly, variant: "destructive" });
+        return;
+      }
+
+      toast({
+        title: "Conta criada",
+        description: "Agora faça login para entrar. Seu acesso pode ficar limitado até aprovação.",
+      });
+      inviteForm.reset();
+      setInviteOpen(false);
+    } finally {
+      setInviteLoading(false);
+    }
   };
 
   const onResetSubmit = async (values: ResetFormValues) => {
@@ -125,85 +178,90 @@ export default function AuthPage() {
         </CardHeader>
 
         <CardContent>
-          <Tabs
-            value={mode}
-            onValueChange={(v) => setMode(v as "login" | "signup")}
-            className="w-full"
-          >
-            <TabsList className="grid h-11 w-full grid-cols-2">
-              <TabsTrigger value="login">Entrar</TabsTrigger>
-              <TabsTrigger value="signup">Criar conta</TabsTrigger>
-            </TabsList>
+          <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">E-mail</Label>
+              <Input id="email" type="email" autoComplete="email" {...loginForm.register("email")} />
+              {loginForm.formState.errors.email && (
+                <p className="text-xs text-destructive">{loginForm.formState.errors.email.message}</p>
+              )}
+            </div>
 
-            <TabsContent value="login" className="mt-4">
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input id="email" type="email" autoComplete="email" {...form.register("email")} />
-                  {form.formState.errors.email && (
-                    <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
-                  )}
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha</Label>
+              <Input id="password" type="password" autoComplete="current-password" {...loginForm.register("password")} />
+              {loginForm.formState.errors.password && (
+                <p className="text-xs text-destructive">{loginForm.formState.errors.password.message}</p>
+              )}
+            </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete="current-password"
-                    {...form.register("password")}
-                  />
-                  {form.formState.errors.password && (
-                    <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>
-                  )}
-                </div>
+            <Button type="submit" className="w-full h-11">
+              Entrar
+            </Button>
 
-                <Button type="submit" className="w-full h-11">
-                  Entrar
-                </Button>
-
-                <div className="flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => setResetOpen(true)}
-                    className="text-xs text-muted-foreground underline-offset-4 hover:underline"
-                  >
-                    Esqueceu a senha?
-                  </button>
-                </div>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="signup" className="mt-4">
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email2">E-mail</Label>
-                  <Input id="email2" type="email" autoComplete="email" {...form.register("email")} />
-                  {form.formState.errors.email && (
-                    <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password2">Senha</Label>
-                  <Input id="password2" type="password" autoComplete="new-password" {...form.register("password")} />
-                  {form.formState.errors.password && (
-                    <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>
-                  )}
-                </div>
-
-                <Button type="submit" className="w-full h-11">
-                  Criar conta
-                </Button>
-
-                <p className="text-xs text-muted-foreground">
-                  Dica: em ambiente de teste, a confirmação automática de e-mail está habilitada.
-                </p>
-              </form>
-            </TabsContent>
-          </Tabs>
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setInviteOpen(true)}
+                className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+              >
+                Tenho convite
+              </button>
+              <button
+                type="button"
+                onClick={() => setResetOpen(true)}
+                className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+              >
+                Esqueceu a senha?
+              </button>
+            </div>
+          </form>
         </CardContent>
       </Card>
+
+      <Dialog open={inviteOpen} onOpenChange={(o) => (inviteLoading ? null : setInviteOpen(o))}>
+        <DialogContent className="invictus-surface invictus-frame border-border/70">
+          <DialogHeader>
+            <DialogTitle>Entrar com convite</DialogTitle>
+            <DialogDescription>Crie sua conta usando um código de convite válido.</DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={inviteForm.handleSubmit(onInviteSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="invite">Código do convite</Label>
+              <Input id="invite" autoComplete="off" {...inviteForm.register("inviteCode")} />
+              {inviteForm.formState.errors.inviteCode && (
+                <p className="text-xs text-destructive">{inviteForm.formState.errors.inviteCode.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="invite-email">E-mail</Label>
+              <Input id="invite-email" type="email" autoComplete="email" {...inviteForm.register("email")} />
+              {inviteForm.formState.errors.email && (
+                <p className="text-xs text-destructive">{inviteForm.formState.errors.email.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="invite-password">Senha</Label>
+              <Input id="invite-password" type="password" autoComplete="new-password" {...inviteForm.register("password")} />
+              {inviteForm.formState.errors.password && (
+                <p className="text-xs text-destructive">{inviteForm.formState.errors.password.message}</p>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" className="h-11" onClick={() => setInviteOpen(false)} disabled={inviteLoading}>
+                Cancelar
+              </Button>
+              <Button type="submit" className="h-11" disabled={inviteLoading}>
+                {inviteLoading ? "Criando…" : "Criar conta"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={resetOpen} onOpenChange={(o) => (resetLoading ? null : setResetOpen(o))}>
           <DialogContent className="invictus-surface invictus-frame border-border/70">

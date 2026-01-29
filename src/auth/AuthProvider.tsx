@@ -62,6 +62,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user]);
 
+  // Bootstrap admin role for allowlisted emails (server-side, idempotent).
+  React.useEffect(() => {
+    if (!session?.access_token) return;
+    // Avoid calling inside onAuthStateChange callback; defer.
+    const t = setTimeout(() => {
+      supabase.functions.invoke("bootstrap-admin-by-email").catch(() => {
+        // Silently ignore; not critical for regular users.
+      });
+    }, 0);
+    return () => clearTimeout(t);
+  }, [session?.access_token]);
+
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: (error as unknown as Error) ?? null };

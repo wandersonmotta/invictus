@@ -16,6 +16,7 @@ import Admin from "./pages/Admin";
 import AuthPage from "./pages/Auth";
 import ClassPage from "./pages/Class";
 import ResetPasswordPage from "./pages/ResetPassword";
+import AguardandoAprovacao from "./pages/AguardandoAprovacao";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,14 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route
+              path="/aguardando-aprovacao"
+              element={
+                <RequireAuth>
+                  <AguardandoAprovacao />
+                </RequireAuth>
+              }
+            />
             <Route
               path="/"
               element={

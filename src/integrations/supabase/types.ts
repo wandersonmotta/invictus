@@ -489,6 +489,14 @@ export type Database = {
         Returns: boolean
       }
       is_mutual_follow: { Args: { a: string; b: string }; Returns: boolean }
+      search_approved_members: {
+        Args: { p_limit?: number; p_search?: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       access_status: "pending" | "approved" | "rejected"

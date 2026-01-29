@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = "15rem";
+const SIDEBAR_WIDTH = "14rem";
 const SIDEBAR_WIDTH_MOBILE = "min(24rem, 88vw)";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
@@ -111,7 +111,7 @@ const SidebarProvider = React.forwardRef<
     mobileMode
   }), [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, toggleable, mobileMode]);
 
-  const sidebarWidth = isMobile && mobileMode === "fixed" ? "min(15rem, 88vw)" : SIDEBAR_WIDTH;
+  const sidebarWidth = isMobile && mobileMode === "fixed" ? "min(14rem, 88vw)" : SIDEBAR_WIDTH;
   return <SidebarContext.Provider value={contextValue}>
       <TooltipProvider delayDuration={0}>
         <div style={{

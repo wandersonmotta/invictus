@@ -17,7 +17,8 @@
     --sidebar-top-highlight-opacity: 0.78;
     --sidebar-marble-blend: soft-light;
     /* Gold border strength (light defaults; dark overrides below) */
-    --sidebar-gold-border-opacity: 0.22;
+    --sidebar-gold-border-1: 0.30;
+    --sidebar-gold-border-2: 0.12;
     /* Clean glass (sem "glaze" dourado) */
     background: linear-gradient(
       180deg,
@@ -27,9 +28,9 @@
     backdrop-filter: blur(20px) saturate(150%);
     box-shadow:
       /* ALWAYS-ON gold frame (clean, not neon) */
-      0 0 0 1px hsl(var(--gold-hot) / var(--sidebar-gold-border-opacity)),
+      0 0 0 2px hsl(var(--gold-hot) / var(--sidebar-gold-border-1)),
       /* second ring for presence (soft depth) */
-      0 0 0 2px hsl(var(--gold-soft) / calc(var(--sidebar-gold-border-opacity) * 0.38)),
+      0 0 0 4px hsl(var(--gold-soft) / var(--sidebar-gold-border-2)),
       0 0 0 1px hsl(var(--border) / 0.60) inset,
       /* internal metal polish */
       0 1px 0 0 hsl(var(--foreground) / 0.08) inset,
@@ -40,7 +41,8 @@
   .dark .invictus-sidebar [data-sidebar="sidebar"] {
     --sidebar-marble-opacity: 0.26;
     --sidebar-top-highlight-opacity: 0.90;
-    --sidebar-gold-border-opacity: 0.30;
+    --sidebar-gold-border-1: 0.42;
+    --sidebar-gold-border-2: 0.18;
   }
 
   .invictus-sidebar [data-sidebar="sidebar"]::before {

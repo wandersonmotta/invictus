@@ -481,6 +481,17 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_my_threads: {
+        Args: { p_folder: Database["public"]["Enums"]["conversation_folder"] }
+        Returns: {
+          accepted: boolean
+          avatar_urls: string[]
+          conversation_id: string
+          last_message_at: string
+          title: string
+          type: Database["public"]["Enums"]["conversation_type"]
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

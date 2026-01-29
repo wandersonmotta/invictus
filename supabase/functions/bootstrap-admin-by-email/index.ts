@@ -49,19 +49,38 @@ Deno.serve(async (req) => {
 
   const authHeader = req.headers.get("authorization") || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!token) return json(401, { error: "missing_token" });
+  // This function is called opportunistically by the client. If there's no
+  // session/token, just return a safe no-op instead of erroring.
+  if (!token) return json(200, { ok: true, granted: false });
 
-  // Validate user from token (anon client)
-  const authed = createClient(SUPABASE_URL, ANON, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
-  const { data: userData, error: userErr } = await authed.auth.getUser();
-  if (userErr || !userData.user) {
-    console.warn("getUser failed", userErr);
-    return json(401, { error: "unauthorized" });
+  // Validate user from token.
+  // NOTE: Supabase auth-js may try to read from a persisted session in edge runtimes.
+  // To avoid any session-storage assumptions, call the Auth REST endpoint directly.
+  let authedUserId: string | null = null;
+  let authedEmail: string | null = null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      method: "GET",
+      headers: {
+        apikey: ANON,
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const text = await r.text();
+    if (!r.ok) {
+      // Safe no-op; we only grant role when allowlisted.
+      console.warn("auth user lookup failed", r.status);
+      return json(200, { ok: true, granted: false });
+    }
+    const u = JSON.parse(text);
+    authedUserId = u?.id ?? null;
+    authedEmail = (u?.email ?? "").toLowerCase() || null;
+  } catch (e) {
+    console.warn("auth user lookup exception", e);
+    return json(200, { ok: true, granted: false });
   }
 
-  const email = (userData.user.email ?? "").toLowerCase();
+  const email = authedEmail ?? "";
   if (!email || !allowlist.includes(email)) return json(200, { ok: true, granted: false });
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
@@ -70,7 +89,7 @@ Deno.serve(async (req) => {
   const { data: existing, error: selectErr } = await admin
     .from("user_roles")
     .select("id")
-    .eq("user_id", userData.user.id)
+    .eq("user_id", authedUserId)
     .eq("role", "admin")
     .maybeSingle();
   if (selectErr) {
@@ -79,7 +98,9 @@ Deno.serve(async (req) => {
   }
   if (existing) return json(200, { ok: true, granted: true, already: true });
 
-  const { error: insertErr } = await admin.from("user_roles").insert({ user_id: userData.user.id, role: "admin" });
+  const { error: insertErr } = await admin
+    .from("user_roles")
+    .insert({ user_id: authedUserId, role: "admin" });
   if (insertErr) {
     console.error("role insert error", insertErr);
     return json(500, { error: "role_insert_failed" });

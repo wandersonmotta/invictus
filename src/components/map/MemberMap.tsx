@@ -25,6 +25,10 @@ export function MemberMap({
   pins,
   centerMe,
   mapbox,
+  showRadius,
+  radiusCenter,
+  radiusKm,
+  onSelectPin,
 }: {
   pins: ApprovedMemberPin[];
   centerMe?: LatLng | null;
@@ -32,10 +36,15 @@ export function MemberMap({
     token: string;
     style: string;
   } | null;
+  showRadius?: boolean;
+  radiusCenter?: LatLng | null;
+  radiusKm?: number | null;
+  onSelectPin?: (userId: string) => void;
 }) {
   const canGeolocate = typeof window !== "undefined" && !!window.navigator?.geolocation;
   const mapRef = React.useRef<L.Map | null>(null);
   const markersRef = React.useRef<L.LayerGroup | null>(null);
+  const radiusCircleRef = React.useRef<L.Circle | null>(null);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
 
   const onGeolocate = React.useCallback(() => {
@@ -136,16 +145,53 @@ export function MemberMap({
             ? `${p.city}/${p.state}`
             : "Invictus";
 
-      L.marker([p.lat, p.lng], { icon: getAvatarIcon(p.avatar_url) })
-        .addTo(markers)
-        .bindTooltip(label, {
+      const marker = L.marker([p.lat, p.lng], { icon: getAvatarIcon(p.avatar_url) }).addTo(markers);
+      if (onSelectPin) {
+        marker.on("click", () => onSelectPin(p.user_id));
+      }
+
+      marker.bindTooltip(label, {
           direction: "top",
           opacity: 1,
           sticky: true,
           className: "invictus-map-tooltip",
         });
     }
-  }, [pins, getAvatarIcon]);
+  }, [pins, getAvatarIcon, onSelectPin]);
+
+  // radius circle overlay (privacy: only show approx center)
+  React.useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const shouldShow = !!showRadius && !!radiusCenter && typeof radiusKm === "number";
+
+    if (!shouldShow) {
+      if (radiusCircleRef.current) {
+        radiusCircleRef.current.remove();
+        radiusCircleRef.current = null;
+      }
+      return;
+    }
+
+    const center: [number, number] = [radiusCenter!.lat, radiusCenter!.lng];
+    const meters = Math.max(1, radiusKm!) * 1000;
+
+    if (!radiusCircleRef.current) {
+      radiusCircleRef.current = L.circle(center, {
+        radius: meters,
+        // keep visuals subtle and on-theme
+        color: "hsl(var(--primary))" as any,
+        fillColor: "hsl(var(--primary))" as any,
+        fillOpacity: 0.08,
+        weight: 1,
+        opacity: 0.65,
+      }).addTo(map);
+    } else {
+      radiusCircleRef.current.setLatLng(center);
+      radiusCircleRef.current.setRadius(meters);
+    }
+  }, [showRadius, radiusCenter, radiusKm]);
 
   return (
     <div className="invictus-surface invictus-frame invictus-map invictus-map-overlay relative w-full overflow-hidden rounded-lg border border-border/70">

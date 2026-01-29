@@ -62,8 +62,9 @@ export default function Comunidade() {
   }, [threadId]);
 
   const selectedThreadId = threadId ?? null;
-  const showListPane = !isMobile || !selectedThreadId;
-  const showThreadPane = !isMobile || !!selectedThreadId;
+  // Novo UX: ao entrar num canal, a conversa ocupa a tela toda (volta para a lista via botão Voltar)
+  const showListPane = !selectedThreadId;
+  const showThreadPane = !!selectedThreadId;
 
   return (
     <main className="invictus-page">
@@ -72,7 +73,7 @@ export default function Comunidade() {
         <p className="invictus-lead">Canais fixos com conversas entre membros aprovados.</p>
       </header>
 
-      <section className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <section className="grid gap-4">
         {showListPane ? (
           <div className="invictus-surface invictus-frame border-border/70 rounded-xl overflow-hidden">
             <ChannelList
@@ -90,7 +91,7 @@ export default function Comunidade() {
             {selectedThreadId ? (
               <CommunityThreadView
                 threadId={selectedThreadId}
-                onBack={isMobile ? () => navigate("/comunidade") : undefined}
+                onBack={() => navigate("/comunidade")}
               />
             ) : (
               <div className="p-5 sm:p-6">

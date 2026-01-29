@@ -506,6 +506,33 @@ export type Database = {
           },
         ]
       }
+      member_live_locations: {
+        Row: {
+          approx_decimals: number
+          expires_at: string
+          lat: number
+          lng: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approx_decimals?: number
+          expires_at: string
+          lat: number
+          lng: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approx_decimals?: number
+          expires_at?: string
+          lat?: number
+          lng?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       member_status: {
         Row: {
           created_at: string
@@ -940,6 +967,24 @@ export type Database = {
           type: Database["public"]["Enums"]["conversation_type"]
         }[]
       }
+      get_nearby_member_pins: {
+        Args: {
+          p_lat: number
+          p_limit?: number
+          p_lng: number
+          p_radius_km: number
+        }
+        Returns: {
+          avatar_url: string
+          city: string
+          display_name: string
+          distance_km: number
+          lat: number
+          lng: number
+          state: string
+          user_id: string
+        }[]
+      }
       get_public_profile: {
         Args: { p_user_id: string }
         Returns: {
@@ -986,6 +1031,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      haversine_km: {
+        Args: { lat1: number; lat2: number; lon1: number; lon2: number }
+        Returns: number
       }
       is_approved: { Args: never; Returns: boolean }
       is_mutual_follow: { Args: { a: string; b: string }; Returns: boolean }
@@ -1120,6 +1169,15 @@ export type Database = {
       }
       toggle_feed_post_like: { Args: { p_post_id: string }; Returns: boolean }
       toggle_follow: { Args: { p_target_user_id: string }; Returns: boolean }
+      upsert_my_live_location: {
+        Args: {
+          p_approx_decimals?: number
+          p_expires_in_seconds?: number
+          p_lat: number
+          p_lng: number
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       access_status: "pending" | "approved" | "rejected"

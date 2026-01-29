@@ -313,6 +313,7 @@ export type Database = {
           location_lng: number | null
           location_updated_at: string | null
           postal_code: string | null
+          profile_visibility: Database["public"]["Enums"]["profile_visibility"]
           region: string | null
           state: string | null
           updated_at: string
@@ -336,6 +337,7 @@ export type Database = {
           location_lng?: number | null
           location_updated_at?: string | null
           postal_code?: string | null
+          profile_visibility?: Database["public"]["Enums"]["profile_visibility"]
           region?: string | null
           state?: string | null
           updated_at?: string
@@ -359,6 +361,7 @@ export type Database = {
           location_lng?: number | null
           location_updated_at?: string | null
           postal_code?: string | null
+          profile_visibility?: Database["public"]["Enums"]["profile_visibility"]
           region?: string | null
           state?: string | null
           updated_at?: string
@@ -556,6 +559,7 @@ export type Database = {
       app_role: "admin" | "moderator" | "user"
       conversation_folder: "inbox" | "requests"
       conversation_type: "direct" | "group"
+      profile_visibility: "members" | "mutuals" | "private"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -687,6 +691,7 @@ export const Constants = {
       app_role: ["admin", "moderator", "user"],
       conversation_folder: ["inbox", "requests"],
       conversation_type: ["direct", "group"],
+      profile_visibility: ["members", "mutuals", "private"],
     },
   },
 } as const

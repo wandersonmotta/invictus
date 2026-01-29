@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 
+import { AvatarCropDialog } from "@/components/profile/AvatarCropDialog";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,12 +17,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 const profileSchema = z.object({
-  display_name: z
-    .string()
-    .trim()
-    .max(60, "Máximo 60 caracteres")
-    .optional()
-    .or(z.literal("")),
+  first_name: z.string().trim().min(1, "Nome obrigatório").max(30, "Máximo 30 caracteres"),
+  last_name: z.string().trim().min(1, "Sobrenome obrigatório").max(30, "Máximo 30 caracteres"),
   username: z
     .string()
     .trim()
@@ -59,6 +57,8 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 type LoadedProfile = {
   display_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   username: string | null;
   avatar_url: string | null;
   bio: string | null;
@@ -113,10 +113,14 @@ export function ProfileForm({ userId }: { userId: string }) {
   const [profile, setProfile] = React.useState<LoadedProfile | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
+  const [cropOpen, setCropOpen] = React.useState(false);
+  const [pendingImageSrc, setPendingImageSrc] = React.useState<string | null>(null);
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      display_name: "",
+      first_name: "",
+      last_name: "",
       username: "",
       postal_code: "",
       bio: "",
@@ -130,7 +134,7 @@ export function ProfileForm({ userId }: { userId: string }) {
     const { data, error } = await supabase
       .from("profiles")
       .select(
-        "display_name, username, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status",
+        "display_name, first_name, last_name, username, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status",
       )
       .eq("user_id", userId)
       .maybeSingle();
@@ -148,7 +152,8 @@ export function ProfileForm({ userId }: { userId: string }) {
     const p = (data ?? null) as LoadedProfile | null;
     setProfile(p);
     form.reset({
-      display_name: p?.display_name ?? "",
+      first_name: p?.first_name ?? "",
+      last_name: p?.last_name ?? "",
       username: p?.username ?? "",
       postal_code: p?.postal_code ? formatCep(p.postal_code) : "",
       bio: p?.bio ?? "",
@@ -182,7 +187,8 @@ export function ProfileForm({ userId }: { userId: string }) {
 
     const payload = {
       user_id: userId,
-      display_name: values.display_name?.trim() || null,
+      first_name: values.first_name.trim(),
+      last_name: values.last_name.trim(),
       username: normalizeUsernameInput(values.username) || null,
       bio: values.bio?.trim() || null,
       expertises,
@@ -192,7 +198,7 @@ export function ProfileForm({ userId }: { userId: string }) {
       .from("profiles")
       .upsert(payload, { onConflict: "user_id" })
       .select(
-        "display_name, username, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status",
+        "display_name, first_name, last_name, username, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status",
       )
       .maybeSingle();
 
@@ -216,29 +222,15 @@ export function ProfileForm({ userId }: { userId: string }) {
     toast({ title: "Perfil salvo" });
   });
 
-  async function handleAvatarFile(file: File) {
-    if (!file.type.startsWith("image/")) {
-      toast({ title: "Arquivo inválido", description: "Envie uma imagem (PNG/JPG/WebP).", variant: "destructive" });
-      return;
-    }
-    const maxBytes = 5 * 1024 * 1024;
-    if (file.size > maxBytes) {
-      toast({ title: "Imagem muito grande", description: "Máximo 5MB.", variant: "destructive" });
-      return;
-    }
-
+  async function uploadAvatarBlob(blob: Blob) {
     setUploading(true);
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-    const safeExt = ["png", "jpg", "jpeg", "webp"].includes(ext) ? ext : "jpg";
-    const objectPath = `${userId}/avatar-${Date.now()}.${safeExt}`;
+    const objectPath = `${userId}/avatar-${Date.now()}.jpg`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("avatars")
-      .upload(objectPath, file, {
-        upsert: true,
-        contentType: file.type,
-        cacheControl: "3600",
-      });
+    const { error: uploadError } = await supabase.storage.from("avatars").upload(objectPath, blob, {
+      upsert: true,
+      contentType: "image/jpeg",
+      cacheControl: "3600",
+    });
 
     if (uploadError) {
       setUploading(false);
@@ -253,7 +245,7 @@ export function ProfileForm({ userId }: { userId: string }) {
       .from("profiles")
       .upsert({ user_id: userId, avatar_url: avatarUrl }, { onConflict: "user_id" })
       .select(
-        "display_name, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status",
+        "display_name, first_name, last_name, username, avatar_url, bio, region, postal_code, city, state, location_lat, location_lng, expertises, access_status",
       )
       .maybeSingle();
 
@@ -291,9 +283,11 @@ export function ProfileForm({ userId }: { userId: string }) {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center gap-4">
-            <Avatar className={cn("h-16 w-16", uploading && "opacity-60")}> 
+            <Avatar className={cn("h-32 w-32", uploading && "opacity-60")}>
               <AvatarImage src={profile?.avatar_url ?? undefined} alt="Foto do perfil" />
-              <AvatarFallback>{(profile?.display_name?.[0] ?? "U").toUpperCase()}</AvatarFallback>
+              <AvatarFallback>
+                {(profile?.display_name?.[0] ?? profile?.first_name?.[0] ?? "U").toUpperCase()}
+              </AvatarFallback>
             </Avatar>
 
             <div className="space-y-2">
@@ -304,7 +298,27 @@ export function ProfileForm({ userId }: { userId: string }) {
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
-                  if (f) void handleAvatarFile(f);
+                  if (f) {
+                    if (!f.type.startsWith("image/")) {
+                      toast({
+                        title: "Arquivo inválido",
+                        description: "Envie uma imagem (PNG/JPG/WebP).",
+                        variant: "destructive",
+                      });
+                      e.currentTarget.value = "";
+                      return;
+                    }
+                    const maxBytes = 5 * 1024 * 1024;
+                    if (f.size > maxBytes) {
+                      toast({ title: "Imagem muito grande", description: "Máximo 5MB.", variant: "destructive" });
+                      e.currentTarget.value = "";
+                      return;
+                    }
+
+                    const url = URL.createObjectURL(f);
+                    setPendingImageSrc(url);
+                    setCropOpen(true);
+                  }
                   // reset to allow re-uploading same file
                   e.currentTarget.value = "";
                 }}
@@ -321,18 +335,54 @@ export function ProfileForm({ userId }: { userId: string }) {
             </div>
           </div>
 
+          <AvatarCropDialog
+            open={cropOpen}
+            onOpenChange={(open) => {
+              setCropOpen(open);
+              if (!open && pendingImageSrc) {
+                URL.revokeObjectURL(pendingImageSrc);
+                setPendingImageSrc(null);
+              }
+            }}
+            imageSrc={pendingImageSrc}
+            onCancel={() => {
+              if (pendingImageSrc) URL.revokeObjectURL(pendingImageSrc);
+              setPendingImageSrc(null);
+            }}
+            onSave={async (blob) => {
+              await uploadAvatarBlob(blob);
+              if (pendingImageSrc) URL.revokeObjectURL(pendingImageSrc);
+              setPendingImageSrc(null);
+            }}
+          />
+
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="display_name">Nome</Label>
+                <Label htmlFor="first_name">Nome</Label>
                 <Input
-                  id="display_name"
+                  id="first_name"
                   disabled={loading || saving}
                   placeholder="Seu nome"
-                  {...form.register("display_name")}
+                  autoComplete="given-name"
+                  {...form.register("first_name")}
                 />
-                {form.formState.errors.display_name ? (
-                  <p className="text-xs text-destructive">{form.formState.errors.display_name.message}</p>
+                {form.formState.errors.first_name ? (
+                  <p className="text-xs text-destructive">{form.formState.errors.first_name.message}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="last_name">Sobrenome</Label>
+                <Input
+                  id="last_name"
+                  disabled={loading || saving}
+                  placeholder="Seu sobrenome"
+                  autoComplete="family-name"
+                  {...form.register("last_name")}
+                />
+                {form.formState.errors.last_name ? (
+                  <p className="text-xs text-destructive">{form.formState.errors.last_name.message}</p>
                 ) : null}
               </div>
 

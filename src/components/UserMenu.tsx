@@ -24,7 +24,8 @@ export function UserMenu() {
   const { data: profile } = useMyProfile(user?.id ?? null);
 
   const fullName = `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim();
-  const label = fullName || profile?.display_name || "Perfil";
+  // Nunca mostrar "Perfil". Se estiver carregando/incompleto, fica neutro.
+  const label = fullName || "—";
 
   return (
     <DropdownMenu>
@@ -44,10 +45,14 @@ export function UserMenu() {
 
           {/* Base clean + overlay metálico (aparece no hover e quando estiver aberto) */}
           <span className="relative hidden max-w-[16rem] truncate text-xs font-semibold tracking-wide sm:block">
-            <span className="transition-opacity duration-200 group-hover:opacity-85">
-              <span className="text-muted-foreground">{label}</span>
+            <span className="text-muted-foreground transition-opacity duration-200 group-hover:opacity-80 group-data-[state=open]:opacity-70">
+              {label}
             </span>
-            <GoldHoverText className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-data-[state=open]:opacity-100">
+            {/* Efeito "segue o mouse" igual ao FRATERNIDADE, porém mais sutil/legível */}
+            <GoldHoverText
+              intensity={0.62}
+              className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-data-[state=open]:opacity-100"
+            >
               {label}
             </GoldHoverText>
           </span>
@@ -56,7 +61,7 @@ export function UserMenu() {
 
       <DropdownMenuContent
         align="end"
-        className="invictus-modal-glass invictus-frame border-border/40 z-50 min-w-52 p-1"
+        className="invictus-topbar-menu-glass z-50 min-w-52 p-1"
       >
         <DropdownMenuItem
           onClick={() => void signOut()}

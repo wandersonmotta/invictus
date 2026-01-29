@@ -46,18 +46,18 @@ export const GoldHoverText = React.forwardRef<HTMLSpanElement, GoldHoverTextProp
       style={
         {
           // fallback base
-          color: "hsl(var(--muted-foreground))",
+          color: "hsl(var(--foreground) / 0.82)",
           // gradient dentro do texto
-          backgroundImage: `radial-gradient(120px 70px at ${pos.x}% ${pos.y}%, hsl(var(--gold-hot) / ${
-            0.95 * intensity
-          }) 0%, hsl(var(--gold-soft) / ${0.6 * intensity}) 40%, hsl(var(--foreground) / 0) 70%)`,
+          backgroundImage: `radial-gradient(160px 90px at ${pos.x}% ${pos.y}%, hsl(var(--gold-hot) / ${
+            0.9 * intensity
+          }) 0%, hsl(var(--gold-soft) / ${0.55 * intensity}) 46%, hsl(var(--foreground) / 0) 78%)`,
           backgroundClip: "text",
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
           transition: "filter 160ms ease, opacity 160ms ease",
-          opacity: active ? 1 : 0.92,
+          opacity: active ? 1 : 0.98,
           filter: active
-            ? `drop-shadow(0 0 12px hsl(var(--primary) / ${0.35 * intensity}))`
+            ? `drop-shadow(0 0 10px hsl(var(--gold-hot) / ${0.18 * intensity}))`
             : "none",
         } as React.CSSProperties
       }

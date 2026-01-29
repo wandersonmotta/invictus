@@ -1,199 +1,137 @@
 
-# Plano: Editor de Avatar + Top Bar com Foto/Nome/Sair
-
-## Resumo
-Implementar (1) um **editor de recorte/posicionamento de avatar** com círculo de preview maior e salvar a imagem já cortada em formato quadrado; (2) dividir o campo "Nome" no perfil em **Nome** e **Sobrenome** (2 campos); (3) adicionar no **top bar** (AppLayout) a foto circular pequena, nome + sobrenome em dourado, e um **dropdown** ao clicar na foto com a opção "Sair" em dourado metálico.
-
----
-
-## 1. Editor de Avatar (ProfileForm)
-
-### Contexto atual
-- Hoje: botão "Trocar foto" (clica → abre file input → upload direto).
-- Avatar exibido em círculo de 64×64px (h-16 w-16).
-
-### O que vamos fazer
-1. **Aumentar o círculo de preview** para ~120×120px (h-30 w-30) para melhor visualização.
-2. Quando usuário selecionar imagem, **abrir um Dialog** (modal "Invictus Glass") com:
-   - Canvas de recorte circular (biblioteca `react-easy-crop` ou similar).
-   - Zoom/posicionamento via slider e arrastar.
-   - Botões "Cancelar" e "Salvar".
-3. Ao clicar "Salvar":
-   - Gerar **imagem recortada em formato quadrado** (ex.: 512×512px) via canvas.
-   - Converter para Blob (JPG ou PNG).
-   - Fazer upload para `avatars` (Supabase Storage).
-   - Atualizar `profile.avatar_url`.
-
-### Biblioteca sugerida
-- `react-easy-crop` (já está instalada ou instalaremos).
-- Lógica de crop → canvas → blob já testada em projetos Lovable.
-
-### Arquivos modificados
-- `src/components/profile/ProfileForm.tsx`: aumentar avatar, adicionar estado para modal + crop, função de salvar.
-- Criar novo componente (opcional): `src/components/profile/AvatarCropDialog.tsx` (reuso em outros lugares).
+## Objetivo
+Ajustar o “User menu” do top bar (foto + nome + dropdown “Sair”) para ficar **clean, luxuoso e sofisticado**, removendo o amarelo “chapado” e trazendo:
+- **Glass premium** no menu e no hover/ativo do trigger
+- **Fade/desvanecer** suave no hover (foto + nome)
+- **Metálico dourado** no nome ao hover e principalmente quando o menu estiver aberto (click/ativo)
+- Item **“Sair”** com estética metálica dourada e hover glass (sem fundo amarelo)
 
 ---
 
-## 2. Dividir "Nome" em 2 campos (Nome + Sobrenome)
-
-### Contexto atual
-- Tabela `profiles`: coluna `display_name text` (nome único).
-- ProfileForm: input "Nome" (`display_name`).
-
-### O que vamos fazer (backend)
-1. **Migration SQL**:
-   - Adicionar coluna `first_name text` (nome).
-   - Adicionar coluna `last_name text` (sobrenome).
-   - **Migração de dados**: popular `first_name` com a primeira palavra de `display_name`, e `last_name` com o restante (ou NULL se só tem 1 palavra).
-   - Manter `display_name` por enquanto (legado/compatibilidade com funções existentes), mas passar a compor automaticamente: `first_name || ' ' || last_name`.
-   - Criar trigger ou atualizar funções para que `display_name` seja sempre `concat(first_name, ' ', last_name)` ao salvar.
-2. **Atualizar funções RPC** (se necessário):
-   - `search_approved_members`, `find_approved_member_by_username`, `get_approved_member_pins`, `get_my_threads`: hoje retornam `display_name`; vamos continuar retornando `display_name` (computado).
-   - Garantir que `display_name` seja sempre consistente com `first_name || ' ' || last_name`.
-
-### O que vamos fazer (frontend)
-1. **ProfileForm** (ProfileFormValues):
-   - Trocar campo `display_name` por `first_name` e `last_name`.
-   - Validação zod:
-     - `first_name`: obrigatório, trim, max 30 caracteres.
-     - `last_name`: obrigatório, trim, max 30 caracteres.
-   - Ao carregar perfil: preencher inputs com `first_name` e `last_name`.
-   - Ao salvar: enviar `first_name` e `last_name`; backend compõe `display_name`.
-2. **Outros componentes**: não mudar nada (continuam lendo `display_name` das funções).
-
-### Arquivos modificados
-- Nova migration SQL: `supabase/migrations/<timestamp>_add_first_last_name.sql`.
-- `src/components/profile/ProfileForm.tsx`: schema zod, inputs, lógica.
-- `src/integrations/supabase/types.ts`: auto-atualizado (não editar).
+## Diagnóstico (por que está “amarelo” hoje)
+- O botão do trigger usa `Button variant="ghost"`, cujo estilo padrão é:
+  - `hover:bg-accent hover:text-accent-foreground`
+- No tema atual, `--accent` é dourado (`--primary`), então ao passar o mouse o botão fica **amarelo**.
+- No dropdown, os itens usam `focus:bg-accent`, o que também dá “amarelo” ao navegar/hover/focus.
 
 ---
 
-## 3. Top Bar: Avatar + Nome + Menu "Sair"
+## Ajuste de Design (o que vamos mudar)
+### 1) Trigger (foto + nome)
+- **Remover o hover amarelo** do `ghost` com overrides no `className`:
+  - trocar `hover:bg-accent` por um **glass escuro sutil**, por exemplo:
+    - `hover:bg-[hsl(var(--foreground)_/_0.04)]`
+    - `hover:text-foreground`
+- Criar um efeito “premium” quando:
+  - **hover**: leve desvanecer (opacity) e micro brilho
+  - **menu aberto** (`data-state="open"`): metálico dourado e moldura sutil (gold frame controlado)
 
-### Contexto atual
-- `src/components/AppLayout.tsx`: header com logo + texto "FRATERNIDADE".
-- Não há perfil do usuário exibido.
+### 2) Nome metálico sem mexer globalmente no GoldHoverText
+Hoje o `GoldHoverText` já nasce com aparência dourada. Para ficar mais “clean” e “executivo”:
+- Vamos renderizar o nome com **duas camadas**:
+  1) Base (sempre): texto neutro (`text-muted-foreground` ou `text-foreground/90`)
+  2) Overlay metálico: `GoldHoverText` ou um novo estilo `invictus-metal-text`
+- A overlay fica com `opacity-0` e aparece com transição em:
+  - `group-hover:opacity-100`
+  - `group-data-[state=open]:opacity-100`
 
-### O que vamos fazer
-1. **Buscar dados do usuário logado**:
-   - Usar `useAuth()` para pegar `user.id`.
-   - Criar hook ou query para buscar `profiles.first_name`, `profiles.last_name`, `profiles.avatar_url` do usuário logado.
-   - Cache com TanStack Query (staleTime 60s).
-2. **Layout do header** (AppLayout):
-   - À **direita** do logo + "FRATERNIDADE", adicionar:
-     - Avatar circular pequeno (32×32px).
-     - Nome + Sobrenome em **dourado** (`text-primary`, efeito metálico via `GoldHoverText` ou classe customizada).
-     - Ao clicar no avatar ou nome: abrir **Dropdown Menu** (Radix `DropdownMenu`).
-3. **Dropdown** (conteúdo):
-   - Item "Sair" com ícone `LogOut` (lucide).
-   - Estilo dourado metálico (mesma cor de hover do GoldHoverText).
-   - Ao clicar "Sair": chamar `signOut()` do `useAuth()`.
+Resultado: em repouso fica sofisticado e discreto; no hover/click vira metálico.
 
-### Design visual (top bar)
-- Fundo: `invictus-surface` + `backdrop-blur-xl` (como hoje).
-- Separador inferior sutil (gradiente) mantido.
-- Novo agrupamento à direita:
-  - `<Avatar />` (h-8 w-8).
-  - Texto nome (`<GoldHoverText>` ou `<span className="text-primary font-semibold">`)
-  - Clicar em qualquer um abre menu.
-- Menu dropdown: fundo `invictus-modal-glass`, item "Sair" com hover dourado.
+### 3) Foto (avatar) com “fade over”
+- No hover do conjunto:
+  - `group-hover:opacity-85`
+  - `group-hover:saturate-125` (leve)
+  - opcional: `group-hover:brightness-110`
+- No estado aberto:
+  - volta para `opacity-100` e ganha um “ring” dourado sutil para indicar ativo.
 
-### Arquivos modificados
-- `src/components/AppLayout.tsx`: adicionar query de perfil, renderizar avatar + nome + dropdown.
-- `src/components/ui/dropdown-menu.tsx`: já existe (Radix).
-- Possível novo componente: `src/components/UserMenu.tsx` (reuso em vários layouts).
+### 4) Dropdown (glass verdadeiro, sem transparência feia)
+- Em vez de `invictus-surface` no menu, usar `invictus-modal-glass` + `invictus-frame`:
+  - Isso dá recorte chamfer + vidro + moldura champagne
+- Garantir que o menu não fique “see-through”:
+  - `invictus-modal-glass` já tem background e blur bons
+  - manter `z-50` e acrescentar `shadow` refinada se necessário
 
----
-
-## Sequência de implementação
-
-1. **Migration SQL** (first_name + last_name):
-   - Criar migration.
-   - Aguardar aprovação do sistema.
-   - Testar no backend (perfil salva e `display_name` é computado).
-2. **ProfileForm** (2 campos):
-   - Atualizar schema zod.
-   - Ajustar inputs.
-   - Testar salvar e exibir.
-3. **Editor de Avatar** (ProfileForm):
-   - Instalar `react-easy-crop` (se necessário).
-   - Criar modal de crop.
-   - Aumentar círculo de preview.
-   - Implementar lógica de crop → blob → upload.
-   - Testar fluxo completo.
-4. **Top Bar** (AppLayout):
-   - Criar query para buscar perfil do usuário logado.
-   - Adicionar avatar + nome à direita do logo.
-   - Implementar dropdown "Sair".
-   - Testar em desktop e mobile.
+### 5) Item “Sair” metálico dourado
+- Remover `focus:bg-accent` (amarelo) sobrescrevendo classes do `DropdownMenuItem`:
+  - `focus:bg-[hsl(var(--foreground)_/_0.06)]`
+  - `focus:text-foreground`
+  - `cursor-pointer`
+- Aplicar dourado metálico no texto “Sair” e no ícone:
+  - texto: `GoldHoverText` (já ok) ou `invictus-metal-text`
+  - ícone: `text-[hsl(var(--gold-hot)_/_0.95)]` e hover com leve glow
 
 ---
 
-## Validações e segurança
+## Implementação (passo a passo)
+### Passo A — Criar classes utilitárias “Invictus Topbar”
+**Arquivo:** `src/index.css` (em `@layer components`)
+Adicionar 2 classes (nomes sugeridos):
+1) `.invictus-topbar-user-trigger`
+   - glass no hover
+   - transição suave
+   - ring/control no estado aberto via atributo:
+     - `[data-state="open"]` (Radix coloca no Trigger; com `asChild`, cai no `Button`)
+2) `.invictus-metal-text`
+   - gradient metálico mais “luxo” (linear, não tão “neon”)
+   - `background-clip: text; -webkit-text-fill-color: transparent;`
+   - um drop-shadow bem sutil para profundidade
 
-- **RLS**: `profiles` já tem RLS; usuários podem atualizar apenas o próprio perfil.
-- **Storage**: bucket `avatars` já é público; imagens recortadas seguem mesmo padrão de path (`userId/avatar-timestamp.ext`).
-- **Crop**: toda lógica de recorte é client-side (canvas); imagem final enviada ao backend já cortada.
-- **SQL**: trigger ou função para compor `display_name` a partir de `first_name || ' ' || last_name` garante consistência.
+(Alternativa: se preferir, podemos fazer tudo só com Tailwind inline no `UserMenu.tsx`; mas a classe CSS deixa o design consistente e fácil de ajustar.)
 
----
+### Passo B — Ajustar `UserMenu.tsx` (trigger + label + dropdown)
+**Arquivo:** `src/components/UserMenu.tsx`
+1) Trocar classes do `Button variant="ghost"`:
+   - adicionar `group` e overrides:
+     - `hover:bg-[hsl(var(--foreground)_/_0.04)]`
+     - `hover:text-foreground`
+     - `data-[state=open]:bg-[hsl(var(--foreground)_/_0.05)]`
+     - `data-[state=open]:ring-1 data-[state=open]:ring-[hsl(var(--gold-hot)_/_0.30)]`
+   - adicionar `rounded-full` e padding mais “premium”
+2) Avatar:
+   - `className="h-8 w-8 transition ... group-hover:opacity-85 ... group-data-[state=open]:opacity-100"`
+   - opcional ring no aberto: `group-data-[state=open]:ring-1 ...`
+3) Nome:
+   - trocar o `GoldHoverText` atual por um wrapper com:
+     - base text (clean) + overlay metálico (aparece no hover/open)
+   - manter `hidden sm:block` para não quebrar o mobile
+4) Dropdown content:
+   - mudar `className` para: `invictus-modal-glass invictus-frame z-50 min-w-52 border-border/40`
+5) Dropdown item “Sair”:
+   - sobrescrever focus/hover para não amarelar:
+     - `focus:bg-[hsl(var(--foreground)_/_0.06)]`
+     - `hover:bg-[hsl(var(--foreground)_/_0.05)]`
+   - `GoldHoverText` no texto, e ícone dourado.
 
-## Testes (critérios de aceite)
-
-1. **Editor de Avatar**:
-   - Usuário clica "Trocar foto" → modal abre com preview grande.
-   - Pode arrastar/zoom na imagem.
-   - Ao salvar, imagem é recortada em círculo e armazenada em formato quadrado.
-   - Avatar atualiza no perfil e no top bar.
-2. **Nome + Sobrenome**:
-   - Formulário exibe 2 campos.
-   - Ao salvar, backend compõe `display_name`.
-   - Buscas e listagens continuam mostrando nome completo.
-3. **Top Bar**:
-   - Avatar pequeno + nome completo (dourado) aparecem à direita do logo.
-   - Clicar no avatar abre dropdown com "Sair".
-   - "Sair" funciona e desloga.
-   - Layout responsivo (mobile: talvez esconder texto do nome e deixar só avatar + dropdown).
-
----
-
-## Arquivos principais a modificar
-
-- Backend:
-  - `supabase/migrations/<nova_migration>.sql` (first_name, last_name, trigger/função para display_name).
-- Frontend:
-  - `src/components/profile/ProfileForm.tsx` (2 campos + editor de avatar).
-  - `src/components/AppLayout.tsx` (top bar: avatar + nome + dropdown).
-  - (Opcional) `src/components/profile/AvatarCropDialog.tsx` (modal de crop).
-  - (Opcional) `src/components/UserMenu.tsx` (dropdown reutilizável).
-
----
-
-## Riscos/cuidados
-
-- **Display_name legado**: manter `display_name` como coluna computada (ou via trigger) garante que funções/views existentes continuam funcionando sem quebrar.
-- **Crop de imagem**: biblioteca `react-easy-crop` pode adicionar ~30kb ao bundle; aceitável para a funcionalidade.
-- **Mobile**: testar top bar em telas pequenas (avatar + nome pode ficar apertado; considerar esconder texto do nome em <640px e deixar só avatar + dropdown).
-
----
-
-## Nota técnica (display_name)
-
-Duas abordagens possíveis:
-1. **Coluna computada** (Postgres 12+):
-   ```sql
-   ALTER TABLE profiles
-     ADD COLUMN display_name text GENERATED ALWAYS AS (first_name || ' ' || last_name) STORED;
-   ```
-2. **Trigger** (mais flexível):
-   - Ao INSERT/UPDATE, preencher `display_name` com `first_name || ' ' || last_name`.
-
-Recomendação: **coluna computada** (mais simples, sempre consistente).
+### Passo C — Garantir consistência do dropdown global (se necessário)
+Se houver outros dropdowns ficando amarelos por padrão, poderemos:
+- ajustar `src/components/ui/dropdown-menu.tsx` para usar um focus background padrão mais neutro
+- ou manter alterações só no `UserMenu` (menor risco)
 
 ---
 
-Fim do plano. Arquivos a serem modificados:
-- `supabase/migrations/<timestamp>_add_first_last_name.sql`
-- `src/components/profile/ProfileForm.tsx`
-- `src/components/AppLayout.tsx`
-- `src/integrations/supabase/types.ts` (auto-atualizado)
+## Critérios de aceite (como você valida)
+1) No top bar:
+   - Em repouso: **sem amarelo chapado**, aparência clean.
+   - Hover em foto/nome: elementos **desvanecem** suavemente e o nome ganha “metal”.
+   - Clique para abrir: estado **metálico dourado** claro + ring sutil, e permanece até fechar.
+2) Dropdown:
+   - Fundo glass chamfer + moldura premium.
+   - Item “Sair” não fica amarelo; hover/focus fica glass escuro sutil.
+   - Texto e ícone “Sair” dourados metálicos.
+3) Responsivo:
+   - Em mobile, fica só avatar (e menu), sem quebrar layout.
+
+---
+
+## Arquivos que serão alterados
+- `src/components/UserMenu.tsx` (principal)
+- `src/index.css` (novas classes de estilo premium para top bar)
+- (Opcional, só se precisar padronizar tudo) `src/components/ui/dropdown-menu.tsx`
+
+---
+
+## Observação sobre o screenshot (“Perfil”)
+O texto “Perfil” aparece quando o usuário ainda não tem `first_name/last_name` preenchidos. Assim que você salvar Nome/Sobrenome no perfil, o label vira o nome completo.
+Se quiser, podemos também trocar o fallback de “Perfil” para algo mais premium (ex.: “Minha conta”) e com estilo neutro.
+

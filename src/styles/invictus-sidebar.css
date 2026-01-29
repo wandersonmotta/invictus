@@ -12,6 +12,10 @@
      Assinatura: vinheta + marca d’água (monograma) + “champagne edge” (sem textura). */
   .invictus-sidebar [data-sidebar="sidebar"] {
     position: relative;
+    /* Tuning knobs (light defaults; dark overrides below) */
+    --sidebar-marble-opacity: 0.18;
+    --sidebar-top-highlight-opacity: 0.85;
+    --sidebar-marble-blend: soft-light;
     /* Clean glass (sem "glaze" dourado) */
     background: linear-gradient(180deg, hsl(var(--card) / var(--glass)) 0%, hsl(var(--card) / 0.16) 100%);
     backdrop-filter: blur(18px);
@@ -22,6 +26,12 @@
       0 24px 80px -60px hsl(var(--foreground) / 0.55);
   }
 
+  /* Dark: um pouco mais presente sem virar “glaze” */
+  .dark .invictus-sidebar [data-sidebar="sidebar"] {
+    --sidebar-marble-opacity: 0.32;
+    --sidebar-top-highlight-opacity: 0.95;
+  }
+
   .invictus-sidebar [data-sidebar="sidebar"]::before {
     content: "";
     position: absolute;
@@ -29,16 +39,34 @@
     pointer-events: none;
     border-radius: inherit;
     background:
+      /* top highlight (luz no vidro) */
+      radial-gradient(120% 60% at 50% 0%, hsl(var(--gold-soft) / 0.10), transparent 58%),
       /* champagne edge (apenas na borda, quase imperceptível) */
       linear-gradient(135deg, hsl(var(--gold-hot) / 0.06), transparent 58%),
       /* controlled specular */
       linear-gradient(180deg, hsl(var(--foreground) / 0.10), transparent 34%);
-    opacity: 0.95;
+    opacity: var(--sidebar-top-highlight-opacity);
   }
 
   /* Remove “spine” do Command Deck (padrão do print é lista limpa) */
   .invictus-sidebar [data-sidebar="sidebar"]::after {
-    content: none;
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    /* “mármore sob o vidro”: dourado + grafite, bem sutil */
+    background:
+      radial-gradient(120% 90% at 14% 10%, hsl(var(--gold-hot) / 0.10), transparent 56%),
+      radial-gradient(120% 90% at 92% 18%, hsl(var(--gold-soft) / 0.08), transparent 60%),
+      /* veios grafite (bem suaves) */
+      radial-gradient(130% 110% at 42% 86%, hsl(var(--foreground) / 0.10), transparent 64%),
+      radial-gradient(140% 120% at 78% 72%, hsl(var(--foreground) / 0.06), transparent 62%),
+      /* direção/fluxo (polido) */
+      linear-gradient(135deg, transparent 0%, hsl(var(--gold-hot) / 0.06) 36%, transparent 72%);
+    mix-blend-mode: var(--sidebar-marble-blend);
+    opacity: var(--sidebar-marble-opacity);
+    filter: blur(0.2px);
   }
 
   /* Seções (como no print) */

@@ -40,11 +40,19 @@ const waitlistSchema = z.object({
 
 type WaitlistValues = z.infer<typeof waitlistSchema>;
 
+type MediaStatus = {
+  label: "v3c" | "fallback" | "loading" | "error";
+  currentSrc?: string;
+};
+
 export function WaitlistHero() {
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const [mediaSrc, setMediaSrc] = React.useState<string>(waitlistMediaPrimary);
+  const [mediaStatus, setMediaStatus] = React.useState<MediaStatus>({ label: "loading" });
+
+  const isDev = import.meta.env.DEV;
 
   const form = useForm<WaitlistValues>({
     resolver: zodResolver(waitlistSchema),
@@ -92,6 +100,33 @@ export function WaitlistHero() {
     }
   };
 
+  const handleMediaLoad: React.ReactEventHandler<HTMLImageElement> = (e) => {
+    const currentSrc = e.currentTarget.currentSrc || e.currentTarget.src;
+    const isFallback = currentSrc.includes("waitlist-media-color.jpg") && !currentSrc.includes("v3c");
+    const label: MediaStatus["label"] = isFallback ? "fallback" : "v3c";
+
+    // Debug verificável: qual URL REAL o browser carregou.
+    console.info("[WaitlistHero] media loaded:", { currentSrc, requested: mediaSrc, label });
+    setMediaStatus({ label, currentSrc });
+  };
+
+  const handleMediaError: React.ReactEventHandler<HTMLImageElement> = (e) => {
+    const failedSrc = e.currentTarget.currentSrc || e.currentTarget.src;
+    console.error("[WaitlistHero] media failed:", { failedSrc, requested: mediaSrc });
+
+    setMediaSrc((prev) => {
+      // Falhou a primary -> troca 1x para fallback.
+      if (prev !== waitlistMediaFallback) {
+        setMediaStatus({ label: "fallback", currentSrc: waitlistMediaFallback });
+        return waitlistMediaFallback;
+      }
+
+      // Falhou até o fallback: não alterna, só marca erro.
+      setMediaStatus({ label: "error", currentSrc: failedSrc });
+      return prev;
+    });
+  };
+
   return (
     <section className="px-4 pb-12 pt-6 sm:px-6 sm:pb-16" aria-labelledby="waitlist-title">
       <div className="mx-auto w-full max-w-6xl">
@@ -114,12 +149,18 @@ export function WaitlistHero() {
                   src={mediaSrc}
                   className="w-full"
                   loading="eager"
-                  onError={() => {
-                    // Garantia: se o asset novo falhar (cache/build), usamos o fallback já estável.
-                    if (mediaSrc !== waitlistMediaFallback) setMediaSrc(waitlistMediaFallback);
-                    console.error("Waitlist media failed to load:", mediaSrc);
-                  }}
+                  onLoad={handleMediaLoad}
+                  onError={handleMediaError}
                 />
+
+                {isDev && (
+                  <div className="pointer-events-none absolute left-2 top-2">
+                    <span className="inline-flex items-center rounded-full border border-border/60 bg-background/60 px-2 py-1 text-[10px] font-medium text-muted-foreground backdrop-blur">
+                      Imagem: {mediaStatus.label}
+                    </span>
+                  </div>
+                )}
+
                 {/* Logo como overlay real (evita artefatos de texto na geração) */}
                 <div
                   className="pointer-events-none absolute inset-0 flex items-center justify-center"

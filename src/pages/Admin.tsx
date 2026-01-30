@@ -4,10 +4,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +43,8 @@ type InviteCode = {
   id: string;
   code: string;
   active: boolean;
+  archived_at: string | null;
+  archived_by: string | null;
   expires_at: string | null;
   max_uses: number;
   uses_count: number;
@@ -108,7 +122,7 @@ export default function Admin() {
       const {
         data,
         error
-      } = await supabase.from("invite_codes").select("id,code,active,expires_at,max_uses,uses_count,note,created_at").order("created_at", {
+      } = await supabase.from("invite_codes").select("id,code,active,archived_at,archived_by,expires_at,max_uses,uses_count,note,created_at").order("created_at", {
         ascending: false
       });
       if (error) throw error;
@@ -336,6 +350,91 @@ export default function Admin() {
     });
   };
 
+  type ArchiveDialogState =
+    | {
+        open: true;
+        mode: "single" | "selected" | "all";
+        ids: string[];
+      }
+    | { open: false };
+
+  const [showArchived, setShowArchived] = React.useState(false);
+  const [selectedInviteIds, setSelectedInviteIds] = React.useState<Set<string>>(() => new Set());
+  const [archiveDialog, setArchiveDialog] = React.useState<ArchiveDialogState>({ open: false });
+
+  const visibleInvites = React.useMemo(() => {
+    const list = invites ?? [];
+    return showArchived ? list : list.filter((i) => i.archived_at == null);
+  }, [invites, showArchived]);
+
+  const archivableInvites = React.useMemo(
+    () => visibleInvites.filter((i) => i.archived_at == null && i.uses_count === 0),
+    [visibleInvites],
+  );
+
+  const archivableIds = React.useMemo(() => new Set(archivableInvites.map((i) => i.id)), [archivableInvites]);
+
+  const selectedArchivableIds = React.useMemo(() => {
+    const ids: string[] = [];
+    selectedInviteIds.forEach((id) => {
+      if (archivableIds.has(id)) ids.push(id);
+    });
+    return ids;
+  }, [selectedInviteIds, archivableIds]);
+
+  const allArchivableSelected = archivableInvites.length > 0 && selectedArchivableIds.length === archivableInvites.length;
+
+  const toggleSelectAllArchivable = () => {
+    setSelectedInviteIds((prev) => {
+      const next = new Set(prev);
+      if (allArchivableSelected) {
+        archivableInvites.forEach((i) => next.delete(i.id));
+      } else {
+        archivableInvites.forEach((i) => next.add(i.id));
+      }
+      return next;
+    });
+  };
+
+  const toggleRowSelected = (id: string, checked: boolean) => {
+    setSelectedInviteIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const archiveInvites = async (ids: string[], successTitle: string) => {
+    if (ids.length === 0) return;
+    const nowIso = new Date().toISOString();
+    const { data, error } = await supabase
+      .from("invite_codes")
+      .update({ archived_at: nowIso })
+      .in("id", ids)
+      .is("archived_at", null)
+      .eq("uses_count", 0)
+      .select("id");
+    if (error) {
+      toast({
+        title: "Erro ao arquivar convites",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const archivedCount = (data ?? []).length;
+    const skippedCount = Math.max(0, ids.length - archivedCount);
+
+    toast({
+      title: successTitle,
+      description: skippedCount > 0 ? `${skippedCount} ignorado(s) (já usado(s) ou já arquivado(s)).` : undefined,
+    });
+    setSelectedInviteIds(new Set());
+    await qc.invalidateQueries({ queryKey: ["invite_codes"] });
+  };
+
   // --- Approvals ---
   const approveUser = async (profileId: string) => {
     if (!user?.id) return;
@@ -437,28 +536,153 @@ export default function Admin() {
 
             <Card className="invictus-surface invictus-frame border-border/70">
               <CardHeader>
-                <CardTitle className="text-base">Convites</CardTitle>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <CardTitle className="text-base">Convites</CardTitle>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Switch checked={showArchived} onCheckedChange={setShowArchived} />
+                      <span className="text-sm text-muted-foreground">Mostrar arquivados</span>
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={selectedArchivableIds.length === 0}
+                      onClick={() => setArchiveDialog({ open: true, mode: "selected", ids: selectedArchivableIds })}
+                    >
+                      Arquivar selecionados
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={archivableInvites.length === 0}
+                      onClick={() => setArchiveDialog({ open: true, mode: "all", ids: archivableInvites.map((i) => i.id) })}
+                    >
+                      Arquivar todos
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-2">
-                {(invites ?? []).length === 0 ? <p className="text-sm text-muted-foreground">Nenhum convite criado ainda.</p> : <div className="space-y-2">
-                    {invites?.map(inv => <div key={inv.id} className="flex flex-col gap-2 rounded-lg border border-border/60 p-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium">{inv.code}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {inv.uses_count}/{inv.max_uses} usos {inv.expires_at ? `• expira ${new Date(inv.expires_at).toLocaleString()}` : ""}
-                            {inv.note ? ` • ${inv.note}` : ""}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">{inv.active ? "ativo" : "inativo"}</span>
-                          <Button variant="outline" size="sm" onClick={() => void setInviteActive(inv.id, !inv.active)}>
-                            {inv.active ? "Desativar" : "Ativar"}
-                          </Button>
-                        </div>
-                      </div>)}
-                  </div>}
+                {visibleInvites.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum convite para exibir.</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[44px]">
+                          <Checkbox
+                            checked={allArchivableSelected}
+                            onCheckedChange={() => toggleSelectAllArchivable()}
+                            aria-label="Selecionar todos os arquiváveis"
+                          />
+                        </TableHead>
+                        <TableHead>Código</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Usos</TableHead>
+                        <TableHead>Expira</TableHead>
+                        <TableHead>Nota</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+
+                    <TableBody>
+                      {visibleInvites.map((inv) => {
+                        const isArchived = inv.archived_at != null;
+                        const isUsed = inv.uses_count > 0;
+                        const canArchive = !isArchived && !isUsed;
+                        const selected = selectedInviteIds.has(inv.id);
+
+                        const status = isArchived
+                          ? "Arquivado"
+                          : inv.active
+                            ? "Ativo"
+                            : "Inativo";
+
+                        return (
+                          <TableRow key={inv.id}>
+                            <TableCell className="w-[44px]">
+                              <Checkbox
+                                checked={selected}
+                                disabled={!canArchive}
+                                onCheckedChange={(v) => toggleRowSelected(inv.id, v === true)}
+                                aria-label={`Selecionar convite ${inv.code}`}
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">{inv.code}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="text-sm">{status}</span>
+                                {isUsed && <span className="text-xs text-muted-foreground">Já usado</span>}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {inv.uses_count}/{inv.max_uses}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {inv.expires_at ? new Date(inv.expires_at).toLocaleString() : "—"}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{inv.note ?? "—"}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="inline-flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={isArchived}
+                                  onClick={() => void setInviteActive(inv.id, !inv.active)}
+                                >
+                                  {inv.active ? "Desativar" : "Ativar"}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={!canArchive}
+                                  onClick={() => setArchiveDialog({ open: true, mode: "single", ids: [inv.id] })}
+                                >
+                                  Arquivar
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
+
+            <AlertDialog open={archiveDialog.open} onOpenChange={(open) => setArchiveDialog(open ? archiveDialog : { open: false })}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Arquivar convites</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {archiveDialog.open && archiveDialog.mode === "single"
+                      ? "Este arquivamento é definitivo. O convite ficará inativo e não poderá ser reativado."
+                      : "Este arquivamento é definitivo. Convites arquivados ficarão inativos e não poderão ser reativados."}
+                    <br />
+                    Convites já usados não podem ser arquivados.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setArchiveDialog({ open: false })}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      if (!archiveDialog.open) return;
+                      const ids = archiveDialog.ids;
+                      const title =
+                        ids.length === 1
+                          ? "Convite arquivado"
+                          : `${ids.length} convites arquivados`;
+                      setArchiveDialog({ open: false });
+                      void archiveInvites(ids, title);
+                    }}
+                  >
+                    Confirmar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </TabsContent>
 
           <TabsContent value="categories" className="mt-4 space-y-4">

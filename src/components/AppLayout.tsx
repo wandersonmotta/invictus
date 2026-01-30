@@ -17,29 +17,31 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarInset>
           <header
             className={
-              "sticky top-0 z-20 flex h-14 items-center gap-2 px-3 sm:px-4 backdrop-blur-xl " +
+              "sticky top-0 z-20 flex h-14 items-center gap-2 px-2 sm:px-4 backdrop-blur-xl " +
               "invictus-surface " +
               // barra clara SUTIL para separar do topo (sem ficar branca/estourada)
               "relative after:content-[''] after:absolute after:left-0 after:right-0 after:bottom-0 after:h-px " +
               "after:bg-gradient-to-r after:from-transparent after:via-[hsl(var(--foreground)_/_0.10)] after:to-transparent"
             }
           >
-            <div className="flex flex-1 items-center gap-3 min-w-0">
+            <div className="flex flex-1 items-center gap-2 sm:gap-3 min-w-0">
               <SidebarTrigger className="md:hidden" />
 
               <img
                 src={logo}
                 alt="Logo da Fraternidade Invictus"
-                className="h-7 sm:h-9 w-auto select-none shrink-0"
+                className="h-4 sm:h-9 w-auto select-none shrink-0"
                 draggable={false}
                 style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary) / 0.25))" }}
               />
-              <GoldHoverText className="text-[8px] sm:text-[10px] font-semibold tracking-[0.25em] sm:tracking-[0.35em] truncate max-w-[44vw]">
-                FRATERNIDADE
-              </GoldHoverText>
+              <div className="min-w-0 flex-1">
+                <GoldHoverText className="text-[8px] sm:text-[10px] font-semibold tracking-[0.25em] sm:tracking-[0.35em] whitespace-nowrap">
+                  FRATERNIDADE
+                </GoldHoverText>
+              </div>
             </div>
 
-            <div className="ml-auto flex items-center gap-1">
+            <div className="ml-auto flex items-center gap-0.5 sm:gap-1">
               <NotificationBell />
               <UserMenu />
             </div>

@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { useRevealOnScroll } from "@/hooks/useRevealOnScroll";
 import { cn } from "@/lib/utils";
 
 type EditorialMediaProps = {
@@ -28,9 +29,23 @@ export function EditorialMedia({
 }: EditorialMediaProps) {
   const decorative = !alt;
   const fetchPriority = loading === "eager" ? "high" : "auto";
+  const reveal = useRevealOnScroll<HTMLDivElement>({
+    rootMargin: "0px 0px -16% 0px",
+    threshold: 0.2,
+    once: true,
+    enterDelayMs: 44,
+    disableClasses: true,
+  });
 
   return (
-    <div className={cn("overflow-hidden rounded-xl border border-border/60 bg-background/20", className)}>
+    <div
+      ref={reveal.ref}
+      className={cn(
+        "invictus-media-reveal overflow-hidden rounded-xl border border-border/60 bg-background/20",
+        reveal.visible ? "is-in" : "",
+        className
+      )}
+    >
       <AspectRatio ratio={ratio}>
         <img
           src={src}

@@ -8,18 +8,25 @@ import { FeedCommentRow } from "@/components/feed/FeedCommentRow";
 
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
+import { FeedCommentComposer } from "@/components/feed/FeedCommentComposer";
 
 export function CommentsDrawer({ postId, count }: { postId: string; count: number }) {
   const [open, setOpen] = React.useState(false);
   const [body, setBody] = React.useState("");
+  const composerRef = React.useRef<HTMLInputElement | null>(null);
   const [myUserId, setMyUserId] = React.useState<string | null>(null);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editBody, setEditBody] = React.useState("");
   const qc = useQueryClient();
   const { toast } = useToast();
+
+  React.useEffect(() => {
+    if (!open) return;
+    const t = window.setTimeout(() => composerRef.current?.focus(), 80);
+    return () => window.clearTimeout(t);
+  }, [open]);
 
   React.useEffect(() => {
     let mounted = true;
@@ -62,6 +69,7 @@ export function CommentsDrawer({ postId, count }: { postId: string; count: numbe
         qc.invalidateQueries({ queryKey: ["feed_comments", postId] }),
         qc.invalidateQueries({ queryKey: ["feed_posts"] }),
       ]);
+      composerRef.current?.focus();
     },
     onError: (e: any) => toast({ title: "Não foi possível comentar", description: e?.message, variant: "destructive" }),
   });
@@ -116,14 +124,15 @@ export function CommentsDrawer({ postId, count }: { postId: string; count: numbe
           Comentários ({count})
         </Button>
       </DrawerTrigger>
-      <DrawerContent className="invictus-surface">
-        <DrawerHeader>
-          <DrawerTitle>Comentários</DrawerTitle>
-        </DrawerHeader>
+      <DrawerContent className="invictus-surface invictus-frame border border-border/70 overflow-hidden">
+        <div className="flex max-h-[85vh] flex-col">
+          <DrawerHeader className="border-b border-border/60">
+            <DrawerTitle>Comentários</DrawerTitle>
+          </DrawerHeader>
 
-        <div className="px-4 pb-4">
-          <ScrollArea className="h-[45vh] rounded-md border border-border/60">
-            <div className="space-y-3 p-4">
+          <div className="min-h-0 flex-1 px-4 py-4">
+            <ScrollArea className="h-full rounded-md border border-border/60">
+              <div className="space-y-3 p-4">
               {commentsQuery.isLoading ? (
                 <div className="text-sm text-muted-foreground">Carregando…</div>
               ) : commentsQuery.isError ? (
@@ -164,14 +173,18 @@ export function CommentsDrawer({ postId, count }: { postId: string; count: numbe
               ) : (
                 <div className="text-sm text-muted-foreground">Seja o primeiro a comentar.</div>
               )}
-            </div>
-          </ScrollArea>
+              </div>
+            </ScrollArea>
+          </div>
 
-          <div className="mt-3 flex gap-2">
-            <Input value={body} onChange={(e) => setBody(e.target.value)} placeholder="Escreva um comentário…" />
-            <Button type="button" onClick={() => addMutation.mutate()} disabled={addMutation.isPending}>
-              Enviar
-            </Button>
+          <div className="border-t border-border/60 px-4 py-3">
+            <FeedCommentComposer
+              ref={composerRef}
+              value={body}
+              onChange={setBody}
+              onSubmit={() => addMutation.mutate()}
+              disabled={addMutation.isPending}
+            />
           </div>
         </div>
       </DrawerContent>

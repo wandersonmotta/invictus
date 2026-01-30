@@ -40,12 +40,53 @@
 
 /* Lightweight readable "squares" for landing sections */
 .invictus-landing-panel {
-  border: 1px solid hsl(var(--border) / 0.6);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border) / 0.55);
   border-radius: 1.25rem;
-  background: hsl(var(--background) / 0.55);
-  backdrop-filter: blur(10px);
+  background:
+    radial-gradient(900px 420px at 12% 0%, hsl(var(--foreground) / 0.08), transparent 60%),
+    linear-gradient(180deg, hsl(var(--background) / 0.66), hsl(var(--background) / 0.42));
+  box-shadow:
+    0 20px 80px -40px hsl(var(--foreground) / 0.55),
+    0 0 0 1px hsl(var(--primary) / 0.08) inset;
+  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(10px);
   padding: 1.5rem;
+}
+
+/* Opções de densidade para evitar poluição: use só onde precisa */
+.invictus-landing-panel--soft {
+  background:
+    radial-gradient(900px 420px at 12% 0%, hsl(var(--foreground) / 0.06), transparent 60%),
+    linear-gradient(180deg, hsl(var(--background) / 0.58), hsl(var(--background) / 0.36));
+}
+
+.invictus-landing-panel--strong {
+  background:
+    radial-gradient(900px 420px at 12% 0%, hsl(var(--foreground) / 0.10), transparent 60%),
+    linear-gradient(180deg, hsl(var(--background) / 0.80), hsl(var(--background) / 0.62));
+  border-color: hsl(var(--border) / 0.7);
+  box-shadow:
+    0 26px 110px -60px hsl(var(--foreground) / 0.6),
+    0 0 0 1px hsl(var(--primary) / 0.12) inset;
+}
+
+/* brilho dourado bem sutil (não "borda" óbvia) */
+.invictus-landing-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(520px 260px at 18% 10%, hsl(var(--primary) / 0.12), transparent 62%),
+    radial-gradient(420px 220px at 84% 0%, hsl(var(--primary) / 0.08), transparent 60%);
+  opacity: 0.9;
+}
+
+.invictus-landing-panel > * {
+  position: relative;
+  z-index: 1;
 }
 
 @media (min-width: 640px) {

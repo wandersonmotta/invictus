@@ -1,3 +1,4 @@
+import { GoldHoverText } from "@/components/GoldHoverText";
 import { Card } from "@/components/ui/card";
 
 const bullets = {
@@ -60,32 +61,33 @@ function BulletList({ items }: { items: readonly string[] }) {
 export function Manifesto() {
   return (
     <SectionShell title="O que é a Fraternidade Invictus" id="manifesto">
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="invictus-auth-surface invictus-auth-frame border-0 p-6">
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            A Fraternidade Invictus nasce para formar homens e mulheres indestrutíveis, com mentalidade de liderança,
+      <div className="grid gap-8 lg:grid-cols-2">
+        <div className="space-y-5">
+          <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
+            A Fraternidade Invictus nasce para formar homens e mulheres indestrutíveis — mentalidade de liderança,
             disciplina inegociável e obsessão por resultado.
           </p>
-          <div className="my-4 h-px w-full bg-border/60" />
-          <p className="text-sm leading-relaxed text-muted-foreground">
+          <div className="h-px w-full bg-border/60" />
+          <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
             Aqui não existe promessa fácil. Existe processo, verdade e consequência.
-            <br />
-            INVICTUS não é sobre motivação. É sobre transformação real.
           </p>
-        </Card>
+          <p className="text-pretty text-sm leading-relaxed">
+            <GoldHoverText>INVICTUS não é sobre motivação.</GoldHoverText> É sobre transformação real.
+          </p>
+        </div>
 
-        <Card className="invictus-auth-surface invictus-auth-frame border-0 p-6">
-          <h3 className="mb-2 text-sm font-medium tracking-wide text-muted-foreground">Nossa visão</h3>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            Criar uma elite de pessoas capazes de dominar o próprio destino financeiro, operar negócios reais com clareza e
-            estratégia, construir patrimônio, legado e liberdade e viver acima da média, sem depender de ninguém.
+        <div className="space-y-5">
+          <h3 className="text-xs font-medium tracking-wide text-muted-foreground">Nossa visão</h3>
+          <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
+            Criar uma elite capaz de dominar o próprio destino financeiro, operar negócios reais com clareza e estratégia,
+            construir patrimônio, legado e liberdade — e viver acima da média, sem depender de ninguém.
           </p>
-          <div className="my-4 h-px w-full bg-border/60" />
-          <p className="text-sm leading-relaxed text-muted-foreground">
+          <div className="h-px w-full bg-border/60" />
+          <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
             A visão é simples e brutalmente honesta: quem entra aqui para crescer, cresce. Quem entra esperando facilidade,
             sai.
           </p>
-        </Card>
+        </div>
       </div>
     </SectionShell>
   );
@@ -96,12 +98,10 @@ export function Pillars() {
     <SectionShell title="Nossa mentalidade (pilares)">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {bullets.pillars.map((t) => (
-          <Card key={t} className="invictus-auth-surface invictus-auth-frame border-0 p-5">
+          <div key={t} className="border-l border-border/60 pl-4">
             <p className="text-sm font-medium leading-snug">{t}</p>
-            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-              Problemas não são pauta. Soluções são obrigação.
-            </p>
-          </Card>
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Problemas não são pauta. Soluções são obrigação.</p>
+          </div>
         ))}
       </div>
     </SectionShell>
@@ -111,11 +111,12 @@ export function Pillars() {
 export function WhatYouFindHere() {
   return (
     <SectionShell title="O que você encontra aqui">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {bullets.findHere.map((t) => (
-          <Card key={t} className="invictus-auth-surface invictus-auth-frame border-0 p-5">
-            <p className="text-sm font-medium">{t}</p>
-          </Card>
+          <div key={t} className="flex gap-3 border-b border-border/60 pb-3">
+            <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" aria-hidden="true" />
+            <p className="text-sm font-medium leading-snug">{t}</p>
+          </div>
         ))}
       </div>
     </SectionShell>
@@ -125,18 +126,18 @@ export function WhatYouFindHere() {
 export function WhoIsFor() {
   return (
     <SectionShell title="Quem deve (e quem não deve) fazer parte">
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="invictus-auth-surface invictus-auth-frame border-0 p-6">
-          <h3 className="mb-3 text-sm font-medium tracking-wide text-muted-foreground">Você pertence se</h3>
+      <div className="grid gap-8 lg:grid-cols-2">
+        <div className="space-y-4">
+          <h3 className="text-xs font-medium tracking-wide text-muted-foreground">Você pertence se</h3>
           <BulletList items={bullets.should} />
-          <p className="mt-4 text-sm text-muted-foreground">Não importa de onde você veio. Importa para onde está disposto a ir.</p>
-        </Card>
+          <p className="text-sm text-muted-foreground">Não importa de onde você veio. Importa para onde está disposto a ir.</p>
+        </div>
 
-        <Card className="invictus-auth-surface invictus-auth-frame border-0 p-6">
-          <h3 className="mb-3 text-sm font-medium tracking-wide text-muted-foreground">Não é para quem</h3>
+        <div className="space-y-4">
+          <h3 className="text-xs font-medium tracking-wide text-muted-foreground">Não é para quem</h3>
           <BulletList items={bullets.shouldNot} />
-          <p className="mt-4 text-sm text-muted-foreground">Aqui ninguém é carregado. Cada um sustenta o próprio lugar.</p>
-        </Card>
+          <p className="text-sm text-muted-foreground">Aqui ninguém é carregado. Cada um sustenta o próprio lugar.</p>
+        </div>
       </div>
     </SectionShell>
   );
@@ -145,9 +146,9 @@ export function WhoIsFor() {
 export function LeadershipAndRule() {
   return (
     <SectionShell title="Liderança e regra de permanência">
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="invictus-auth-surface invictus-auth-frame border-0 p-6">
-          <h3 className="mb-2 text-sm font-medium tracking-wide text-muted-foreground">Liderança</h3>
+      <div className="grid gap-8 lg:grid-cols-2">
+        <div className="space-y-4">
+          <h3 className="text-xs font-medium tracking-wide text-muted-foreground">Liderança</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
             A liderança da INVICTUS não promete. Mostra.
             <br />
@@ -155,18 +156,16 @@ export function LeadershipAndRule() {
             <br />
             Não passa a mão na cabeça. Entrega direção.
           </p>
-          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-            Aqui você é tratado como adulto. Porque adulto constrói.
-          </p>
-        </Card>
+          <p className="text-sm leading-relaxed text-muted-foreground">Aqui você é tratado como adulto. Porque adulto constrói.</p>
+        </div>
 
-        <Card className="invictus-auth-surface invictus-auth-frame border-0 p-6">
-          <h3 className="mb-2 text-sm font-medium tracking-wide text-muted-foreground">Regra de permanência</h3>
+        <div className="space-y-4">
+          <h3 className="text-xs font-medium tracking-wide text-muted-foreground">Regra de permanência</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
             Só permanece quem prospera. Não por exclusão, mas porque o ritmo elimina quem não acompanha.
           </p>
-          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">Resultado é regra. Evolução é obrigação.</p>
-        </Card>
+          <p className="text-sm leading-relaxed text-muted-foreground">Resultado é regra. Evolução é obrigação.</p>
+        </div>
       </div>
     </SectionShell>
   );

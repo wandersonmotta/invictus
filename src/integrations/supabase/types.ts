@@ -870,22 +870,28 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          full_name: string | null
           id: string
           ip_hash: string | null
+          phone: string | null
           source: string | null
         }
         Insert: {
           created_at?: string
           email: string
+          full_name?: string | null
           id?: string
           ip_hash?: string | null
+          phone?: string | null
           source?: string | null
         }
         Update: {
           created_at?: string
           email?: string
+          full_name?: string | null
           id?: string
           ip_hash?: string | null
+          phone?: string | null
           source?: string | null
         }
         Relationships: []

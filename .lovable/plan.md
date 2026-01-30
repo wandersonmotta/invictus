@@ -1,98 +1,83 @@
 
-## Objetivo
-Corrigir o “Esqueceu a senha?” para que o e-mail de redefinição:
-- Chegue com mais confiabilidade (evitar spam o máximo possível)
-- Venha com o nome correto **“INVICTUS FRATERNIDADE”** (não “INVICTUS-Connect”)
-- Tenha um botão de “Redefinir senha” visível (não “apagado”/cinza)
-- Mantenha a UX atual do /auth (não mexer no layout dourado do card)
+Contexto e decisão
+- Você quer: não usar nada externo, sem API key, mas ainda assim ter “INVICTUS FRATERNIDADE” como nome + template no padrão do site e cair direto na caixa de entrada.
+- Limitação prática: o envio “nativo” (padrão do sistema de autenticação) normalmente não permite controlar totalmente:
+  - Nome exibido do remetente (“From name”)
+  - Template/HTML do e-mail (botão, cores, identidade visual)
+  - Entregabilidade (inbox vs spam) sem ajustar provedor/DNS/SMTP
+- Portanto: para ter “INVICTUS FRATERNIDADE” + layout personalizado de forma confiável, a alternativa viável é continuar no fluxo customizado (Resend), que exige API key. Isso bate com sua escolha: “Continuar com Resend (recomendado)” e “prefiro esperar do que usar nativo sem personalizar”.
 
-Você confirmou:
-- Está chegando no **spam**
-- Quer **Enviar via Resend**
-- Você **já tem domínio verificado**
+O que está acontecendo hoje (por que não chega)
+- A UI sempre mostra “E-mail enviado…” mesmo quando falha (isso foi proposital para segurança: não revelar se um e-mail existe ou não).
+- Quando o Resend está mal configurado (API key errada/ausente, ou “from” não permitido), o backend tenta enviar e falha — mas a tela continua mostrando sucesso.
+- Já vimos anteriormente log do tipo “API key is invalid”. Isso normalmente significa:
+  - RESEND_API_KEY vazia, incompleta, antiga, ou copiada errada
+  - ou secret atualizada mas não é uma key válida do Resend
+- Além disso, mesmo com API key OK, se o RESEND_FROM_EMAIL não for de um domínio verificado/permitido no Resend, o envio também falha (muitas vezes com erro de “from not verified / validation error”).
 
-## Diagnóstico (por que isso acontece hoje)
-1) O fluxo atual usa o envio padrão do sistema de autenticação (`resetPasswordForEmail`).  
-   - Dependendo da configuração do remetente/SMTP, os provedores (iCloud/Gmail/Outlook) podem jogar no spam.
-2) O “nome errado” e o “botão apagado” normalmente vêm do template padrão do provedor (ou CSS do template) e como alguns clientes de e-mail interpretam estilos.
-3) Para ter controle total (nome, HTML do e-mail, botão legível), precisamos enviar o e-mail nós mesmos via Resend, mas ainda usando o mecanismo seguro de recuperação do backend.
+Estado atual do projeto (checado no código)
+- O app hoje chama o reset assim:
+  - src/auth/AuthProvider.tsx → resetPassword() → chama a função backend “send-password-reset”
+- A função backend “send-password-reset”:
+  - Gera link seguro de recuperação
+  - Envia e-mail via Resend com “INVICTUS FRATERNIDADE”
+  - Retorna sempre { ok: true } para o frontend mesmo em falha (segurança)
+- Secrets existem no projeto:
+  - RESEND_API_KEY
+  - RESEND_FROM_EMAIL
 
-## Solução escolhida (Resend) — como vai funcionar
-Vamos trocar o envio de “Esqueceu a senha?” para um fluxo customizado:
+Plano de execução (para fazer funcionar e você receber o e-mail)
+1) Confirmar e corrigir os 2 inputs obrigatórios (sem isso não tem como enviar)
+   1.1) RESEND_API_KEY
+   - Você precisa criar uma API key no Resend (normalmente começa com “re_”).
+   - Colar exatamente a key completa no secret RESEND_API_KEY (sem espaços, sem aspas extras).
+   1.2) RESEND_FROM_EMAIL
+   - Você vai definir um e-mail do seu domínio que está verificado no Resend (ex.: noreply@seudominio.com.br).
+   - Atualizar o secret RESEND_FROM_EMAIL com esse e-mail.
 
-### A) Criar uma função de backend (Edge Function) para recuperação
-Criar uma função (ex.: `send-password-reset`) que:
-1. Recebe `{ email, redirectTo }` do app.
-2. Usa uma chave privilegiada do backend (service role) para gerar um link de recuperação seguro via API Admin:
-   - `auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo } })`
-   - Isso retorna um **action_link** pronto (com token) do jeito correto.
-3. Envia um e-mail pelo Resend com:
-   - From name: **INVICTUS FRATERNIDADE**
-   - From email: algo do seu domínio verificado (ex.: `noreply@seudominio.com.br`)
-   - Assunto e HTML premium, com botão preto/dourado bem legível e 100% inline styles (compatível com Gmail/iCloud/Outlook).
-4. Segurança: retornar uma resposta “genérica” mesmo quando o e-mail não existir (para evitar enumeração de usuários):
-   - Ex.: sempre responder 200 com “Se este e-mail existir, você receberá um link…”
+2) Teste técnico controlado (para não ficar “no escuro”)
+   - Vou disparar uma chamada de teste para a função “send-password-reset” e checar os logs do backend:
+     - Se aparecer “send-password-reset: sent” → envio saiu do backend corretamente.
+     - Se aparecer “resend_send_failed …” → ainda há problema de API key / from / domínio.
+   - Esse teste não depende do front e elimina dúvidas de “o botão funcionou?”.
 
-### B) Atualizar o frontend para usar essa função no “Esqueceu a senha?”
-Sem mexer no visual do card:
-- Trocar a implementação do `resetPassword` (no `AuthProvider` ou diretamente na página `Auth.tsx`) para chamar:
-  - `supabase.functions.invoke("send-password-reset", { body: { email, redirectTo } })`
-- Manter a mesma mensagem atual de sucesso (genérica), para não expor se o e-mail existe ou não.
+3) Melhorar o diagnóstico sem “explanar” dados sensíveis (ajuste de qualidade)
+   - Ajustar a função “send-password-reset” para retornar um status técnico genérico (ex.: { ok: true, provider: 'resend', accepted: true/false }) SEM indicar se o e-mail existe.
+   - Objetivo: quando o Resend estiver quebrado, o front pode mostrar “Serviço de e-mail temporariamente indisponível. Tente novamente em instantes.” em vez de sempre “E-mail enviado”.
+   - Isso não revela se o usuário existe (continua seguro), só evita “falso positivo” quando o provedor está fora.
 
-### C) Ajustes para entregabilidade (spam)
-Mesmo com Resend, entregabilidade depende de DNS:
-- Confirmar que o domínio no Resend está com **SPF** e **DKIM** ativos (e idealmente **DMARC**).
-- Usar um remetente consistente: `noreply@seudominio...`
-- Evitar HTML “pesado” (muito CSS, fontes externas). Tudo inline, simples e premium.
+4) Ajuste fino de entregabilidade (para “cair na caixa de entrada”)
+   - Mesmo com Resend, inbox depende do DNS:
+     - SPF e DKIM do domínio precisam estar OK
+     - DMARC recomendado
+   - Se ainda cair em spam:
+     - Ajustar assunto e conteúdo (mais curto, menos “promo-like”)
+     - Evitar palavras/formatos que aumentam score de spam
+     - Garantir alinhamento do “From” com domínio verificado
 
-### D) Corrigir “botão apagado”
-No HTML do e-mail:
-- Botão como `<a>` com estilos inline (background sólido, cor do texto, borda) e fallback (texto com link por baixo).
-- Evitar estilos que alguns clientes “desabilitam” (ex.: opacity baixa ou classes CSS não-inline).
-- Garantir contraste e legibilidade.
+5) (Opcional) Fallback temporário
+   - Se você quiser “não ficar sem reset enquanto arruma Resend”:
+     - Criar modo híbrido: tenta Resend; se falhar por configuração, usa o nativo como fallback.
+   - Observação: isso reintroduz o problema de nome/template no fallback. Você disse que prefere esperar a usar nativo sem personalizar, então só faremos se você pedir.
 
-## Arquivos/áreas que serão alterados
-1) **Novo backend function**
-- `supabase/functions/send-password-reset/index.ts`
-  - Implementação com Resend + generateLink
-  - CORS correto
-  - Rate limit leve (se necessário) e logs úteis (sem expor tokens em logs)
+Dependências / o que preciso de você agora (não técnico, direto)
+- Me diga qual e-mail você quer usar como remetente (RESEND_FROM_EMAIL), por exemplo:
+  - noreply@seudominio.com.br
+- E confirme que você vai gerar uma RESEND_API_KEY nova no Resend e colar aqui (a key é obrigatória; sem ela não existe envio personalizado).
 
-2) **Config**
-- `supabase/config.toml`
-  - Adicionar a entrada da função com `verify_jwt = false` (e validar/filtrar no código se necessário)
-  - Manter `project_id` na primeira linha (como exigido)
+Critérios de “funcionou”
+- Você solicita “Esqueceu a senha?” em /auth
+- Você recebe e-mail com remetente “INVICTUS FRATERNIDADE”
+- Botão “Redefinir senha” aparece bem visível (dourado/alto contraste) e abre /reset-password
+- Você consegue trocar a senha e logar com a nova senha
 
-3) **Frontend**
-- `src/auth/AuthProvider.tsx` (preferível) ou `src/pages/Auth.tsx`
-  - Trocar `resetPasswordForEmail` por `functions.invoke("send-password-reset")`
-  - Preservar UX e mensagens
+Riscos e limitações (importante alinhar expectativa)
+- “Sem API externa” + “com branding total e entregabilidade controlada” não é realista: o envio nativo não dá esse nível de controle.
+- Garantir 100% inbox em todos provedores nunca é promessa absoluta, mas com domínio bem configurado (SPF/DKIM/DMARC) e conteúdo correto, melhora muito.
 
-## Segredos necessários (antes de implementar)
-Vamos precisar adicionar no backend (secrets):
-- `RESEND_API_KEY`
-- `RESEND_FROM_EMAIL` (ex.: `noreply@seudominio.com.br`)
-Opcional:
-- `RESEND_FROM_NAME` (vamos usar “INVICTUS FRATERNIDADE”; se preferir configurável, vira secret também)
-
-## Testes (o que eu vou validar)
-1) No /auth → “Esqueceu a senha?”:
-- Enviar para um e-mail real
-- Confirmar que chega (inbox/spam) e com nome correto
-2) Verificar conteúdo do e-mail:
-- Assunto, remetente, botão bem visível
-- Link abre e cai na rota `/reset-password` dentro do app
-3) Fluxo completo:
-- Definir nova senha na tela `/reset-password`
-- Login com a nova senha
-4) Compatibilidade:
-- Checar em mobile (Gmail/iCloud) e desktop (Gmail web) ao menos
-
-## Observações importantes
-- Mesmo com Resend, pode cair no spam se o domínio não estiver 100% configurado (SPF/DKIM/DMARC). Como você já tem domínio verificado, isso tende a melhorar bastante.
-- O e-mail será propositalmente “genérico” na resposta do app (segurança).
-- Não vamos mexer no layout dourado do /auth.
-
-## Entrega esperada
-- E-mail de redefinição com branding “INVICTUS FRATERNIDADE”, botão funcionando e visível, maior chance de chegar no inbox.
-- Fluxo de redefinição funcionando ponta-a-ponta dentro do app.
+Implementação (seção técnica — o que será alterado no código quando você aprovar esta próxima etapa)
+- supabase/functions/send-password-reset/index.ts
+  - Ajustar resposta para permitir UI mostrar indisponibilidade quando o envio falhar (sem revelar se o e-mail existe).
+  - Melhorar logs e mensagens de erro (somente no backend).
+- src/pages/Auth.tsx (ou manter como está)
+  - Opcional: mostrar aviso “Se não chegar, verifique spam” e/ou “serviço temporariamente indisponível” quando o backend sinalizar falha técnica.

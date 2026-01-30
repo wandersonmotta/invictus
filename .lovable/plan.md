@@ -1,98 +1,98 @@
 
-## Objetivo (o que você pediu)
-- Na tela **/auth**: manter o **card exatamente como está** (dourado, vidro, moldura, tipografia, botões, tudo).
-- Manter a “pegada” de **gradiente** atual do app, mas adicionar por trás uma **imagem PB (preto e branco)** com vibe “organização/elite antiga”: **prédio** + **pessoas de terno**, estética vintage.
-- Deixar **surreal/premium**, mas com a imagem **sutil** (sem roubar a cena do card).
-- Adicionar um “parallax” leve no fundo.
+## Objetivo
+Corrigir o “Esqueceu a senha?” para que o e-mail de redefinição:
+- Chegue com mais confiabilidade (evitar spam o máximo possível)
+- Venha com o nome correto **“INVICTUS FRATERNIDADE”** (não “INVICTUS-Connect”)
+- Tenha um botão de “Redefinir senha” visível (não “apagado”/cinza)
+- Mantenha a UX atual do /auth (não mexer no layout dourado do card)
 
-Você escolheu: **Gerar por IA** + intensidade **Sutil** + **Parallax**.
+Você confirmou:
+- Está chegando no **spam**
+- Quer **Enviar via Resend**
+- Você **já tem domínio verificado**
 
----
+## Diagnóstico (por que isso acontece hoje)
+1) O fluxo atual usa o envio padrão do sistema de autenticação (`resetPasswordForEmail`).  
+   - Dependendo da configuração do remetente/SMTP, os provedores (iCloud/Gmail/Outlook) podem jogar no spam.
+2) O “nome errado” e o “botão apagado” normalmente vêm do template padrão do provedor (ou CSS do template) e como alguns clientes de e-mail interpretam estilos.
+3) Para ter controle total (nome, HTML do e-mail, botão legível), precisamos enviar o e-mail nós mesmos via Resend, mas ainda usando o mecanismo seguro de recuperação do backend.
 
-## O que eu já verifiquei no projeto (para encaixar sem quebrar nada)
-- A página `src/pages/Auth.tsx` usa um `<main className="min-h-svh grid place-items-center ...">` e aplica as classes:
-  - `invictus-auth-surface invictus-auth-frame` no Card e também nos Dialogs.
-- Essas classes estão definidas em `src/index.css` e já criam um “glass” premium (backdrop blur + moldura dourada).
-- Hoje o `body` já tem um fundo com **radial-gradients** (bem sutil) em `src/index.css`. Vou preservar esse “DNA” e somar a foto só no /auth.
+## Solução escolhida (Resend) — como vai funcionar
+Vamos trocar o envio de “Esqueceu a senha?” para um fluxo customizado:
 
----
+### A) Criar uma função de backend (Edge Function) para recuperação
+Criar uma função (ex.: `send-password-reset`) que:
+1. Recebe `{ email, redirectTo }` do app.
+2. Usa uma chave privilegiada do backend (service role) para gerar um link de recuperação seguro via API Admin:
+   - `auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo } })`
+   - Isso retorna um **action_link** pronto (com token) do jeito correto.
+3. Envia um e-mail pelo Resend com:
+   - From name: **INVICTUS FRATERNIDADE**
+   - From email: algo do seu domínio verificado (ex.: `noreply@seudominio.com.br`)
+   - Assunto e HTML premium, com botão preto/dourado bem legível e 100% inline styles (compatível com Gmail/iCloud/Outlook).
+4. Segurança: retornar uma resposta “genérica” mesmo quando o e-mail não existir (para evitar enumeração de usuários):
+   - Ex.: sempre responder 200 com “Se este e-mail existir, você receberá um link…”
 
-## Abordagem (mínima e segura, sem mexer no card)
-### 1) Gerar a imagem (IA) no estilo certo
-Vou gerar **1 imagem principal** (e opcionalmente 2 variações) com estes requisitos:
-- **Preto e branco** (vintage/analógico)
-- **Arquitetura**: fachada de prédio corporativo/ institucional (imponente)
-- **Pessoas**: homens/figuras de terno estilo antigo (anos 30–60), discretos
-- **Sem texto, sem logos, sem marcas**
-- Com “grain” leve (cinema/filme) para estética antiga (mas sem poluir)
-- Enquadramento “wide” para fundo de tela
+### B) Atualizar o frontend para usar essa função no “Esqueceu a senha?”
+Sem mexer no visual do card:
+- Trocar a implementação do `resetPassword` (no `AuthProvider` ou diretamente na página `Auth.tsx`) para chamar:
+  - `supabase.functions.invoke("send-password-reset", { body: { email, redirectTo } })`
+- Manter a mesma mensagem atual de sucesso (genérica), para não expor se o e-mail existe ou não.
 
-**Formato recomendado para performance:**
-- Exportar como **WEBP** (ou PNG se necessário) em ~**1920px** de largura (ou 2560px se estiver muito detalhado e pesado não for problema).
+### C) Ajustes para entregabilidade (spam)
+Mesmo com Resend, entregabilidade depende de DNS:
+- Confirmar que o domínio no Resend está com **SPF** e **DKIM** ativos (e idealmente **DMARC**).
+- Usar um remetente consistente: `noreply@seudominio...`
+- Evitar HTML “pesado” (muito CSS, fontes externas). Tudo inline, simples e premium.
 
-**Resultado:** a imagem vai entrar no projeto como asset estático (ex.: `src/assets/auth-bg.webp` ou `public/auth/auth-bg.webp`).
+### D) Corrigir “botão apagado”
+No HTML do e-mail:
+- Botão como `<a>` com estilos inline (background sólido, cor do texto, borda) e fallback (texto com link por baixo).
+- Evitar estilos que alguns clientes “desabilitam” (ex.: opacity baixa ou classes CSS não-inline).
+- Garantir contraste e legibilidade.
 
----
+## Arquivos/áreas que serão alterados
+1) **Novo backend function**
+- `supabase/functions/send-password-reset/index.ts`
+  - Implementação com Resend + generateLink
+  - CORS correto
+  - Rate limit leve (se necessário) e logs úteis (sem expor tokens em logs)
 
-### 2) Criar um “fundo exclusivo do /auth” com overlay premium (sutil)
-Sem mexer no card, vou mudar apenas o **container do /auth** para ter:
-- **Imagem de fundo**
-- **Overlay com gradientes** (para manter a identidade e garantir leitura)
-- Um toque de “vignette” discreta (para “fechar” o visual e valorizar o card)
+2) **Config**
+- `supabase/config.toml`
+  - Adicionar a entrada da função com `verify_jwt = false` (e validar/filtrar no código se necessário)
+  - Manter `project_id` na primeira linha (como exigido)
 
-Implementação (conceito):
-- Adicionar uma classe no `<main>` da tela Auth, tipo: `invictus-auth-page`.
-- No CSS (`src/index.css`), definir:
-  - `background-image: linear-gradient(...), radial-gradient(...), url(...)`
-  - `background-size: cover`
-  - `background-position: center`
-  - `background-repeat: no-repeat`
-- **Importante:** o card já é “glass” e vai continuar idêntico. O overlay é aplicado no fundo do `main`.
+3) **Frontend**
+- `src/auth/AuthProvider.tsx` (preferível) ou `src/pages/Auth.tsx`
+  - Trocar `resetPasswordForEmail` por `functions.invoke("send-password-reset")`
+  - Preservar UX e mensagens
 
----
+## Segredos necessários (antes de implementar)
+Vamos precisar adicionar no backend (secrets):
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL` (ex.: `noreply@seudominio.com.br`)
+Opcional:
+- `RESEND_FROM_NAME` (vamos usar “INVICTUS FRATERNIDADE”; se preferir configurável, vira secret também)
 
-### 3) Parallax leve (sem travar mobile)
-Para “parallax” com custo baixo e sem JS pesado:
-- Em telas maiores (desktop/tablet): usar `background-attachment: fixed` no container do /auth (dá sensação de profundidade).
-- Em mobile: manter `background-attachment: scroll` (porque `fixed` pode engasgar em alguns aparelhos).
+## Testes (o que eu vou validar)
+1) No /auth → “Esqueceu a senha?”:
+- Enviar para um e-mail real
+- Confirmar que chega (inbox/spam) e com nome correto
+2) Verificar conteúdo do e-mail:
+- Assunto, remetente, botão bem visível
+- Link abre e cai na rota `/reset-password` dentro do app
+3) Fluxo completo:
+- Definir nova senha na tela `/reset-password`
+- Login com a nova senha
+4) Compatibilidade:
+- Checar em mobile (Gmail/iCloud) e desktop (Gmail web) ao menos
 
-Opcional (se você quiser mais “surreal” depois):
-- Parallax por mouse (desktop) com `transform: translate3d(...)` num pseudo-elemento, mas isso envolve JS e eu só faria se você pedir porque é mais delicado.
+## Observações importantes
+- Mesmo com Resend, pode cair no spam se o domínio não estiver 100% configurado (SPF/DKIM/DMARC). Como você já tem domínio verificado, isso tende a melhorar bastante.
+- O e-mail será propositalmente “genérico” na resposta do app (segurança).
+- Não vamos mexer no layout dourado do /auth.
 
----
-
-## Como eu vou validar com “prints” (antes de você aprovar visualmente)
-1) Abrir a rota **/auth** (que você já está).
-2) Capturar print em:
-   - 390×844 (mobile)
-   - 768×1024 e/ou 820×1180 (tablet)
-   - 1366×768 ou 1440×900 (desktop)
-3) Checklist visual:
-   - Card dourado continua exatamente igual (sem alteração de cor/efeito).
-   - Fundo ficou PB + executivo antigo + prédio + pessoas.
-   - Intensidade sutil: dá clima, mas não compete com o card.
-   - Parallax perceptível no desktop/tablet e não “quebra” no mobile.
-   - Dialogs (convite / reset) continuam com o mesmo glass premium e legíveis.
-
----
-
-## Arquivos que serão mexidos (escopo)
-- `src/pages/Auth.tsx`
-  - Apenas para adicionar/ajustar a classe do `<main>` (não mexer em Card/UI interna).
-- `src/index.css`
-  - Adicionar as regras CSS do background específico do Auth.
-- Adicionar 1 asset de imagem no projeto (ex.: `src/assets/auth-bg.webp` ou `public/...`).
-
----
-
-## Riscos / cuidados
-- **Peso da imagem**: se ficar muito pesada, pode atrasar o carregamento. Vou otimizar para WEBP e manter o overlay ajudando a “disfarçar” compressão.
-- **Legibilidade/performance**: por isso o overlay + parallax somente onde faz sentido.
-
----
-
-## Entrega final esperada
-- Tela de autenticação com um background PB cinematográfico (prédio + “executivos antigos”), com gradiente/overlay premium, e card Invictus intacto e dominante.
-- Em desktop/tablet: parallax leve.
-- Em mobile: mesmo visual, sem travamentos.
-
+## Entrega esperada
+- E-mail de redefinição com branding “INVICTUS FRATERNIDADE”, botão funcionando e visível, maior chance de chegar no inbox.
+- Fluxo de redefinição funcionando ponta-a-ponta dentro do app.

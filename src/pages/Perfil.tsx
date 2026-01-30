@@ -15,7 +15,6 @@ export default function Perfil() {
   const [showEmail, setShowEmail] = useState(false);
   const [tab, setTab] = useState("edit");
   const [refreshKey, setRefreshKey] = useState(0);
-
   const maskedEmail = useMemo(() => {
     const email = user?.email ?? "";
     const [local, domain] = email.split("@");
@@ -23,11 +22,10 @@ export default function Perfil() {
     const safeLocal = local.length <= 2 ? `${local[0] ?? ""}*` : `${local.slice(0, 2)}***`;
     return `${safeLocal}@${domain}`;
   }, [user?.email]);
-
   return <main className="invictus-page">
       <header className="invictus-page-header">
         <h1 className="invictus-h1">Perfil</h1>
-        <p className="invictus-lead">Complete o seu perfil — mesmo durante a aprovação.</p>
+        <p className="invictus-lead">Complete o seu perfil.</p>
       </header>
 
       <Tabs value={tab} onValueChange={setTab}>
@@ -39,9 +37,7 @@ export default function Perfil() {
         </div>
 
         <TabsContent value="edit" className="mt-4 space-y-6">
-          {user?.id ? (
-            <ProfileForm userId={user.id} onSaved={() => setRefreshKey((v) => v + 1)} />
-          ) : null}
+          {user?.id ? <ProfileForm userId={user.id} onSaved={() => setRefreshKey(v => v + 1)} /> : null}
 
           <section className="invictus-surface invictus-frame border-border/70 rounded-xl p-4 sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

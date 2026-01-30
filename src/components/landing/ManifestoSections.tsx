@@ -105,7 +105,7 @@ export function Pillars() {
 
   return (
     <SectionShell title="Nossa mentalidade (pilares)">
-      <div className="invictus-stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="invictus-stagger invictus-stagger--lr grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {pillars.map(({ title, Icon, desc }) => (
           <div key={title} className="invictus-landing-card p-4">
             <div className="flex items-center gap-2">
@@ -131,7 +131,7 @@ export function WhatYouFindHere() {
 
   return (
     <SectionShell title="O que você encontra aqui">
-      <div className="invictus-stagger grid gap-6 lg:grid-cols-3">
+      <div className="invictus-stagger invictus-stagger--lr grid gap-6 lg:grid-cols-3">
         {groups.map(({ title, Icon, items }) => (
           <div key={title} className="invictus-landing-card p-4">
             <div className="flex items-center gap-2">

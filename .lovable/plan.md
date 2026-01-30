@@ -1,72 +1,93 @@
 
-## O que eu vi no mobile (print do preview)
-- No topo (top bar), o texto **FRATERNIDADE** está sendo “cortado/escondido” porque o espaço útil do header fica pequeno quando somamos:
-  - Botão do menu (hamburguer)
-  - Logo
-  - Texto “FRATERNIDADE”
-  - Sino + menu do usuário
-  - Padding e gaps internos
+## O que eu identifiquei no “tablet / outro modelo móvel”
+Pelo print em 768x1024 (tablet), o topo fica “apertado” porque:
+- A partir de **sm (>= 640px)**, o logo volta para `sm:h-9`, ficando grande e largo (a arte “INVICTUS” ocupa muita largura).
+- Nesse tamanho, o “FRATERNIDADE” fica com pouco espaço horizontal (ou fica visualmente esmagado/encoberto pelo conjunto logo + área do usuário).
 
-Você pediu especificamente:
-- **Não alterar nada no “FRATERNIDADE”** (efeito dourado/estilo do texto como está).
-- A correção deve ser **somente encaixe**, reduzindo o que for necessário na **logo** (e, se preciso, espaçamentos do container), para ficar perfeito do desktop ao mobile.
+No mobile (<= 767px) já está OK porque a logo está `h-4`.
+
+Você pediu: **mesma lógica do mobile**, sem alterar o estilo do “FRATERNIDADE” (dourado/efeito/estética), apenas “encaixar” reduzindo a logo e micro-espaçamentos quando necessário.
 
 ---
 
-## Ajuste proposto (mínimo e seguro)
-### 1) Diminuir mais a logo apenas no mobile
-**Arquivo:** `src/components/AppLayout.tsx`  
-**Mudança:**
-- Trocar a altura da logo no mobile de `h-7` para algo menor (ex.: `h-5` ou `h-6`), mantendo `sm:h-9` no desktop/tablet.
-- Exemplo de direção (não é o código final, é a intenção):
-  - `className="h-6 sm:h-9 ..."` (ou `h-5 sm:h-9` se ainda faltar espaço)
-
-**Por que isso resolve:**
-- A logo é o elemento com maior “peso” visual/largura efetiva.
-- Diminuir a logo libera espaço sem mexer no texto “FRATERNIDADE”.
+## Objetivo do ajuste (tablet)
+- Em tablet: **diminuir a logo o suficiente para caber “FRATERNIDADE” como está**.
+- Em desktop: manter como está hoje (logo grande e premium).
+- Em mobile: manter como está hoje (logo pequena e tudo encaixado).
 
 ---
 
-### 2) Liberar espaço de layout sem mudar a aparência do texto
-**Arquivo:** `src/components/AppLayout.tsx`  
-**Mudança:**
-- Ajustar o container do texto para ocupar o “resto” do espaço disponível corretamente, sem depender de `max-w` fixo.
-- Hoje o `GoldHoverText` tem `truncate max-w-[44vw]`, o que pode estar forçando o corte cedo demais.
-- A estratégia será:
-  1) Colocar o `GoldHoverText` dentro de um wrapper `div` com `flex-1 min-w-0`
-  2) Manter `truncate` (caso o espaço fique realmente impossível), mas remover/afrouxar o `max-w` para ele usar o espaço real sobrando.
-  
-**Importante:**  
-Isso não muda o dourado, nem fonte, nem efeito; só muda “quanto espaço ele pode usar” antes de cortar.
+## Estratégia (mínima e segura)
+### 1) Tornar o tamanho da logo “progressivo” por breakpoint (mobile → tablet → desktop)
+**Arquivo:** `src/components/AppLayout.tsx`
+
+Hoje:
+- `className="h-4 sm:h-9 ..."`
+
+Vamos mudar para 3 níveis:
+- **mobile:** `h-4` (mantém o que já resolveu)
+- **tablet (sm/md):** reduzir para algo como `sm:h-7` (ou `sm:h-6` se ainda faltar espaço)
+- **desktop (lg+):** `lg:h-9` (mantém o desktop intacto)
+
+Exemplo de intenção:
+- `className="h-4 sm:h-7 lg:h-9 ..."`
+
+Isso preserva o desktop (só cresce no `lg`) e melhora o tablet, sem tocar no “FRATERNIDADE”.
 
 ---
 
-### 3) Reduzir micro-espaçamentos apenas no mobile (sem mudar design)
-**Arquivo:** `src/components/AppLayout.tsx`  
-**Mudança:**
-- Reduzir levemente o `gap` do grupo esquerdo no mobile:
-  - de `gap-3` para `gap-2` no mobile (mantendo `sm:gap-3` no resto)
-- Se necessário, reduzir o padding horizontal do header no mobile:
-  - de `px-3` para `px-2` no mobile (mantendo `sm:px-4`)
+### 2) Ajuste fino de espaçamentos no header especificamente para tablet
+**Arquivo:** `src/components/AppLayout.tsx`
 
-**Por que isso ajuda:**
-- Esses pequenos ajustes somam pixels preciosos no mobile e evitam o “FRATERNIDADE” ficar escondido, sem mexer no estilo do texto.
+Se necessário (dependendo do seu “outro modelo”), vamos “economizar” alguns pixels no tablet, sem mudar design:
+- Padding horizontal progressivo:
+  - manter `px-2` no mobile
+  - usar algo levemente menor no tablet (ex.: `sm:px-3`)
+  - manter `lg:px-4` no desktop
+- Gap progressivo no agrupamento esquerdo:
+  - manter `gap-2` no mobile
+  - manter `sm:gap-2` no tablet (em vez de aumentar)
+  - usar `lg:gap-3` no desktop
 
----
-
-## Como eu vou testar (antes de finalizar)
-1) Abrir em viewport mobile (390x844).
-2) Confirmar visualmente no header:
-   - Logo menor no mobile
-   - “FRATERNIDADE” aparecendo inteiro (sem ficar escondido)
-   - Sino + UserMenu continuam clicáveis e alinhados
-3) Conferir também em:
-   - Tablet (768x1024)
-   - Desktop (1280+)
-4) Validar que não houve mudança de comportamento (apenas encaixe).
+Isso é o mesmo procedimento do mobile: não muda estilo, só “encaixe” por espaço.
 
 ---
 
-## Resultado esperado
-- No celular: logo um pouco menor e tudo encaixado, com **FRATERNIDADE visível**.
-- No desktop: exatamente como está hoje (logo grande e header premium), sem alterações perceptíveis.
+### 3) Garantir que o “FRATERNIDADE” use o espaço real disponível (sem truncar cedo)
+Você já tem:
+- Wrapper do texto: `min-w-0 flex-1`
+- Texto: `whitespace-nowrap`
+
+Vamos manter isso.
+A correção principal no tablet tende a ser **tamanho do logo em sm/md**.
+
+---
+
+## Implementação (passos)
+1. Editar `src/components/AppLayout.tsx`:
+   - Alterar o `className` do `<img />` para tamanho responsivo em 3 níveis: mobile / tablet / desktop.
+   - Ajustar `px` e `gap` com breakpoints, se necessário, para o tablet.
+2. Validar em 3 viewports:
+   - **Mobile:** 390x844 (já OK, confirmar que não regrediu)
+   - **Tablet:** 768x1024 e 820x1180 (onde você relatou o detalhe)
+   - **Desktop:** 1366x768 ou 1440x900 (confirmar que ficou igual ao atual)
+
+---
+
+## Critérios de aceite (o que você vai ver)
+- Tablet: “FRATERNIDADE” aparece inteiro e alinhado, com o mesmo dourado/efeito, sem esconder.
+- Tablet: logo fica proporcional (um pouco menor que desktop, maior que mobile).
+- Desktop: topo igual ao que está hoje (visual premium, logo grande).
+- Mobile: continua encaixado.
+
+---
+
+## Observação importante (por que não vou mexer no breakpoint “isMobile”)
+O `useIsMobile()` considera mobile < 768px. Tablet (768px+) é tratado como desktop pelo layout da sidebar.
+Mudar esse breakpoint afetaria o comportamento da navegação (gaveta vs sidebar fixa) e isso é uma mudança maior de UX.
+Aqui vamos resolver com o ajuste correto do header (logo/spacing) sem alterar a navegação.
+
+---
+
+## Depois do ajuste
+Eu tiro novos prints nas resoluções tablet e te mostro o resultado para confirmar que ficou “encaixado” do jeito certo.

@@ -3,13 +3,11 @@
 @import "./styles/invictus-map-pins.css";
 @import "./styles/invictus-sidebar.css";
 @import "./styles/invictus-topbar.css";
+@import "./styles/invictus-auth.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Must be after Tailwind directives because it uses @layer */
-@import "./styles/invictus-auth.css";
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.

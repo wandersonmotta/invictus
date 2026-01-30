@@ -83,13 +83,10 @@ export function Manifesto() {
         </div>
 
         <div className="space-y-5">
-          {/* Vídeo decorativo: reduzido e escondido no mobile para não quebrar layout */}
-          <div className="hidden overflow-hidden rounded-xl border border-border/60 bg-background/20 md:block md:max-w-[320px]">
+          {/* Vídeo decorativo: menor no mobile, maior no desktop */}
+          <div className="overflow-hidden rounded-xl border border-border/60 bg-background/20 sm:max-w-[420px]">
             <AspectRatio ratio={16 / 9}>
-              <LoopVideo
-                src="/videos/invictus-loop-manifesto-exec.mp4"
-                ariaLabel="Vídeo abstrato em loop com estética cinematográfica"
-              />
+              <LoopVideo src="/videos/invictus-loop-manifesto-exec.mp4" ariaLabel="Vídeo corporativo em loop" />
             </AspectRatio>
           </div>
           <h3 className="text-xs font-medium tracking-wide text-muted-foreground">Nossa visão</h3>
@@ -110,16 +107,32 @@ export function Manifesto() {
 
 export function Pillars() {
   const pillars = [
-    { title: bullets.pillars[0], Icon: Shield },
-    { title: bullets.pillars[1], Icon: Zap },
-    { title: bullets.pillars[2], Icon: Target },
-    { title: bullets.pillars[3], Icon: Eye },
+    {
+      title: bullets.pillars[0],
+      Icon: Shield,
+      desc: "Disciplina vence o caos: rotina, padrão e consistência quando ninguém está olhando.",
+    },
+    {
+      title: bullets.pillars[1],
+      Icon: Zap,
+      desc: "Execução é respeito ao tempo: decidir, fazer, medir e ajustar sem romantizar o processo.",
+    },
+    {
+      title: bullets.pillars[2],
+      Icon: Target,
+      desc: "Resultado é a régua: se não moveu o ponteiro, é barulho. Tudo precisa de evidência.",
+    },
+    {
+      title: bullets.pillars[3],
+      Icon: Eye,
+      desc: "Verdade acima do ego: confronto honesto para evoluir rápido e corrigir rota sem desculpa.",
+    },
   ] as const;
 
   return (
     <SectionShell title="Nossa mentalidade (pilares)">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {pillars.map(({ title, Icon }) => (
+        {pillars.map(({ title, Icon, desc }) => (
           <div key={title} className="rounded-xl border border-border/50 bg-background/25 p-4">
             <div className="flex items-center gap-2">
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background/35">
@@ -127,7 +140,7 @@ export function Pillars() {
               </span>
               <p className="text-sm font-medium leading-snug">{title}</p>
             </div>
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">Problemas não são pauta. Soluções são obrigação.</p>
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{desc}</p>
           </div>
         ))}
       </div>
@@ -173,13 +186,13 @@ export function WhoIsFor() {
     <SectionShell title="Quem deve (e quem não deve) fazer parte">
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-4">
-          <h3 className="text-xs font-medium tracking-wide text-muted-foreground">Você pertence se</h3>
+          <h3 className="text-sm font-semibold tracking-wide">Você pertence se</h3>
           <BulletList items={bullets.should} />
           <p className="text-sm text-muted-foreground">Não importa de onde você veio. Importa para onde está disposto a ir.</p>
         </div>
 
         <div className="space-y-4">
-          <h3 className="text-xs font-medium tracking-wide text-muted-foreground">Não é para quem</h3>
+          <h3 className="text-sm font-semibold tracking-wide">Não é para quem</h3>
           <BulletList items={bullets.shouldNot} />
           <p className="text-sm text-muted-foreground">Aqui ninguém é carregado. Cada um sustenta o próprio lugar.</p>
         </div>
@@ -193,7 +206,7 @@ export function LeadershipAndRule() {
     <SectionShell title="Liderança e regra de permanência">
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-4">
-          <h3 className="text-xs font-medium tracking-wide text-muted-foreground">Liderança</h3>
+          <h3 className="text-sm font-semibold tracking-wide">Liderança</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
             A liderança da INVICTUS não promete. Mostra.
             <br />
@@ -205,7 +218,7 @@ export function LeadershipAndRule() {
         </div>
 
         <div className="space-y-4">
-          <h3 className="text-xs font-medium tracking-wide text-muted-foreground">Regra de permanência</h3>
+          <h3 className="text-sm font-semibold tracking-wide">Regra de permanência</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
             Só permanece quem prospera. Não por exclusão, mas porque o ritmo elimina quem não acompanha.
           </p>

@@ -121,12 +121,7 @@ export default function Admin() {
     queryKey: ["pending_profiles"],
     enabled: !!isAdmin,
     queryFn: async () => {
-      const {
-        data,
-        error
-      } = await supabase.from("profiles").select("id,user_id,display_name,created_at,access_status").eq("access_status", "pending").order("created_at", {
-        ascending: false
-      });
+      const { data, error } = await supabase.rpc("admin_list_pending_profiles_logged", { p_limit: 200 });
       if (error) throw error;
       return (data ?? []) as PendingProfile[];
     }

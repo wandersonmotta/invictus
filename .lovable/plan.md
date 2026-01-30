@@ -1,119 +1,140 @@
 
-Contexto do problema (pelos seus prints + o que existe hoje)
-- No Feed (/feed), o post (principalmente vídeo 9:16) fica alto demais e “empurra” as ações (curtir/comentar) para fora da tela.
-- Você quer o padrão do Instagram:
-  1) No feed: mídia grande, porém com altura limitada para não “tomar a tela toda”.
-  2) Ações no estilo IG (ícones) e um link/ação de comentários.
-  3) Ao tocar na mídia, abrir o post em um modal “Instagram web” (mídia à esquerda + painel lateral de comentários à direita), igual ao que já ajustamos no perfil.
-  4) Ao tocar em comentar, abrir o mesmo modal lateral já com foco no campo “Adicione um comentário…”.
+Objetivo (o que vai mudar)
+- Adicionar um campo dedicado `archived_at` (e opcionalmente `archived_by`) na tabela `invite_codes` para diferenciar:
+  - “Desativado”: `active = false` e `archived_at IS NULL`
+  - “Arquivado”: `archived_at IS NOT NULL` (e, por regra, fica também `active = false`)
+- Atualizar a aba Admin → Convites para suportar:
+  1) Arquivar individual
+  2) Selecionar vários e arquivar
+  3) Arquivar todos
+- Regras confirmadas por você:
+  - Arquivamento é definitivo (não existe “desarquivar” pela UI)
+  - Não permitir arquivar convites já usados (`uses_count > 0`)
+  - “Ativar/Desativar” continua existindo e não mexe em `archived_at`
 
-Diagnóstico no código atual
-- Feed é renderizado por:
-  - `src/pages/Feed.tsx` → lista de `FeedPostCard`
-  - `src/components/feed/FeedPostCard.tsx` → hoje renderiza:
-    - `<ReelsMedia />` com ratio 9/16 para vídeo e 4/5 para foto (via `ReelsMedia.tsx`)
-    - Botões “Curtir (N)” e `CommentsDrawer`
-- O “modal estilo Instagram” existe hoje apenas no perfil:
-  - `src/pages/Membro.tsx`
-  - `src/components/profile/MyProfilePreview.tsx`
-  - com `DialogContent` (935px / 720px) + `<PostCommentsPanel />`
-- Portanto: o Feed ainda está no modelo antigo (card + drawer), e o vídeo 9:16 no card causa o problema de altura.
+O que existe hoje (estado atual)
+- Banco: `invite_codes` tem `active`, `uses_count` etc., mas não tem `archived_at`.
+- UI: `src/pages/Admin.tsx` lista convites e só tem Ativar/Desativar. Não há seleção/lote.
+- Segurança: Admin tem permissão de gerenciar `invite_codes` via policy existente; então a mudança é principalmente de modelagem + UX e (importante) regras de consistência.
 
-Objetivo (o que vamos entregar)
-A) Feed com aparência mais Instagram e sem “tomar a tela”
-- Limitar a altura da mídia no card do feed (especialmente vídeo), mantendo o conteúdo centralizado.
-- Deixar as ações (curtir/comentar) sempre visíveis logo abaixo (estilo IG).
+Decisões de design (para ficar consistente e “difícil de burlar”)
+1) Campos novos no banco
+- `invite_codes.archived_at timestamptz NULL`
+- `invite_codes.archived_by uuid NULL` (opcional, mas recomendado para rastrear qual admin arquivou)
 
-B) Modal do post no Feed igual ao do Perfil
-- Ao tocar na mídia do post no feed, abrir um `Dialog` com:
-  - Esquerda: mídia
-  - Direita: `PostCommentsPanel` (comentários já carregados, scroll interno, composer fixo)
-- Ao tocar no ícone de comentar, abrir o modal e focar automaticamente no campo de comentário.
+2) Regras fortes no banco (não só na UI)
+Como você pediu “arquivamento definitivo” e “não arquivar usados”, vou aplicar validações no banco para garantir:
+- Se tentar setar `archived_at` e `uses_count > 0` → bloqueia.
+- Se `archived_at` já estiver preenchido, não pode voltar para NULL (arquivamento definitivo).
+- Se `archived_at` estiver preenchido, `active` deve ficar `false` (evita estados inconsistentes).
+Implementação dessas regras:
+- Preferência por trigger de validação em vez de CHECK complexo. A regra “uses_count > 0” é estável, mas trigger permite mensagens claras e também garante “não desarquivar” de forma robusta.
 
-Mudanças planejadas (frontend)
-1) Criar um “viewer” reutilizável para post (para não duplicar lógica)
-- Criar um componente novo (ex.: `src/components/feed/FeedPostViewerDialog.tsx`) que recebe:
-  - `open`, `onOpenChange`
-  - `post` (com `media_urls`, caption, liked_by_me, like_count, comment_count, autor)
-  - `initialFocus?: "comment" | "none"`
-- Esse componente vai usar o mesmo layout do modal do perfil:
-  - `DialogContent` com:
-    - `h-[min(80vh,720px)]`
-    - `w-[min(935px,calc(100vw-1.5rem))]`
-    - `max-w-none self-center mt-0 overflow-hidden p-0`
-  - Container interno:
-    - `flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_420px]`
-    - Área da mídia com comportamento mobile: `h-[45vh]` (ou um valor mais ajustado, se necessário)
-  - `PostCommentsPanel` do lado direito
-- Benefício: depois podemos, se você quiser, reaproveitar esse mesmo viewer no perfil (reduzir duplicação).
+3) Comportamento do “Desativar”
+- Desativar continua sendo apenas `active=false` e NÃO preenche `archived_at`.
+- Isso permite que você “pause” um convite sem “sumir” com ele definitivamente (arquivar).
 
-2) Ajustar `PostCommentsPanel` para suportar “auto focus no composer”
-- Adicionar uma prop opcional, por exemplo:
-  - `autoFocusComposer?: boolean`
-- Quando o modal abrir via “comentar”, o panel faz foco automático no input.
-- Sem isso, o modal abre, mas o usuário ainda precisa tocar no campo.
+Mudanças no Banco de Dados (migração)
+1) Alterar tabela `invite_codes`
+- `ALTER TABLE public.invite_codes ADD COLUMN archived_at timestamptz null;`
+- `ALTER TABLE public.invite_codes ADD COLUMN archived_by uuid null;`
+- Índices:
+  - `CREATE INDEX IF NOT EXISTS idx_invite_codes_archived_at ON public.invite_codes(archived_at);`
+  - (Opcional) índice composto para listagem: `(archived_at, created_at desc)` se a lista crescer bastante.
 
-3) Atualizar `FeedPostCard` para:
-- Remover `CommentsDrawer` (modelo antigo)
-- Trocar a área de ações para o padrão Instagram (ícones)
-  - Curtir (coração)
-  - Comentar (balão) → abre modal com foco no input
-  - (Opcional) Compartilhar / Salvar (se você quiser; deixo pronto, mas podemos esconder no começo)
-- Ao tocar na mídia:
-  - abrir o novo `FeedPostViewerDialog` (igual Instagram)
-- Ajustar o layout da mídia no card para “limitar altura”
-  - Em vez de forçar sempre o ratio 9/16 ocupando toda a altura, vamos:
-    - colocar a mídia dentro de um frame com `max-h-[70svh]` (ou similar)
-    - usar “contain/centralizar” para não estourar a tela
-  - Implementação mais segura:
-    - criar um wrapper específico no card (sem mudar o comportamento do modal do perfil)
-    - e/ou adicionar uma opção no `ReelsMedia` para `fit="contain"` + `maxHeightClassName`
-- Resultado: ações ficam visíveis sem precisar rolar muito.
+2) Trigger/function de validação (regras de negócio)
+- Criar `public.invite_codes_validate_archive()` (plpgsql) e um trigger `BEFORE UPDATE` para:
+  - Se `NEW.archived_at IS NOT NULL AND OLD.archived_at IS NULL`:
+    - Se `OLD.uses_count > 0` ou `NEW.uses_count > 0` → RAISE EXCEPTION (não arquiva usado)
+    - Forçar `NEW.active = false`
+    - Setar `NEW.archived_by = auth.uid()` se estiver NULL (melhor rastreabilidade)
+  - Se `NEW.archived_at IS NULL AND OLD.archived_at IS NOT NULL`:
+    - RAISE EXCEPTION (não desarquiva)
+  - Se `OLD.archived_at IS NOT NULL`:
+    - Se tentarem `NEW.active = true` → RAISE EXCEPTION (arquivado não pode reativar)
+Observação: isso vale mesmo para admins; se for necessário “desarquivar” no futuro, a gente cria um RPC específico e controlado (com auditoria), mas por agora você pediu definitivo.
 
-4) Garantir atualização de contadores no Feed (curtir/comentar)
-- No card:
-  - Like do post: seguir invalidando `["feed_posts"]`
-- No modal:
-  - Continuar usando os callbacks já existentes (`onPostLikeChange`, `onCommentCountChange`) para atualizar a UI imediatamente
-  - Continuar invalidando queries (já existe no `PostCommentsPanel`) para sincronizar feed/perfis
+Mudanças na UI (Admin → Convites)
+Arquivo alvo: `src/pages/Admin.tsx`
 
-Ajustes finos com base no seu modelo (Instagram)
-- Medidas:
-  - Desktop: 935px largura, painel direito 420px (igual ao que já usamos no perfil)
-  - Mobile: mídia em cima + painel embaixo, com scroll interno e composer sempre visível
-- Ordem e visual das ações (no Feed):
-  - Linha de ícones logo abaixo da mídia
-  - Contador de curtidas abaixo (ex.: “232,3 mil curtidas”)
-  - Linha de legenda em seguida (autor + texto)
-  - “Ver todos os comentários (N)” como link/ação que abre o modal
+1) Atualizar o query de convites
+- Incluir `archived_at, archived_by` no select:
+  - `.select("id,code,active,archived_at,archived_by,expires_at,max_uses,uses_count,note,created_at")`
 
-Arquivos que serão alterados/criados
-- Criar:
-  - `src/components/feed/FeedPostViewerDialog.tsx` (novo, reutilizável)
-- Alterar:
-  - `src/components/feed/FeedPostCard.tsx` (abrir modal ao tocar na mídia; ações estilo IG; limitar altura; remover drawer)
-  - `src/components/feed/PostCommentsPanel.tsx` (prop `autoFocusComposer`)
-  - (Possível) `src/components/feed/ReelsMedia.tsx` (somente se for necessário adicionar suporte “contain/max height” sem duplicar código; se não, fazemos tudo via wrapper no card)
+2) Filtros e estados de seleção
+- Novo estado: `showArchived` (default false)
+  - OFF: lista apenas `archived_at IS NULL` (não arquivados)
+  - ON: lista também arquivados
+- Seleção:
+  - `selectedIds` (Set ou array)
+  - Checkbox por linha
+  - “Selecionar todos” seleciona somente convites arquiváveis (não usados, não arquivados)
 
-Como eu vou testar (end-to-end)
-1) No Feed (/feed)
-- Confirmar que o vídeo/foto não “toma a tela toda” e que os ícones de curtir/comentar ficam visíveis
-- Tocar na mídia → abre modal com mídia + painel de comentários (igual Instagram)
-- Tocar no ícone de comentar → abre modal e já foca o input
-- Curtir no feed e no modal → contador atualiza e sincroniza
-- Comentar no modal → comentário aparece e contador atualiza (e o feed reflete)
+3) Botões e ações (com confirmação)
+- Individual:
+  - Botão “Arquivar” por convite:
+    - Habilitado apenas se `uses_count === 0` e `archived_at IS NULL`
+    - Abre AlertDialog confirmando arquivamento definitivo
+    - Faz `update({ archived_at: new Date().toISOString() })` (o trigger completa `active=false` e `archived_by`)
+- Lote:
+  - “Arquivar selecionados”:
+    - Atualiza todos os IDs selecionados (que ainda sejam arquiváveis)
+  - “Arquivar todos”:
+    - Atua sobre todos os convites arquiváveis da lista atual (considerando filtro)
+- “Ativar/Desativar”:
+  - Continua existindo, mas:
+    - Se `archived_at != null`, botão fica desabilitado e mostra “Arquivado”
+    - Se `archived_at == null`, opera normalmente como hoje (`active=true/false`)
 
-2) Verificar que não quebramos o que já funciona no perfil
-- Abrir modal no `/membro/:username` e no preview do perfil
-- Confirmar layout e scroll ok, e que mudanças em `ReelsMedia` (se houver) não alteraram o comportamento do modal.
+4) Feedback/UX
+- Toasts de sucesso:
+  - “Convite arquivado”
+  - “X convites arquivados”
+- Toast informativo se algum item foi ignorado por regra (ex.: ficou usado enquanto você estava com a tela aberta):
+  - “Alguns convites não puderam ser arquivados porque já tiveram uso.”
+- Badge/status na lista:
+  - “Arquivado” quando `archived_at` preenchido
+  - “Inativo” quando `active=false` e `archived_at null`
+  - “Ativo” quando `active=true` e `archived_at null`
 
-Riscos/atenções (e como vamos evitar)
-- “Limitar altura” sem distorcer:
-  - vamos priorizar “contain/centralizado” no feed para não cortar conteúdo e não empurrar ações para baixo
-- Evitar duplicar viewer em vários lugares:
-  - criar `FeedPostViewerDialog` e usar no Feed; depois, se você aprovar, podemos refatorar perfil para usar o mesmo componente também.
+Sequência de implementação (ordem segura)
+1) Criar migração do banco:
+   - colunas + índices + trigger de validação
+2) Ajustar `src/pages/Admin.tsx`:
+   - query passando a trazer os novos campos
+   - implementar UI de seleção + botões de arquivar (individual/selecionados/todos)
+   - ajustar regras de habilitar/desabilitar botões
+3) Testes manuais end-to-end (admin)
+4) (Opcional) Rodar um security scan para garantir que não surgiram novas políticas fracas (não deve).
 
-Entrega esperada depois dessa implementação
-- No Feed, posts ficam com mídia grande porém com altura controlada, e ações visíveis.
-- Ao tocar na mídia, abre o modal igual ao Instagram web (mídia esquerda, comentários direita).
-- Ao comentar, abre o mesmo modal com foco no formulário de comentário.
+Checklist de teste (end-to-end)
+1) Criar convite novo (uses_count = 0)
+- Deve aparecer na lista (showArchived OFF)
+- Deve permitir “Arquivar”
+- Ao arquivar: ele some da lista padrão (porque agora archived_at != null)
+- Ao ligar “Mostrar arquivados”: ele aparece com status “Arquivado” e sem permitir reativar
+
+2) Convite usado (uses_count > 0)
+- Deve aparecer (se não arquivado)
+- Checkbox e botão “Arquivar” devem estar desabilitados
+- Se tentar arquivar por algum caminho: o banco deve bloquear (garantia do trigger)
+
+3) Desativar (sem arquivar)
+- Clique “Desativar” deve setar apenas `active=false`, mantendo `archived_at null`
+- Deve continuar aparecendo na lista padrão (porque não arquivou)
+
+4) Arquivar selecionados / Arquivar todos
+- Seleção deve ignorar usados
+- Operação em lote deve arquivar apenas os elegíveis, com toast de contagem
+
+Impacto e compatibilidade
+- A mudança é retrocompatível: convites antigos ficam com `archived_at = null` e continuam funcionando.
+- Nenhuma parte do app fora do Admin depende de `archived_at` para o fluxo de cadastro (o cadastro ainda valida via `active/expires/uses_count` — o que já existe). O Admin será a principal área que passa a usar `archived_at`.
+
+Arquivos que serão alterados (quando você aprovar para eu implementar)
+- supabase/migrations/XXXXXXXX_add_invite_archived_at.sql (novo)
+- src/pages/Admin.tsx (editar)
+
+Observação importante
+- Como o projeto usa tipos gerados do backend, após a migração os tipos serão atualizados automaticamente; eu não vou editar manualmente os arquivos “gerados”.
+

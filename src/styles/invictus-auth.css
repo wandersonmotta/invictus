@@ -19,20 +19,38 @@
 /* Landing-only background (keeps auth/reset untouched) */
 .invictus-landing-page {
   background-image:
+    /* extra center contrast for readability */
+    radial-gradient(900px 700px at 50% 30%, hsl(var(--background) / 0.82), transparent 60%),
     radial-gradient(900px 700px at 50% 0%, hsl(var(--foreground) / 0.10), transparent 55%),
     radial-gradient(1200px 900px at 50% 120%, hsl(var(--background) / 0.92), transparent 60%),
     radial-gradient(900px 700px at 18% 6%, hsl(var(--primary) / 0.10), transparent 55%),
     radial-gradient(800px 600px at 82% 8%, hsl(var(--primary) / 0.06), transparent 55%),
     url("/images/invictus-landing-bg.jpg");
 
-  background-size: auto, auto, auto, auto, cover;
+  background-size: auto, auto, auto, auto, auto, cover;
   background-position: center, center, center, center, center;
   background-repeat: no-repeat;
 }
 
 @media (min-width: 768px) {
   .invictus-landing-page {
-    background-attachment: scroll, scroll, scroll, scroll, fixed;
+    background-attachment: scroll, scroll, scroll, scroll, scroll, fixed;
+  }
+}
+
+/* Lightweight readable "squares" for landing sections */
+.invictus-landing-panel {
+  border: 1px solid hsl(var(--border) / 0.6);
+  border-radius: 1.25rem;
+  background: hsl(var(--background) / 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .invictus-landing-panel {
+    padding: 2rem;
   }
 }
 

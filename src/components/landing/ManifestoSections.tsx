@@ -39,7 +39,7 @@ function SectionShell(props: { title: string; children: React.ReactNode; id?: st
         <div className="mb-6 flex items-end justify-between gap-4">
           <h2 className="text-balance text-2xl font-semibold sm:text-3xl">{props.title}</h2>
         </div>
-        {props.children}
+        <div className="invictus-landing-panel">{props.children}</div>
       </div>
     </section>
   );

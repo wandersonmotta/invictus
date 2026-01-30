@@ -1,114 +1,96 @@
 
-Objetivo
-- Tirar a sensação de “PowerPoint/slide” da landing mantendo: fotos, background e estrutura atual.
-- Aumentar a percepção “premium Invictus” principalmente nos “quadrados” (painéis), tipografia e CTAs (botões).
-- Fazer isso sem mexer no conteúdo (copy), só na apresentação/skin.
+Objetivo (o que você pediu)
+- Ativar/fortalecer animações “sutil premium” na landing (desktop e mobile) conforme a pessoa desce a página.
+- Fazer as seções/painéis “entrarem” com elegância (sem cara de template), com stagger interno, fotos com entrada suave e CTAs com micro-interações.
+- Garantir que as animações funcionem no desktop (hoje você está vendo mais no celular) e respeitem “reduzir movimento” do sistema.
 
-O que está acontecendo hoje (por que parece PPT)
-- Quase tudo entra dentro de um único componente visual: `.invictus-landing-panel` (um “retângulo” grande por seção).
-- Os cards internos (pilares, grupos, etc.) usam borda + fundo translúcido muito “genérico de UI”, e os ícones entram “soltos” (parece template).
-- Falta uma assinatura visual consistente para:
-  1) títulos de seção
-  2) separadores
-  3) “metal plates” dos ícones
-  4) CTA com acabamento (polish) e presença
+Diagnóstico (por que no desktop parece que não anima)
+1) Viewport maior no desktop:
+   - Em telas grandes, várias seções ficam “no viewport” já no carregamento inicial.
+   - O IntersectionObserver dispara imediatamente e a animação acontece antes da percepção do usuário (parece que “não teve animação”).
 
-Direção aprovada por você
-- Estilo dos painéis: Refinar painéis atuais
-- Tipografia: Assinatura Invictus
-- Detalhes premium: Separadores dourados + Grain sutil + Ícones metálicos + CTAs premium
+2) Classe de animação aplicada no mesmo frame:
+   - O hook `useRevealOnScroll` aplica classes Tailwind de animação quando `visible` muda.
+   - Dependendo do timing de renderização, isso pode “pular” a transição visual (especialmente quando o elemento já nasce visível).
 
-Plano de implementação (passo a passo)
+3) Stagger interno existe, mas depende de `invictus-revealed`:
+   - O CSS do stagger já está pronto (`.invictus-stagger`), mas precisamos garantir que o reveal do container aconteça no timing certo e de forma consistente.
 
-1) Criar “skin” premium para os painéis da landing (sem virar neon)
-Arquivos: `src/styles/invictus-auth.css` (é onde já vivem as regras da landing)
-- Evoluir `.invictus-landing-panel` para parecer “vidro real + moldura champagne”:
-  - Moldura mais “real” via pseudo-elemento `::after` com gradient champagne (mesma técnica do `.invictus-auth-frame`, porém mais sutil para não ficar “cartão de crédito dourado”).
-  - Highlights internos (specular) via `::before` para vender vidro e tirar “cara de caixa”.
-  - Grain sutil dentro do painel (bem leve), separado do grain geral da página, para quebrar o aspecto liso “de slide”.
-  - Ajustar sombras: menos “box-shadow de template”, mais “profundidade controlada”.
+Direção aprovada
+- Intensidade: Sutil premium
+- Animar: Seções/painéis + Stagger interno + Fotos/mídias + CTAs
 
-Resultado esperado: os “quadrados” continuam existindo, mas parecem uma peça premium (vidro + metal) e não um card genérico.
+O que vou implementar (solução)
+A) “Reveal” realmente perceptível no desktop (seções/painéis)
+- Ajustar o `useRevealOnScroll` para:
+  1) Disparar o reveal um pouco mais tarde (quando a seção está “entrando” de verdade), usando `rootMargin` e `threshold` mais “exigentes”.
+  2) Garantir que a mudança de classe ocorra após o browser “pintar” o estado inicial (ex.: usando `requestAnimationFrame`/micro-delay), para a animação ficar visível mesmo quando a seção entra rapidamente.
+  3) Manter compatibilidade com `prefers-reduced-motion` (se estiver ativado, tudo aparece sem animação).
 
-2) Dar assinatura Invictus ao cabeçalho de cada seção (título + separador)
-Arquivo: `src/components/landing/SectionShell.tsx` + `src/styles/invictus-auth.css`
-- Atualizar `SectionShell` para renderizar:
-  - Um “eyebrow” opcional (ex.: “INVICTUS / Manifesto / Pilares”) com small caps + tracking (assinatura).
-  - Um separador dourado minimalista (linha em gradiente, no mesmo espírito do header do app).
-  - Título com classe específica (ex.: `.invictus-landing-title`) para:
-    - melhor tracking
-    - contraste
-    - espaçamento e largura de leitura
-- Importante: manter compatível com todas as seções atuais (sem obrigar a passar novos props). A versão mínima pode usar um eyebrow fixo “INVICTUS” ou derivado do próprio título.
+B) Motion system premium (sem Tailwind dependente)
+- Em vez de depender apenas de `animate-in` do Tailwind (que pode ser sutil demais e/ou timing-sensitive), criar também um modo “cinematográfico sutil” em CSS para o reveal:
+  - Estado inicial: `opacity: 0; transform: translateY(10~14px); filter: blur(0.5px) (bem leve)`.
+  - Estado revelado: `opacity: 1; transform: none; filter: none`.
+  - Transição: `cubic-bezier(0.2, 0.8, 0.2, 1)` com ~500–650ms (premium).
 
-Resultado esperado: a landing ganha “editorial structure” sem mudar o layout.
+C) Stagger interno mais “arrumado”
+- Manter o stagger atual, mas:
+  - Garantir que apenas elementos dentro do “scope” correto sejam ocultados.
+  - Ajustar curva/tempo para ficar mais “luxo”: menos “snappy”, mais “glide”.
+  - Expandir delays para cobrir mais casos (seções com muitos itens) e evitar que tudo apareça junto em telas grandes.
 
-3) Transformar os cards internos (Pilares / O que encontra aqui) em “cards premium” com ícone metálico
-Arquivo: `src/components/landing/ManifestoSections.tsx` + `src/styles/invictus-auth.css`
-- Criar classes utilitárias específicas da landing, por exemplo:
-  - `.invictus-landing-card` (fundo + borda + brilho interno)
-  - `.invictus-icon-plate` (plate metálico para ícones)
-- Trocar os wrappers atuais dos itens (ex.: `rounded-xl border ... bg-background/25`) para usar essas classes (mantendo o mesmo grid e spacing).
-- Ícones:
-  - Em vez do ícone dentro de um quadradinho “neutro”, usar uma “plate” metálica com:
-    - gradiente discreto (foreground + gold)
-    - contorno fino
-    - highlight interno
-    - leve glow controlado (bem menos que auth-frame)
-- Opcional (se ficar bom): um “micro-separador” dentro do card (linha dourada sutil) para dar acabamento.
+D) Fotos/mídias com entrada premium
+- Atualizar `EditorialMedia` para aceitar (por padrão) um reveal suave:
+  - Fade + leve zoom-in (ex.: 1.02 → 1.00) e blur mínimo removendo.
+  - Entrada sincronizada com o stagger do bloco (para parecer “editado”, não “UI”).
 
-Resultado esperado: os elementos que hoje parecem “cards de apresentação” viram peças com identidade e acabamento.
+E) CTAs premium (hover + press + shine discreto)
+- Manter o visual do `.invictus-cta` e adicionar micro-interação:
+  - Hover: já existe; vou refinar com transição mais “soft”.
+  - Active/press: leve “press down” (translateY 1px) e redução mínima de brilho.
+  - Opcional: “sheen” muito sutil no hover (um highlight diagonal que se move) — controlado para não virar efeito chamativo.
 
-4) CTAs premium (principalmente “Quero fazer parte” e botões do topo)
-Arquivo: `src/components/landing/WaitlistHero.tsx` + `src/components/ui/button.tsx` (ou classes CSS específicas de landing para não impactar o app todo)
-- Manter o componente Button (não inventar outro).
-- Abordagem segura para não afetar o app inteiro:
-  - Criar um className específico para CTAs da landing (ex.: `.invictus-cta`) aplicado somente na landing.
-  - Esse CTA terá:
-    - “ring” dourado mais sofisticado (gradient fino)
-    - highlight/specular no topo
-    - hover com “polish” (aumenta contraste + micro glow, sem jump)
-    - estado disabled bem resolvido
-- Aplicar essa classe no botão “Quero fazer parte” e no botão de submit do modal da waitlist.
+Arquivos que vou mexer
+1) `src/hooks/useRevealOnScroll.ts`
+- Ajustar lógica para:
+  - Melhor timing no desktop (rootMargin/threshold default melhores para landing).
+  - Aplicar `setVisible(true)` com micro-delay quando intersecta (evitar “sem animação”).
+  - Expor uma opção tipo `enterDelayMs` (default pequeno, ex.: 30–60ms) para seções muito acima da dobra não “piscar”.
 
-Resultado esperado: o CTA parece “joia” (premium), não botão padrão.
+2) `src/components/landing/SectionShell.tsx`
+- Ajustar as opções do hook (ex.: threshold mais alto no desktop).
+- Garantir que o container do painel (e header) use classes do novo motion CSS (ex.: `invictus-reveal`), além do `invictus-revealed`.
 
-5) Ajustes finos de leitura para tirar “cara de slide”
-Arquivos: `src/components/landing/ManifestoSections.tsx` + `src/styles/invictus-auth.css`
-- Ajustar largura de texto (line-length) e ritmo:
-  - limitar parágrafos longos a uma largura mais “editorial”
-  - aumentar um pouco o leading do manifesto
-- Aumentar contraste de “muted text” dentro do painel (muito sutil) para parecer mais caro e menos “cinza chapado”.
+3) `src/components/landing/EditorialMedia.tsx`
+- Aplicar um reveal próprio para a mídia (hook + classes), respeitando reduced motion.
+- Manter fallback e props atuais (sem quebrar chamadas existentes).
 
-Checklist de validação (antes de você mostrar pro sócio)
+4) `src/styles/invictus-auth.css`
+- Adicionar/ajustar:
+  - Classes de reveal (`.invictus-reveal-enter`, `.invictus-revealed ...`) com transições suaves.
+  - Refinar `invictus-stagger` (timing/easing/delays).
+  - Micro-interações de CTA (hover/active/sheeen opcional).
+  - Garantir bloco `@media (prefers-reduced-motion: reduce)` cobrindo tudo.
+
+Checklist de validação (o que você vai conseguir testar no Preview)
 - Desktop:
-  - As seções têm um cabeçalho com assinatura + separador dourado sutil
-  - Painéis não parecem “caixas”; parecem vidro/metal
-  - Ícones em plates metálicos, consistentes entre si
-  - CTA “Quero fazer parte” parece premium e chama atenção sem berrar
+  - Ao descer, cada seção aparece com fade + leve slide (perceptível).
+  - Dentro de cada seção, cards/bullets entram em sequência (stagger “chique”, sem parecer template).
+  - As fotos entram suave (sem “pulo” e sem parecer “efeito de PowerPoint”).
+  - CTAs têm hover premium e “press” ao clicar.
 - Mobile:
-  - Nada fica pesado demais (blur/grain controlados)
-  - Textos continuam muito legíveis
-  - Cards não viram “poluição visual”
-- Consistência:
-  - Não alterar estilo global do app interno (somente landing)
+  - Animações continuam leves (sem travar e sem blur pesado).
+  - Nada vira “bagunça” — tudo entra organizado.
+- Preferências do sistema:
+  - Se “reduzir movimento” estiver ativado, tudo aparece sem animação (acessibilidade).
 
-Arquivos que provavelmente serão alterados
-- `src/styles/invictus-auth.css` (novas classes + refinamentos do painel/títulos/cards/cta)
-- `src/components/landing/SectionShell.tsx` (estrutura do header da seção)
-- `src/components/landing/ManifestoSections.tsx` (trocar classes dos cards e plates de ícone)
-- `src/components/landing/WaitlistHero.tsx` (aplicar CTA premium e pequenos ajustes visuais)
+Riscos / cuidados
+- Performance: blur/filters em excesso podem pesar; vou usar blur mínimo (ou remover em mobile) e manter durations curtas.
+- “Sem animação no desktop”: mitigado com threshold/rootMargin + micro-delay para garantir que o browser veja o estado inicial.
+- Consistência: mudanças isoladas na landing (CSS prefixado `invictus-...`), sem afetar o app interno.
 
-Riscos e como vou evitar
-- “Ficar dourado demais / parecer template de luxo genérico”
-  - Vou usar dourado como acento de precisão (linhas/plates), mantendo grafite como base.
-- Performance no mobile (blur/grain pesado)
-  - Grain leve, e blur já existente (só ajustar com parcimônia); respeitar prefers-reduced-motion.
-- Quebrar consistência com o resto do app
-  - Todas as classes novas serão prefixadas e usadas só na landing.
-
-Entrega incremental (para facilitar aprovação do seu sócio)
-- Primeiro entrego: painel + cabeçalho de seção (impacto imediato).
-- Depois: cards internos + ícones metálicos.
-- Por último: CTAs premium (finaliza a sensação “produto caro”).
-
+Entrega incremental (para você validar rápido)
+1) Ajustar hook + SectionShell (você já deve ver as seções “entrarem” no desktop).
+2) Stagger interno refinado (cards e listas entram em sequência com mais “luxo”).
+3) EditorialMedia com entrada premium.
+4) CTAs com micro press + sheen sutil no hover.

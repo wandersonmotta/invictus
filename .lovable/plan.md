@@ -1,150 +1,95 @@
 
 Objetivo
-- Na tela /mapa, adicionar um “modo proximidade” opcional, onde o usuário escolhe um raio (10 a 200 km) baseado na localização em tempo real do dispositivo.
-- Preservar privacidade: não exibir a localização exata do usuário (nem um pin preciso), apenas uma referência aproximada e um círculo de raio.
-- Mostrar quem está próximo dentro do raio, permitindo clicar para ver detalhes (expertise, bio) e fazer ações (ver perfil, seguir, iniciar mensagem).
-- Manter também o modo “Mapa global” (todos os membros) como já existe hoje.
+- Ao clicar em “Comentários” no card do post, o painel (Drawer) deve abrir com estética “Invictus Glass” (vidro premium) aplicada no painel inteiro.
+- O formulário de comentário no rodapé deve seguir o modelo da imagem: botão de emoji à esquerda, campo “pill” no centro e ação “Postar” à direita, com popover de emojis (sem dependências novas), mantendo o mesmo padrão visual do painel lateral.
 
-O que vou verificar/usar do que já existe
-- /mapa está em `src/pages/Index.tsx` e usa:
-  - `useApprovedMemberPins()` -> RPC `get_approved_member_pins` (já traz pins com jitter e respeita privacidade).
-  - `MemberMap` (Leaflet) que renderiza pins e tem botão de geolocalização.
-- Já existe RPC `get_public_profile(p_user_id)` retornando `bio`, `city/state`, `expertises`, `username`, etc. (ideal para carregar detalhes ao clicar em um membro).
-- Já existe follow: RPC `toggle_follow` e stats via `get_follow_stats` (usado em /membro e /buscar).
-- Já existe iniciar conversa: RPC `create_conversation` (usado em `NewMessageDialog`).
+O que já existe (e vamos reaproveitar)
+- `src/components/feed/CommentsDrawer.tsx` já lista comentários, faz add/edit/delete/like via RPCs e usa Vaul Drawer.
+- Tokens/estilos “glass” já existem no CSS (`invictus-surface`, `invictus-frame`, e também `invictus-modal-glass` para conteúdo tipo popover/modal).
+- Componentes base existentes: `Popover`, `Button`, `Input`, `ScrollArea`, `Drawer*`.
 
-Regras de acesso (conforme pedido)
-- Modo proximidade: disponível apenas para membros aprovados.
-  - Se o usuário não for aprovado, mostrar um card explicando que o recurso fica disponível após aprovação (sem quebrar o mapa global).
-- Os pins já vêm somente de aprovados e com filtros de visibilidade (members/mutuals/private) via backend; manter essa regra.
+Escopo exato aprovado (conforme sua escolha)
+- “Drawer inteiro em glass”: aplicar visual glass no header, lista (área rolável) e rodapé (composer).
+- Popover de emojis também ficará com glass (sem ficar transparente), com z-index alto.
 
-UX (como vai ficar na prática)
-1) Toggle de modo
-- No painel lateral da página /mapa (onde hoje tem “Seu status” e “Pins”), adicionar uma seção “Proximidade”.
-- Um seletor simples:
-  - “Mapa global” (padrão): mostra todos os pins como hoje.
-  - “Perto de mim”: ativa geolocalização do dispositivo e habilita o slider de raio.
+Mudanças planejadas (Frontend)
 
-2) Slider de raio (10–200 km)
-- Slider com step de 10 km, min 10, max 200.
-- Exibir texto: “Raio: 80 km” e “Encontrados: 12 membros”.
-- Atualizar em tempo real o filtro e o círculo no mapa ao mover o slider.
+1) Deixar o Drawer inteiro no modelo glass
+Arquivo: `src/components/feed/CommentsDrawer.tsx`
+- Atualizar `DrawerContent` (classe atual: `invictus-surface`) para incluir também moldura/vidro no painel inteiro:
+  - adicionar `invictus-frame`
+  - garantir borda consistente `border-border/70` (ou equivalente)
+  - manter `overflow-hidden` para o vidro ficar “limpo”
+- Ajustar o layout interno para suportar “rodapé fixo”:
+  - transformar o miolo em um layout de coluna:
+    - topo (título)
+    - meio (lista rolável)
+    - base (composer)
+  - reduzir risco do composer “sumir” atrás do teclado no mobile:
+    - manter padding e usar `ScrollArea` para o conteúdo com altura calculada (ex.: `h-[45vh]` já existe; vamos avaliar trocar por `flex-1` com `min-h-0` para ficar mais adaptável).
+- Garantir contraste e não-transparência onde precisa:
+  - Separador `border-t border-border/60` acima do rodapé
+  - Header com o mesmo “glass surface” (sem ficar “see-through” demais)
 
-3) Solicitação de GPS (permissão)
-- Ao ativar “Perto de mim”, pedir permissão do navegador usando Geolocation API.
-- Usar `watchPosition` para atualizar em tempo real (se a pessoa se mover, os resultados mudam).
-- Se negar permissão, mostrar mensagem clara e um botão “Tentar novamente”.
-
-4) Privacidade da localização do usuário
-- Guardar internamente a localização exata apenas em memória (state), somente para cálculo de distância.
-- Para exibição no mapa:
-  - Não criar “marker” do usuário.
-  - Desenhar apenas um círculo de proximidade centrado em uma coordenada aproximada do usuário:
-    - Ex.: arredondar lat/lng para 2 casas decimais (aprox. 1 km) antes de desenhar o círculo e antes de qualquer reverse-geocode.
-- Texto no UI: “Sua localização é aproximada (privacidade).”
-
-5) Lista de “membros próximos”
-- Abaixo do slider (ou em um Card dedicado), renderizar uma lista dos membros dentro do raio (ordenados por distância).
-- Cada item:
-  - Avatar + nome + cidade/UF + distância (ex.: “23 km”).
-  - Clique abre um mini-modal/painel com detalhes (bio + expertises) carregados via `get_public_profile`.
-  - Ações:
-    - “Ver perfil” (vai para `/membro/:username`).
-    - “Seguir/Seguindo” (toggle follow).
-    - “Mensagem” (cria conversa DM e navega para `/mensagens/:conversationId`).
-
-Implementação técnica (frontend)
-A) Criar um hook para localização do dispositivo
-- Novo hook (por ex. `src/components/map/useDeviceLocation.ts`):
-  - `status`: "idle" | "requesting" | "granted" | "denied" | "error"
-  - `exact`: { lat, lng } | null  (apenas em memória)
-  - `approx`: { lat, lng } | null  (arredondada)
-  - `start()` para iniciar `watchPosition`
-  - `stop()` para limpar o watch
-  - Guardar `watchId` em ref
-  - Configurar options: `{ enableHighAccuracy: true, maximumAge: 60_000, timeout: 10_000 }`
-
-B) Cálculo de distância e filtro por raio
-- Função util (pode ficar no próprio hook ou em `src/lib/geo.ts`):
-  - Haversine (km) entre `exact` (user) e `pin.lat/lng`.
-- No `Index.tsx`:
-  - `mode: "global" | "nearby"`
-  - `radiusKm` state (default 80)
-  - `nearbyPins = pins.filter(distance <= radiusKm)` (usando `exact`)
-  - `nearbySorted = nearbyPins.map(withDistance).sort(distance asc)`
-
-C) Atualizar `MemberMap` para suportar:
-- Mostrar círculo do raio (sem marker do usuário)
-  - Props novas:
-    - `radiusCenter?: { lat; lng } | null` (usar approx)
-    - `radiusKm?: number | null`
-    - `showRadius?: boolean`
-- Detectar mudanças e atualizar um `L.Circle` via refs:
-  - criar circle uma vez quando `showRadius && radiusCenter`
-  - atualizar `setLatLng` e `setRadius(radiusKm * 1000)` quando mudar
-  - remover circle quando sair do modo proximidade
-- Seleção de membro
-  - Adicionar prop `onSelectPin?: (userId: string) => void`
-  - Nos markers: registrar `marker.on("click", () => onSelectPin?.(p.user_id))`
-
-D) Modal/Painel de detalhes do membro
-- Criar componente (ex.: `src/components/map/MemberQuickProfileDialog.tsx`):
-  - Recebe `userId` selecionado (ou null)
-  - Query (React Query) chamando `supabase.rpc("get_public_profile", { p_user_id: userId })`
-  - Renderiza:
-    - Avatar, display_name, @username, cidade/UF
-    - Chips de expertises (reusar `ExpertisesChips` se encaixar)
-    - Bio
-  - Botões:
-    - Ver perfil: usa `username` para navegar
-    - Seguir: `toggle_follow`
-    - Mensagem: `create_conversation` tipo “dm” com `[userId]`, navegar para rota da conversa
-  - Estado de loading/erro com toasts.
-
-E) Ajustes no `Index.tsx` (/mapa)
+2) Criar o composer no rodapé no estilo da imagem (emoji + pill + Postar)
+Novo arquivo: `src/components/feed/FeedCommentComposer.tsx`
 - UI:
-  - No `<aside>` adicionar Card “Proximidade”
-    - Se `me?.access_status !== "approved"`: mostrar bloqueio.
-    - Se aprovado:
-      - Toggle “Mapa global / Perto de mim”
-      - Ao ativar “Perto de mim”: chamar `start()` do hook
-      - Slider (Radix Slider já existe em `src/components/ui/slider.tsx`)
-      - Contagem de resultados e lista curta
-- Map render:
-  - Se modo global: `pins={pins}`
-  - Se modo proximidade: `pins={nearbyPins}` (ou oferecer um switch “Filtrar pins no mapa”)
-  - Passar `showRadius`, `radiusCenter={approx}`, `radiusKm`
-  - Passar `centerMe` como hoje (se existir no profile) mas quando modo proximidade estiver ativo, dar prioridade à localização do dispositivo para “centralizar”.
+  - Container do rodapé com `invictus-surface`
+  - “pill” interno com borda suave: `rounded-full border border-border/60 bg-background/40` (ajustado para não ficar transparente demais no dark)
+  - Botão de emoji (ícone) à esquerda
+  - Campo de digitação central (single-line) com placeholder “Adicione um comentário…”
+  - Botão “Postar” à direita (desabilitado quando vazio/pending)
+- Comportamento:
+  - Enter envia (como hoje), sem mandar se estiver vazio
+  - Após enviar com sucesso: limpar input e manter foco
+  - API/Mutations continuam no `CommentsDrawer` (composer recebe `value`, `onChange`, `onSubmit`, `disabled`), mantendo a lógica atual intacta.
 
-F) (Opcional, mas recomendado) “cidade/estado aproximado” do usuário sem expor precisão
-- Fazer reverse geocode usando lat/lng aproximados (arredondados) para obter um texto “Perto de: Cidade/UF”.
-- Implementar com caching em memória e debounce (ex.: 1 chamada por mudança relevante).
-- Se falhar: mostrar apenas “Perto de você”.
+3) Adicionar um Emoji Picker leve (Popover) com estética glass
+Novo arquivo: `src/components/ui/emoji-popover.tsx` (ou `src/components/feed/emoji-popover.tsx`; vou seguir a pasta `ui/` por ser reutilizável)
+- Implementar usando `Popover`, `PopoverTrigger`, `PopoverContent`
+- Conteúdo:
+  - Grid de emojis mais usados (sem lib externa)
+  - Clique em um emoji insere no texto atual (versão 1: insere no final; versão 2 opcional: inserção na posição do cursor usando ref e selectionStart/selectionEnd)
+- Estilo:
+  - `PopoverContent` com `invictus-surface invictus-frame border-border/70` para ficar premium e não transparente
+  - `z-50` já existe no popover base; manter/elevar se necessário (ex.: `z-[60]`) para não ficar atrás do Drawer
 
-Cuidados e edge cases
-- Permissão negada: manter mapa global funcional e mostrar “Você negou o acesso ao GPS”.
-- Sem suporte no navegador: mostrar mensagem “Seu dispositivo não suporta geolocalização”.
-- Performance: não disparar queries por membro; só buscar `get_public_profile` do membro selecionado (1 por vez).
-- Privacidade: nunca renderizar marker do usuário, nunca salvar localização no backend, e usar apenas coordenada aproximada para UI/overlay.
+4) Integrar o composer dentro do CommentsDrawer
+Arquivo: `src/components/feed/CommentsDrawer.tsx`
+- Substituir o bloco atual de input + botão “Enviar” por `<FeedCommentComposer />`
+- Conectar o botão “Postar” ao `addMutation.mutate()`
+- Ligar o emoji picker para atualizar `body` do comentário (ex.: `setBody(prev => prev + emoji)`)
+- Melhorias de UX:
+  - Ao abrir o Drawer: focar automaticamente o campo do composer (passando ref do input para o `CommentsDrawer` ou expondo `autoFocus` controlado pelo open state)
+
+5) (Opcional, mas combina com o visual) Atualizar o trigger “Comentários (N)”
+Arquivos possíveis:
+- `src/components/feed/CommentsDrawer.tsx` (no `DrawerTrigger`)
+- Se preferir no card: `src/components/feed/FeedPostCard.tsx`
+Mudança:
+- Trocar o botão textual por ícone + contador (ex.: `MessageCircle`) mantendo acessibilidade (`sr-only` com “Abrir comentários”).
+Observação: isso é opcional; só farei se você confirmar que quer esse ajuste também.
+
+Pontos de atenção / qualidade
+- Evitar “dropdown see-through”: Popover e Drawer terão `bg`/surface suficiente para não ficar transparente demais.
+- Z-index: garantir que o popover de emojis fique acima do Drawer e não seja cortado; se necessário, aumentar z-index do `PopoverContent`.
+- Responsividade: manter max-width e estética minimalista já existente; o Drawer é full width, mas o conteúdo interno pode continuar centralizado e legível.
+- Consistência com o app: usar os tokens/classe “Invictus” existentes, sem criar dependências.
 
 Checklist de testes (end-to-end)
-- /mapa com usuário aprovado:
-  - Alternar para “Perto de mim” -> pedir permissão -> resultados aparecem.
-  - Mover slider 10/80/200 -> pins filtram e círculo muda.
-  - Clicar em pin -> abre painel -> mostra bio/expertises -> “Seguir” funciona -> “Mensagem” abre conversa.
-- /mapa com usuário não aprovado:
-  - Seção proximidade bloqueada, mapa global continua ok.
-- Negar permissão:
-  - Mensagem clara e opção de tentar novamente, sem quebrar o resto.
+1) Feed → abrir um post → clicar em Comentários → confirmar que o painel inteiro está em glass (fundo + moldura).
+2) Digitar comentário no “pill” → “Postar” habilita/desabilita corretamente → enviar → comentário aparece e contador atualiza.
+3) Abrir emoji picker → escolher emoji → emoji entra no campo → enviar.
+4) Mobile: abrir comentários, abrir teclado, garantir que o campo continua acessível e a lista rola normalmente.
+5) Verificar que o popover de emojis não fica transparente e não fica atrás do painel.
 
-Arquivos que provavelmente serão alterados/criados
-- Editar:
-  - `src/pages/Index.tsx` (UI do modo proximidade + slider + lista + integração com mapa)
-  - `src/components/map/MemberMap.tsx` (círculo de raio + clique em pin)
+Arquivos que serão criados/alterados
 - Criar:
-  - `src/components/map/useDeviceLocation.ts` (watchPosition + estado + approx)
-  - `src/components/map/MemberQuickProfileDialog.tsx` (detalhes + ações)
-  - (Opcional) `src/lib/geo.ts` para haversine e arredondamento
+  - `src/components/feed/FeedCommentComposer.tsx`
+  - `src/components/ui/emoji-popover.tsx`
+- Editar:
+  - `src/components/feed/CommentsDrawer.tsx`
+  - (Opcional) `src/components/feed/FeedPostCard.tsx` se formos trocar o trigger por ícone
 
-Sem mudanças no backend
-- Para o que você pediu (raio + clique + detalhes + conexões), dá para fazer usando os RPCs já existentes (`get_approved_member_pins`, `get_public_profile`, `toggle_follow`, `create_conversation`) sem mexer no banco.
+Observação importante
+- Isso é 100% frontend/UI. Não exige nenhuma alteração no backend, nem em tabelas/RPCs, porque vamos reutilizar exatamente o fluxo atual de comentários.

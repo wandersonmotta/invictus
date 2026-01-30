@@ -20,6 +20,7 @@ import AguardandoAprovacao from "./pages/AguardandoAprovacao";
 import Comunidade from "./pages/Comunidade";
 import Feed from "./pages/Feed";
 import Membro from "./pages/Membro";
+import Landing from "./pages/Landing";
 
 const queryClient = new QueryClient();
 
@@ -41,8 +42,10 @@ const App = () => (
                 </RequireAuth>
               }
             />
+            <Route path="/" element={<Landing />} />
+
             <Route
-              path="/"
+              path="/app"
               element={
                 <RequireAuth>
                   <AppLayout>

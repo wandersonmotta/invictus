@@ -19,6 +19,13 @@ export default function Landing() {
   const navigate = useNavigate();
 
   React.useEffect(() => {
+    // Fallback robusto: garante o background premium mesmo se algum device
+    // não aplicar corretamente o background no container principal.
+    document.body.classList.add("invictus-landing-body");
+    return () => document.body.classList.remove("invictus-landing-body");
+  }, []);
+
+  React.useEffect(() => {
     if (session) navigate("/app", { replace: true });
   }, [session, navigate]);
 

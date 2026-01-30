@@ -39,7 +39,10 @@ export default function Feed() {
   });
   return <main className="invictus-page">
       <header className="invictus-page-header flex flex-col gap-3">
-        
+        <div className="mx-auto w-full max-w-[480px]">
+          <h1 className="invictus-h1">Feed</h1>
+          
+        </div>
 
         <div className="mx-auto flex w-full max-w-[480px] items-center gap-2">
           <Tabs value={mode} onValueChange={v => setMode(v as FeedMode)}>

@@ -12,6 +12,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 
@@ -48,16 +49,21 @@ const navSections = [
 export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
+  const { isMobile, setOpenMobile } = useSidebar();
 
   const isActive = (path: string) => {
     if (path === "/") return currentPath === "/";
     return currentPath === path || currentPath.startsWith(`${path}/`);
   };
 
+  const handleNavClick = () => {
+    if (isMobile) setOpenMobile(false);
+  };
+
   return (
     <Sidebar
       className={cn("invictus-sidebar")}
-      collapsible="none"
+      collapsible="offcanvas"
       variant="inset"
     >
       <SidebarContent>
@@ -80,6 +86,7 @@ export function AppSidebar() {
                           end={item.url === "/"}
                           className="invictus-sidebar-link"
                           aria-current={isActive(item.url) ? "page" : undefined}
+                          onClick={handleNavClick}
                         >
                           <span className="invictus-sidebar-iconWrap" aria-hidden="true">
                             <item.icon className="invictus-sidebar-icon" aria-hidden="true" />

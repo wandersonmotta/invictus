@@ -4,13 +4,13 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { GoldHoverText } from "@/components/GoldHoverText";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { UserMenu } from "@/components/UserMenu";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 import logo from "@/assets/invictus-logo.png";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarProvider toggleable={false} mobileMode="fixed">
+    <SidebarProvider toggleable={true} mobileMode="sheet">
       <div className="min-h-svh flex w-full">
         <AppSidebar />
 
@@ -25,14 +25,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             }
           >
             <div className="flex flex-1 items-center gap-3">
-                <img
-                  src={logo}
-                  alt="Logo da Fraternidade Invictus"
-                  className="h-9 w-auto select-none"
-                  draggable={false}
-                  style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary) / 0.25))" }}
-                />
-                <GoldHoverText className="text-[10px] font-semibold tracking-[0.35em]">FRATERNIDADE</GoldHoverText>
+              <SidebarTrigger className="md:hidden" />
+
+              <img
+                src={logo}
+                alt="Logo da Fraternidade Invictus"
+                className="h-9 w-auto select-none"
+                draggable={false}
+                style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary) / 0.25))" }}
+              />
+              <GoldHoverText className="text-[10px] font-semibold tracking-[0.35em]">FRATERNIDADE</GoldHoverText>
             </div>
 
             <div className="ml-auto flex items-center gap-1">

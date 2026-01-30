@@ -24,17 +24,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               "after:bg-gradient-to-r after:from-transparent after:via-[hsl(var(--foreground)_/_0.10)] after:to-transparent"
             }
           >
-            <div className="flex flex-1 items-center gap-3">
+            <div className="flex flex-1 items-center gap-3 min-w-0">
               <SidebarTrigger className="md:hidden" />
 
               <img
                 src={logo}
                 alt="Logo da Fraternidade Invictus"
-                className="h-9 w-auto select-none"
+                className="h-7 sm:h-9 w-auto select-none shrink-0"
                 draggable={false}
                 style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary) / 0.25))" }}
               />
-              <GoldHoverText className="text-[10px] font-semibold tracking-[0.35em]">FRATERNIDADE</GoldHoverText>
+              <GoldHoverText className="text-[8px] sm:text-[10px] font-semibold tracking-[0.25em] sm:tracking-[0.35em] truncate max-w-[44vw]">
+                FRATERNIDADE
+              </GoldHoverText>
             </div>
 
             <div className="ml-auto flex items-center gap-1">

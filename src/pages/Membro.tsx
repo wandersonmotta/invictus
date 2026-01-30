@@ -8,8 +8,7 @@ import type { FeedPost } from "@/features/feed/types";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ReelsMedia } from "@/components/feed/ReelsMedia";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PostCommentsPanel } from "@/components/feed/PostCommentsPanel";
 import { ExpertisesChips } from "@/components/profile/ExpertisesChips";
 
@@ -37,6 +36,9 @@ export default function Membro() {
     (FeedPost & { thumbUrl: string | null; firstType: string | null }) | null
   >(null);
   const [selectedMediaUrls, setSelectedMediaUrls] = React.useState<{ url: string; contentType: string | null }[]>([]);
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const primary = selectedMediaUrls[0];
+  const isVideo = Boolean(primary?.contentType?.startsWith("video/"));
 
   const profileQuery = useQuery({
     queryKey: ["public_profile", username],
@@ -109,6 +111,37 @@ export default function Membro() {
       setSelectedMediaUrls([]);
     }
   }, [viewerOpen]);
+
+  React.useEffect(() => {
+    if (!viewerOpen || !isVideo) return;
+    const el = videoRef.current;
+    if (!el) return;
+    const start = typeof (selectedPost?.media?.[0] as any)?.trim_start_seconds === "number" ? (selectedPost?.media?.[0] as any).trim_start_seconds : null;
+    const end = typeof (selectedPost?.media?.[0] as any)?.trim_end_seconds === "number" ? (selectedPost?.media?.[0] as any).trim_end_seconds : null;
+
+    const onLoaded = () => {
+      if (start != null && Number.isFinite(start)) {
+        try {
+          el.currentTime = Math.max(0, start);
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    const onTimeUpdate = () => {
+      if (end != null && Number.isFinite(end) && el.currentTime >= end) {
+        el.pause();
+      }
+    };
+
+    el.addEventListener("loadedmetadata", onLoaded);
+    el.addEventListener("timeupdate", onTimeUpdate);
+    return () => {
+      el.removeEventListener("loadedmetadata", onLoaded);
+      el.removeEventListener("timeupdate", onTimeUpdate);
+    };
+  }, [viewerOpen, isVideo, selectedPost?.post_id]);
 
   return (
     <main className="invictus-page">
@@ -263,25 +296,34 @@ export default function Membro() {
             >
               <DialogHeader className="sr-only">
                 <DialogTitle>Publicação</DialogTitle>
+                <DialogDescription>Visualização da publicação com mídia e comentários.</DialogDescription>
               </DialogHeader>
 
               {selectedPost ? (
                 <div className="flex h-full min-h-0 flex-col md:grid md:grid-cols-[minmax(0,1fr)_420px]">
                   <div className="h-[45vh] min-h-0 border-b border-border/60 md:h-auto md:border-b-0 md:border-r">
-                    {selectedMediaUrls[0] ? (
-                      <ReelsMedia
-                        url={selectedMediaUrls[0].url}
-                        contentType={selectedMediaUrls[0].contentType}
-                        trimStartSeconds={(selectedPost.media?.[0] as any)?.trim_start_seconds ?? null}
-                        trimEndSeconds={(selectedPost.media?.[0] as any)?.trim_end_seconds ?? null}
-                        alt="Mídia do post"
-                        className="h-full rounded-none border-0"
-                      />
-                    ) : (
-                      <div className="rounded-xl border border-border/60 bg-muted p-6 text-sm text-muted-foreground">
-                        Carregando mídia…
-                      </div>
-                    )}
+                    <div className="h-full w-full bg-muted">
+                      {primary ? (
+                        <div className="flex h-full w-full items-center justify-center">
+                          {isVideo ? (
+                            <video
+                              ref={videoRef}
+                              src={primary.url}
+                              className="max-h-full max-w-full object-contain"
+                              playsInline
+                              controls
+                              preload="metadata"
+                            />
+                          ) : (
+                            <img src={primary.url} alt="Mídia do post" className="max-h-full max-w-full object-contain" loading="lazy" />
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center p-6 text-sm text-muted-foreground">
+                          Carregando mídia…
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <PostCommentsPanel

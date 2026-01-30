@@ -264,8 +264,8 @@ export default function Membro() {
               </DialogHeader>
 
               {selectedPost ? (
-                <div className="grid h-full md:grid-cols-[minmax(0,1fr)_420px]">
-                  <div className="min-h-0 border-b border-border/60 md:border-b-0 md:border-r">
+                <div className="flex h-full min-h-0 flex-col md:grid md:grid-cols-[minmax(0,1fr)_420px]">
+                  <div className="h-[45vh] min-h-0 border-b border-border/60 md:h-auto md:border-b-0 md:border-r">
                     {selectedMediaUrls[0] ? (
                       <ReelsMedia
                         url={selectedMediaUrls[0].url}

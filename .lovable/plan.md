@@ -1,193 +1,112 @@
 
-Objetivo (próximo nível, do jeito que você descreveu)
-- Fazer a landing ficar “premium de verdade”: mais clean, mais sofisticada, com hierarquia visual forte (quem entra sente exclusividade).
-- Corrigir a qualidade ruim do background no mobile: trocar por uma imagem nova em alta resolução (4K) gerada por IA, com versões otimizadas.
-- Parar o “mexer ruim” do fundo ao rolar: fundo 100% estático (sem parallax/attachment fixed).
-- Dar impacto com animação: os painéis/“quadrados” entram conforme a pessoa desce, e os itens internos entram em sequência (stagger), sem poluir.
-- Manter performance boa no mobile.
+Contexto (o que você pediu agora)
+- Você quer que a identidade visual da landing (background + mídias “tipo gif”) represente homens e mulheres (equilíbrio), em cenas reais de negócios/networking, mantendo o padrão Invictus: cinematográfico, preto e branco, premium, com “toque” dourado discreto.
+- Você escolheu:
+  - Mídias em loop: Trocar por imagens (não usar vídeo/gif)
+  - Estilo do background: Evento/Networking
+  - Diversidade: Equilibrado
 
-O que eu vi no código (pontos que explicam o problema)
-1) O fundo da landing está em CSS como background-image (invictus-landing-page) e, em telas >= 768px, existe:
-   - background-attachment: fixed (isso cria o “parallax”/efeito de deslocamento no scroll).
-   Mesmo que seja “sutil”, em alguns devices fica com sensação “ruim”/bugada.
+Diagnóstico rápido do estado atual
+- Background da landing hoje depende do componente `LandingBackground` que renderiza um `<picture>` com:
+  - `/images/invictus-landing-bg-1920x1080.jpg` (desktop)
+  - `/images/invictus-landing-bg-1536x1920.jpg` (mobile)
+- As “mídias tipo gif” na landing hoje são vídeos MP4 via `LoopVideo` em:
+  - `src/components/landing/ManifestoSections.tsx` (manifesto)
+  - `src/components/landing/WaitlistHero.tsx` (waitlist)
+- Como você quer trocar por imagens, vamos substituir esses vídeos por imagens estáticas com o mesmo enquadramento/“moldura premium”, mantendo a estética e performance.
 
-2) O fundo atual usa um único arquivo: /images/invictus-landing-bg.jpg
-   - Quando o arquivo não é grande/otimizado para retina/mobile moderno, a imagem “estoura”/pixeliza, principalmente em telas altas (mobile) e com scaling.
+Objetivo de implementação (resultado esperado)
+1) Background novo (desktop + mobile) com pessoas (homens e mulheres) em ambiente de networking/negócios, P&B cinematográfico, com luz/contraste premium.
+2) Substituir os “loops” (vídeos) por imagens editoriais no mesmo padrão (homens e mulheres).
+3) Garantir consistência: mesma “família visual” entre desktop e mobile (não parecer duas fotos aleatórias).
+4) Garantir que o background apareça sempre (sem regressão do bug de “não aparece”).
 
-3) As animações de entrada já existem via useRevealOnScroll (IntersectionObserver) aplicado no SectionShell:
-   - Hoje: a seção entra toda de uma vez.
-   - Você pediu: seção + stagger interno (itens entram em sequência para dar impacto editorial).
+Parte A — Gerar os novos assets (IA) no padrão Invictus
+A1) Gerar 2 imagens de background (uma pensada para desktop e outra para mobile)
+- Desktop (16:9): 3840x2160 (master), depois exportar/otimizar para 1920x1080.
+- Mobile (4:5 ou 3:4 com leitura vertical): master em alta (ex.: 3072x4096 ou equivalente), depois exportar/otimizar para 1536x1920.
 
-Decisões aprovadas (pela sua última resposta)
-- Background: estático + overlay animado (sutil)
-- Conteúdo animado: seção + stagger interno
-- Imagem 4K: gerar nova (IA)
+Prompt base (direção criativa)
+- “Cinematic black and white corporate networking event, well-dressed men and women (balanced presence), candid business conversation, subtle luxury atmosphere, shallow depth of field, high contrast, film grain subtle, no text, no logos, no watermarks, editorial photography, premium lighting, Invictus vibe”
+Regras:
+- Sem texto/logos/marcas/d’água.
+- Rosto/pele com aparência realista (evitar uncanny).
+- “Equilibrado” = mulheres e homens com presença equivalente.
 
-Plano de implementação (passo a passo)
+A2) Gerar 2 imagens “editoriais” para substituir os vídeos (Manifesto e Waitlist)
+- Uma imagem para o bloco do Manifesto (16:9).
+- Uma imagem para o bloco da Waitlist (16:9).
+Mesma linguagem visual (P&B, premium, negócios, mix de gêneros).
 
-Parte A — Background 4K (novo), responsivo e “parado”
-A1) Gerar um novo background 4K com IA (visual executivo/corporativo)
-- Vou gerar 1 imagem principal com “cara de Invictus”:
-  - Preto e branco cinematográfico (arquitetura corporativa, pessoas de terno/negócios, editorial)
-  - Detalhes dourados discretos (nada chamativo)
-  - Sem texto, sem elementos óbvios “de banco de imagem”
-- Entregável: 1 arte “hero background” que funciona bem em desktop e mobile (composição pensada para corte vertical também).
+A3) Export e otimização
+- Salvar como JPG de alta qualidade (ou WEBP se já estiver ok no projeto; se houver dúvidas, manter JPG para compatibilidade máxima).
+- Manter nomes previsíveis e versionados para evitar cache agressivo.
+  - Sugestão: `invictus-landing-bg-1920x1080-v2.jpg`, `invictus-landing-bg-1536x1920-v2.jpg`
+  - E as imagens dos blocos: `invictus-landing-manifesto-media-v1.jpg`, `invictus-landing-waitlist-media-v1.jpg`
 
-A2) Criar versões otimizadas (sem perder qualidade)
-- A partir da imagem master, vou criar variações de tamanho (mesmo visual, só resolução diferente):
-  - 3840px (4K) para desktop grande
-  - 2560px para desktop normal/retina
-  - 1440px para tablet
-  - 1080px para mobile (ainda alta qualidade)
-  - (Opcional) versões .webp se estiver ok para o projeto; caso contrário, JPG alta qualidade bem comprimido
-- Isso reduz peso e melhora carregamento no mobile.
+Parte B — Integrar os novos backgrounds no app (sem quebrar o fallback)
+B1) Atualizar `LandingBackground.tsx`
+- Trocar `srcSet/src` para apontar para os novos arquivos “v2”.
+- Manter o `<picture>` e o layer fixo (é o fallback mais robusto para mobile).
 
-A3) Trocar o CSS para usar image-set (resolução certa por device)
-- Atualizar .invictus-landing-page para usar image-set() no background:
-  - o navegador escolhe automaticamente a imagem mais adequada (ex.: 1x/2x, ou por tamanho).
-- Ajustar:
-  - background-position pensado para manter rosto/área principal do fundo em foco no mobile.
-  - background-size: cover (mantém o impacto)
-  - background-attachment: scroll (sempre) para ficar totalmente estático.
-- Remover/alterar o @media(min-width:768px) que hoje aplica “fixed”.
+B2) Garantir que o CSS da landing não “anule” o background
+- Revisar `src/styles/invictus-auth.css` para garantir que:
+  - `.invictus-landing-page` não esteja com background sólido/overlay que cubra completamente.
+  - o z-index do `LandingBackground` (-z-10) esteja efetivamente atrás e não “sumindo” por stacking context inesperado.
+- Se necessário, ajustar:
+  - `main.invictus-landing-page { position: relative; }`
+  - garantir `isolation/isolate` apenas onde não mate o layer fixo.
 
-Critério de sucesso dessa parte
-- No celular, a imagem fica nítida (sem “lavar”, sem pixel).
-- Rolou a página: o fundo não “mexe”/não dá sensação de bug.
+B3) Diagnóstico rápido no browser (para fechar o bug “não aparece”)
+- Confirmar no Network que os arquivos `...-v2.jpg` retornam 200.
+- Confirmar no DOM que `LandingBackground` está renderizando e ocupando `fixed inset-0`.
+- Se o problema for cache, o “-v2” resolve sem precisar pedir hard refresh.
 
-Parte B — Overlay animado “luxo” (sem mexer a foto)
-B1) Criar um overlay sutil por cima do background (sem parallax)
-- Vamos manter a imagem parada e colocar um pseudo-elemento por cima (ex.: ::before) na .invictus-landing-page com:
-  - film grain / noise bem sutil (ou uma textura via gradiente)
-  - vignette suave
-  - leve variação de opacidade/posição (animação lenta, quase imperceptível)
-- Objetivo: dar vida premium sem “mexer a imagem” e sem tirar legibilidade.
+Parte C — Trocar os “gifs”/loops (vídeos) por imagens premium (homens e mulheres)
+C1) Criar um componente simples e consistente (ex.: `EditorialMedia`)
+- Responsável por renderizar a imagem com:
+  - `AspectRatio 16/9`
+  - borda e glass (igual ao que já existia para o vídeo)
+  - `loading="lazy"` (exceto se você quiser carregar “eager” no primeiro bloco acima da dobra)
 
-B2) Garantir acessibilidade e performance
-- Respeitar prefers-reduced-motion: se o usuário preferir reduzir movimento, o overlay fica estático (sem animation).
-- Animação lenta (ex.: 10–16s) e apenas em opacity/transform leve, para não travar mobile.
+C2) Alterar `ManifestoSections.tsx`
+- Substituir `<LoopVideo ... />` por `<img ... />` (via `EditorialMedia`).
+- Mantém o layout/spacing e a mesma “moldura”.
 
-Critério de sucesso dessa parte
-- Sensação de “cinema”/editorial, mas sem distração.
-- Não piorar o tempo de carregamento nem o scroll.
+C3) Alterar `WaitlistHero.tsx`
+- Substituir o `<LoopVideo ... />` por imagem editorial correspondente.
+- Mantém o comportamento responsivo (o bloco já está bem dimensionado).
 
-Parte C — Animação de entrada com stagger interno (impacto editorial)
-C1) Manter a animação da seção (já existe) e acrescentar o stagger dos itens dentro
-- Hoje o SectionShell aplica reveal.className na <section>.
-- Vou evoluir para:
-  1) Seção anima (fade/slide) como base.
-  2) Elementos internos marcados (ex.: cards, bullets, colunas) entram em sequência com delays leves.
+Parte D — QA (checagens obrigatórias antes de você validar)
+D1) Visual
+- Desktop: background com cena de networking + mix de gêneros visível.
+- Mobile: background vertical nítido, sem “estourar” e sem recorte ruim (rosto cortado, etc.).
+- Imagens editoriais substituindo os vídeos: consistência total com o background.
 
-C2) Como implementar o stagger sem bagunçar o layout
-Opção escolhida: classe utilitária de stagger que funciona “por seção”
-- Criar uma classe CSS do tipo:
-  - .invictus-stagger > * { animation-delay: var(...) } com nth-child
-- Aplicar .invictus-stagger apenas nos containers certos (grid de pilares, grupos, listas) para não animar “tudo indiscriminadamente”.
-- Aplicar apenas quando a seção já estiver “visible” no hook.
+D2) Performance
+- Sem vídeos = melhora de performance e menos consumo de dados no mobile.
+- Garantir que as imagens dos blocos sejam comprimidas e razoáveis em KB/MB.
 
-C3) Onde aplicar para dar o efeito que você quer (“vai aparecendo os quadrados”)
-- Cada SectionShell:
-  - O painel “entra” primeiro.
-  - Em seguida, dentro do painel, os blocos entram (colunas/cards/bullets).
-- Locais ideais:
-  - Pillars (os 4 cards entram em sequência)
-  - WhatYouFindHere (3 grupos entram em sequência; e dentro de cada grupo, os 2 itens podem ter micro-delay)
-  - WhoIsFor (2 colunas entram; e os bullets podem entrar com delay curto)
-  - FinalWarning (card entra e textos internos entram em sequência leve)
+D3) Acessibilidade
+- Background: `aria-hidden` já ok.
+- Imagens editoriais: se forem decorativas, `alt=""`. Se tiverem função semântica (provável que não), usar alt descritivo.
 
-Critério de sucesso dessa parte
-- Ao rolar, a página “ganha vida” e parece uma apresentação editorial.
-- Sem exagero e sem “poluição”.
+Arquivos que serão modificados (escopo)
+- `public/images/` (substituir/adicionar novas imagens)
+- `src/components/landing/LandingBackground.tsx` (apontar para v2)
+- `src/components/landing/ManifestoSections.tsx` (trocar LoopVideo por imagem)
+- `src/components/landing/WaitlistHero.tsx` (trocar LoopVideo por imagem)
+- (Opcional) criar `src/components/landing/EditorialMedia.tsx` para padronizar o “frame premium” de mídia
 
-Parte D — Hierarquia tipográfica “premium”: subtítulos e destaques
-Você comentou que vários pontos não estão destacando como deveriam (ex.: “Você pertence se”).
-Eu vou padronizar por seção (subtítulos), como você aprovou.
+Dependências / limitações importantes
+- Eu consigo gerar imagens cinematográficas de alta qualidade via IA.
+- Eu não gero MP4/gif “real” com pessoas via IA dentro do fluxo atual; como você escolheu “Trocar por imagens”, isso fica resolvido e ainda melhora performance.
 
-D1) Padronizar subtítulos (H3) para sempre “parecer importante”
-- Criar um estilo consistente para subtítulos dentro das seções da landing:
-  - fonte um pouco maior
-  - negrito
-  - tracking leve (executivo)
-  - e, quando fizer sentido, uma “linha dourada” discreta ou ícone pequeno (sem infantilizar)
+Entrega em 2 checkpoints (para você aprovar rápido)
+1) Checkpoint 1: Novos backgrounds (desktop + mobile) aplicados na landing e aparecendo 100%.
+2) Checkpoint 2: Troca dos “gifs” (vídeos) por imagens editoriais, com mix de gêneros e padrão Invictus.
 
-Exemplos de alvos diretos no ManifestoSections.tsx (já existem):
-- “Nossa visão”
-- “Você pertence se”
-- “Não é para quem”
-- “Liderança”
-- “Regra de permanência”
-
-D2) Ajustar contraste e legibilidade (sem deixar “cinza demais”)
-- Reduzir uso de muted-foreground em blocos longos quando necessário (manter para descrições curtas).
-- Garantir que frases-chave usem text-foreground/90 ou text-foreground.
-
-Critério de sucesso dessa parte
-- Subtítulos saltam aos olhos e guiam a leitura.
-- A landing fica “cara de produto caro” (hierarquia clara, sem excesso).
-
-Parte E — Revisão visual estratégica (posicionamento de mídia e “clean premium”)
-E1) Reposicionar o vídeo (se mantivermos) para ser “estratégico” e não competir com o texto
-- No screenshot atual, o vídeo está na coluna “Nossa visão” e chama atenção, mas pode parecer “bloco a mais” em vez de um detalhe editorial.
-- Ajuste pro próximo nível:
-  - tratar vídeo como “insert editorial”: menor que um card, com moldura mais fina, e alinhado de forma a apoiar o texto, não dominar.
-  - no mobile: vídeo menor, acima de um trecho-chave (não entre parágrafos demais).
-
-E2) Ajustar padding/ritmo dos painéis para “respirar”
-- Manter painéis premium, mas com:
-  - menos elementos competindo (linhas divisórias só onde precisa)
-  - espaçamento mais consistente entre blocos
-
-Arquivos que serão alterados/criados (escopo)
-1) CSS
-- src/styles/invictus-auth.css
-  - Trocar o background da landing para image-set com imagens novas
-  - Remover background-attachment: fixed da landing
-  - Adicionar overlay animado no background (pseudo-elemento + keyframes)
-  - Adicionar utilitários de stagger (classes)
-
-2) Landing components
-- src/components/landing/ManifestoSections.tsx
-  - Aplicar “stagger interno” nos grids e listas
-  - Padronizar subtítulos (H3) com classe/estilo consistente
-  - Ajustar posicionamento do vídeo para ficar editorial/estratégico
-
-- src/components/landing/WaitlistHero.tsx
-  - Ajustar posicionamento do vídeo para ficar estratégico e premium (mobile menor, desktop equilibrado)
-  - Garantir que o CTA continue sendo o foco
-
-3) Assets
-- public/images/
-  - Adicionar a nova imagem 4K e variações otimizadas (múltiplos tamanhos)
-  - (Opcional) adicionar uma versão poster/thumbnail para fallback
-
-Checklist de validação (QA)
-1) Mobile (principal)
-- Fundo nítido (sem pixel) e sem “mexer” ao rolar.
-- Conteúdo aparece com impacto (seção + stagger), mas sem travar.
-- Vídeos aparecem menores no mobile e não “comem” a tela.
-
-2) Desktop
-- Fundo continua premium e estático.
-- Overlay animado é perceptível só como “vida”, não como efeito chamativo.
-- Layout respira: leitura fácil, hierarquia forte.
-
-3) Acessibilidade / preferências
-- prefers-reduced-motion: sem animações (ou mínimo necessário).
-- Texto sempre legível sobre o background.
-
-4) Regressão
-- Modal da lista de espera continua perfeito (abrir/fechar, envio).
-- Rotas /auth e /reset-password continuam com identidade própria (sem afetar).
-
-Entregas em etapas (para você aprovar visual rápido)
-- Etapa 1: Novo background 4K + image-set + remover “mexer ruim”
-- Etapa 2: Overlay animado sutil (film grain/vignette)
-- Etapa 3: Seção + stagger interno (impacto ao rolar)
-- Etapa 4: Ajuste fino de posicionamento da mídia + tipografia (subtítulos com presença)
-
-Observação importante (para ficar realmente “nível produto caro”)
-O maior salto de percepção de valor aqui vai vir de:
-1) Background 4K bem escolhido (composição certa para mobile)
-2) Fundo parado + overlay “cinema”
-3) Ritmo editorial (stagger + subtítulos fortes)
-Isso cria aquela sensação imediata: “tem direção, tem curadoria, é seleto”.
+Critério de sucesso (bem direto)
+- Ao abrir “/” no celular e no desktop: fundo aparece sempre e remete claramente a negócios/networking com homens e mulheres.
+- Nenhuma seção perde legibilidade.
+- Visual fica premium (cinematográfico P&B) e consistente em toda a landing.

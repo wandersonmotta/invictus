@@ -107,10 +107,10 @@ export function Pillars() {
     <SectionShell title="Nossa mentalidade (pilares)">
       <div className="invictus-stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {pillars.map(({ title, Icon, desc }) => (
-          <div key={title} className="rounded-xl border border-border/50 bg-background/25 p-4">
+          <div key={title} className="invictus-landing-card p-4">
             <div className="flex items-center gap-2">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background/35">
-                <Icon className="h-4 w-4 text-primary/80" />
+              <span className="invictus-icon-plate inline-flex h-8 w-8 items-center justify-center" aria-hidden="true">
+                <Icon className="h-4 w-4 text-primary/85" />
               </span>
               <p className="text-sm font-medium leading-snug">{title}</p>
             </div>
@@ -133,10 +133,10 @@ export function WhatYouFindHere() {
     <SectionShell title="O que você encontra aqui">
       <div className="invictus-stagger grid gap-6 lg:grid-cols-3">
         {groups.map(({ title, Icon, items }) => (
-          <div key={title} className="rounded-xl border border-border/50 bg-background/25 p-4">
+          <div key={title} className="invictus-landing-card p-4">
             <div className="flex items-center gap-2">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background/35">
-                <Icon className="h-4 w-4 text-primary/80" />
+              <span className="invictus-icon-plate inline-flex h-8 w-8 items-center justify-center" aria-hidden="true">
+                <Icon className="h-4 w-4 text-primary/85" />
               </span>
               <p className="text-sm font-medium">{title}</p>
             </div>

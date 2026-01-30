@@ -104,10 +104,11 @@ export function WaitlistHero() {
 
           <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:items-center">
-              <div className="overflow-hidden rounded-xl border border-border/60 bg-background/25 sm:w-[220px]">
+              {/* reduzido e escondido no mobile para não tomar tela */}
+              <div className="hidden overflow-hidden rounded-xl border border-border/60 bg-background/20 md:block md:w-[200px]">
                 <AspectRatio ratio={16 / 9}>
                   <LoopVideo
-                    src="/videos/invictus-loop-waitlist.mp4"
+                    src="/videos/invictus-loop-waitlist-exec.mp4"
                     ariaLabel="Vídeo abstrato em loop com detalhes dourados"
                   />
                 </AspectRatio>

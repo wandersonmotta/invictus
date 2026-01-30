@@ -83,10 +83,11 @@ export function Manifesto() {
         </div>
 
         <div className="space-y-5">
-          <div className="overflow-hidden rounded-xl border border-border/60 bg-background/30">
-            <AspectRatio ratio={4 / 5}>
+          {/* Vídeo decorativo: reduzido e escondido no mobile para não quebrar layout */}
+          <div className="hidden overflow-hidden rounded-xl border border-border/60 bg-background/20 md:block md:max-w-[320px]">
+            <AspectRatio ratio={16 / 9}>
               <LoopVideo
-                src="/videos/invictus-loop-manifesto.mp4"
+                src="/videos/invictus-loop-manifesto-exec.mp4"
                 ariaLabel="Vídeo abstrato em loop com estética cinematográfica"
               />
             </AspectRatio>

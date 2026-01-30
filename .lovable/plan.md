@@ -1,139 +1,135 @@
 
-Objetivo
-- Criar uma landing page pública em “/” com a identidade INVICTUS (dark, dourado, clean, luxuosa) usando seus textos (manifesto completo + pilares + “o que encontra aqui” + rodapé).
-- Manter a área de membros protegida (login obrigatório) e ajustar a navegação para que, após login, o usuário caia na área logada (ex.: “/app”).
-- Implementar o CTA principal como “Lista de espera” (form de e-mail) salvando no backend com segurança (qualquer pessoa pode enviar, ninguém consegue listar/ler).
+Contexto do que você pediu (e o que eu vi no código atual)
+- Hoje a landing (`src/pages/Landing.tsx`) renderiza `WaitlistHero` logo no topo (acima do Manifesto).
+- O “Manifesto” e outras seções estão montados com vários `Card` (quadrados/caixas) em `src/components/landing/ManifestoSections.tsx`.
+- A landing está usando a classe `invictus-auth-page`, que aponta para a imagem `/images/invictus-auth-bg.jpg` em `src/styles/invictus-auth.css`.
+- O formulário de waitlist hoje captura somente `email` e chama a função de backend `waitlist-signup`, que insere em `waitlist_leads`.
 
-O que existe hoje (rápido diagnóstico)
-- “/” hoje é a Home logada (dentro de RequireAuth + AppLayout).
-- Sidebar aponta “Home” para “/”, então trocar “/” para landing pública exige mover a Home logada para outra rota.
-- “/auth” já está com o visual premium (invictus-auth-page + invictus-auth-frame + FRATERNIDADE).
-- Não existe ainda uma landing pública nem um fluxo de captura de leads (lista de espera).
+Objetivo da próxima iteração
+1) Tirar a lista de espera do topo: a captação vai para o final da página, com um botão “Quero fazer parte” que abre um formulário (modal).
+2) Ajustar o formulário para 3 campos obrigatórios, na ordem:
+   - Nome completo
+   - WhatsApp (número de telefone)
+   - E-mail
+3) Melhorar a organização do texto (menos “quadrados”/cards; mais layout editorial, luxuoso, clean).
+4) Trocar a imagem de fundo apenas da landing (não mexer em /auth e /reset-password):
+   - Nova imagem: “visão do topo de um prédio em preto e branco com detalhes dourados”.
 
-Decisões já confirmadas
-- Landing page em “/” (pública).
-- CTA principal: Lista de espera.
-- Conteúdo: Manifesto completo + Pilares em cards + O que encontra aqui + Rodapé simples.
+Plano de implementação (Frontend)
+A) Estrutura da Landing (mover CTA para baixo)
+- Arquivo: `src/pages/Landing.tsx`
+  - Remover o `WaitlistHero` do topo.
+  - Introduzir uma nova seção no final, antes do rodapé, algo como:
+    - “Lista de espera” + texto curto + botão primário “Quero fazer parte”
+    - Ao clicar, abre um modal (Dialog) com o formulário.
 
-Implementação (Frontend)
-1) Rotas (separar landing pública de área logada)
-- Alterar `src/App.tsx` para:
-  - `"/"` → Landing pública (nova página)
-  - `"/app"` (ou nome equivalente) → Home de membros (atual `src/pages/Home.tsx`) dentro de `<RequireAuth><AppLayout>...</AppLayout></RequireAuth>`
-- Ajustar qualquer rota/redirect que hoje “cai em /” após login:
-  - Em `src/pages/Auth.tsx`, mudar o `from` padrão de `"/"` para `"/app"` para evitar que o usuário logado seja mandado para a landing por padrão.
-  - Opcional (recomendado): se o usuário já estiver logado e acessar “/”, redirecionar automaticamente para “/app” (para não confundir “logado vendo landing”).
+B) Novo componente de CTA no final + modal de formulário
+- Arquivo: `src/components/landing/WaitlistHero.tsx` (provável refactor/renome conceitual)
+  - Transformar o componente atual em algo mais alinhado ao que você quer:
+    - Em vez de “hero com card”, virar “WaitlistSection” (seção no final) + “WaitlistDialog” (modal).
+  - Reaproveitar o padrão de `Dialog` já existente (o projeto já estabiliza a posição para evitar “pular” quando aparecem erros).
+  - Campos e validações (client-side) com zod + react-hook-form:
+    - fullName:
+      - obrigatório, trim
+      - mínimo (ex.: 3) e máximo (ex.: 120)
+      - opcionalmente bloquear números/símbolos excessivos (mantendo flexível para nomes compostos)
+    - phone (WhatsApp):
+      - obrigatório, trim
+      - normalizar para dígitos (remover espaços, “( )”, “-”, etc.)
+      - validar tamanho (ex.: 10 a 13 dígitos), aceitando DDD + número (e opcionalmente +55)
+    - email:
+      - obrigatório, trim, max 255, formato e-mail
+  - UX:
+    - Botão “Quero fazer parte” abre modal.
+    - Submit com loading (“Enviando…”).
+    - Toast de sucesso e fechar modal + reset do form.
+    - Toast genérico de erro sem vazar detalhes.
 
-2) Sidebar / navegação interna da área de membros
-- Alterar `src/components/AppSidebar.tsx`:
-  - Item “Home” (atualmente “/”) passará a ser “/app”.
-  - O resto permanece igual.
-- Isso garante que o menu lateral continue abrindo a “Home de membros”, não a landing.
+C) Reorganizar o Manifesto para ficar “editorial” (sem ficar tudo em Card/quadrados)
+- Arquivo: `src/components/landing/ManifestoSections.tsx`
+  - Trocar a estrutura baseada em `Card` por blocos de texto com:
+    - títulos claros
+    - separadores sutis (ex.: linhas finas / gradientes discretos)
+    - destaques pontuais com `GoldHoverText` (somente em frases-chave)
+    - listas com bullets minimalistas (já existe `BulletList`, vamos manter mas com estética mais “luxo” e menos “UI box”)
+  - Manter a responsividade:
+    - desktop: duas colunas onde fizer sentido
+    - mobile: tudo empilhado com respiro e leitura confortável
+  - Resultado esperado: texto mais “manifesto”, com ritmo, menos “cards de produto”.
 
-3) Nova página de Landing (UI + copy INVICTUS)
-- Criar uma nova página, por exemplo `src/pages/Landing.tsx`, usando:
-  - Fundo cinematográfico já existente (mesma imagem do auth) para manter identidade.
-  - Seções com bastante respiro, tipografia elegante e detalhes em dourado (GoldHoverText, bordas suaves, gradientes discretos).
-- Estrutura sugerida (primeira versão):
-  a) Topbar (pública)
-   - Logo + “FRATERNIDADE” (mesmo padrão do /auth).
-   - Ações à direita:
-     - Secundário: “Entrar” → /auth
-     - (opcional) “Tenho um convite” → /auth (pode abrir o modal do convite já na página de auth se quisermos evoluir depois)
-  b) Hero (acima da dobra)
-   - Headline forte com seus primeiros statements:
-     - “Não é um grupo. Não é um produto. Não é para todos.”
-     - Destaque: “INVICTUS é uma decisão.”
-   - Subheadline curta amarrando a proposta.
-   - CTA principal: formulário da lista de espera (e-mail + botão).
-  c) Seção “O que é a Fraternidade Invictus” (manifesto)
-   - Conteúdo do seu texto, com formatação premium (blocos curtos, destaques em frases-chave).
-  d) Seção “Pilares” (4 cards)
-   - Disciplina acima de talento
-   - Execução acima de discurso
-   - Resultado acima de opinião
-   - Verdade acima de ego
-  e) Seção “O que você encontra aqui” (cards)
-   - Estrutura real de crescimento
-   - Tecnologia como base
-   - Inteligência Artificial própria
-   - Ecossistema de negócios
-   - Oportunidades concretas
-   - Pessoas que jogam no modo sério
-  f) Seções “Quem deve fazer parte” e “Quem não deve”
-   - Duas colunas (desktop) / empilhado (mobile), com bullets fortes.
-  g) Seção “Liderança” + “Regra de permanência” + “Essência Invictus”
-  h) “Aviso final” (home killer)
-   - Em bloco destacado, com contraste e presença.
-  i) Rodapé simples
-   - Nome/identidade + link “Entrar” e um contato simples (podemos deixar placeholder se você ainda não quer expor redes).
+D) Novo fundo exclusivo da landing (sem afetar auth/reset)
+- Arquivos:
+  - `src/styles/invictus-auth.css` (ou outro arquivo de styles já usado) para adicionar uma nova classe, por exemplo:
+    - `.invictus-landing-page { ... url("/images/invictus-landing-bg.jpg") ... }`
+  - `src/pages/Landing.tsx`:
+    - trocar `className="invictus-auth-page ..."` por `className="invictus-landing-page ..."`
+- Gerar a imagem nova e colocar em `public/images/`:
+  - Vamos gerar via o gerador de imagem (modelo “Nano banana”) um fundo P&B com detalhes dourados, com “cara de Invictus”.
+  - Observação técnica importante: imagem como arquivo em `public/images/`, nunca no banco de dados.
 
-4) Consistência de estilo (dark/gold/class)
-- Reutilizar classes existentes quando possível:
-  - `invictus-auth-page` como base do fundo (ou criar uma classe “invictus-landing-page” se precisarmos de ajustes específicos para scroll e legibilidade).
-  - Cards premium podem usar `invictus-auth-surface invictus-auth-frame` (ou variações mais leves para não “pesar”).
-- Garantir:
-  - Excelente contraste e legibilidade no texto longo do manifesto.
-  - Layout responsivo (mobile-first).
-  - CTA sempre visível/óbvio no hero.
+Plano de implementação (Backend / Banco de dados)
+E) Atualizar schema de `waitlist_leads` para aceitar os 3 campos
+- Tabela atual: `public.waitlist_leads` tem apenas `email`, `source`, `ip_hash`, `created_at`.
+- Vamos adicionar:
+  - `full_name text`
+  - `phone text`
+- Como já existem registros antigos (apenas e-mail), para não quebrar nada:
+  - adicionar colunas como NULLABLE primeiro
+  - impor “obrigatoriedade” via:
+    - validação na função de backend (sempre exigir os campos)
+    - e endurecer a policy de INSERT (WITH CHECK) para exigir que `full_name` e `phone` não estejam vazios (e manter email regex).
+  - (Opcional futuro) depois que você tiver certeza de que não precisa dos registros antigos incompletos, dá para migrar e tornar NOT NULL.
 
-Implementação (Backend – Lista de Espera)
-5) Persistência segura dos leads
-- Criar uma tabela (ex.: `waitlist_leads`) com campos:
-  - `id` (uuid)
-  - `email` (text, obrigatório)
-  - `created_at` (timestamp default now)
-  - `source` (text, opcional; ex.: “landing”)
-  - `ip_hash` (text, opcional) para rate limit leve sem armazenar IP puro
-- Regras de acesso (segurança):
-  - Permitir INSERT público (qualquer visitante pode entrar na lista).
-  - Bloquear SELECT/UPDATE/DELETE para visitantes e usuários comuns.
-  - Leitura só para admins (se já existir um padrão de admin no projeto, seguimos o padrão atual).
+F) Atualizar a policy de INSERT (segurança + validação mínima no banco)
+- Hoje a policy “Anyone can join waitlist” valida apenas o formato do e-mail.
+- Vamos atualizar para algo do tipo:
+  - email com regex (como já está)
+  - full_name não vazio e dentro de um limite
+  - phone não vazio e dentro de um limite
+- Observação: a validação “real” (normalização de WhatsApp, etc.) fica no backend function; a policy faz só o mínimo para evitar lixo óbvio.
 
-6) Endpoint de cadastro (para validação + anti-abuso)
-- Criar uma função de backend (ex.: `waitlist-signup`) que:
-  - Recebe e valida o e-mail.
-  - Normaliza (trim/lowercase).
-  - Faz upsert/ignora duplicados (para não gerar spam de múltiplos cadastros iguais).
-  - Aplica rate limit simples (ex.: por IP hash + janela de tempo) para reduzir abuso.
-  - Retorna mensagem genérica de sucesso (sem vazar se o e-mail já existia).
+G) Atualizar a função de backend `waitlist-signup` para receber e salvar os campos
+- Arquivo: `supabase/functions/waitlist-signup/index.ts`
+  - Atualizar o payload para `{ full_name, phone, email, source }`.
+  - Normalizar:
+    - email -> trim + lowercase
+    - full_name -> trim + colapsar espaços múltiplos (ex.: “João   Silva” -> “João Silva”)
+    - phone -> manter apenas dígitos (e opcionalmente padronizar +55 se você quiser; por enquanto guardar dígitos é mais simples e robusto)
+  - Validar server-side:
+    - limites de tamanho
+    - formato do e-mail
+    - faixa de tamanho do telefone
+  - Inserir no `waitlist_leads` com `full_name`, `phone`, `email`, `source`, `ip_hash`
+  - Duplicidade:
+    - continuar tratando email duplicado (unique lower(email)) como sucesso silencioso.
 
-7) Integração na Landing
-- No submit do formulário:
-  - Loading state no botão.
-  - Toast de sucesso “Você entrou na lista de espera” (mensagem neutra).
-  - Limpar input.
-  - Em caso de erro: toast “Não foi possível. Tente novamente”.
+Checklist de QA (end-to-end) que eu vou seguir
+1) Visual: abrir “/” (deslogado) e confirmar que:
+   - fundo novo está aplicado só na landing
+   - /auth e /reset-password continuam com o fundo antigo
+2) Layout: confirmar que o manifesto está mais “limpo” (menos caixas) e com leitura boa no mobile.
+3) Lista de espera:
+   - rolar até o final, clicar “Quero fazer parte”, abrir modal
+   - validar erros (campos vazios, telefone inválido, e-mail inválido)
+   - enviar com dados válidos, receber toast de sucesso, fechar modal e limpar campos
+4) Regressão: login /app continuam intactos.
 
-Checklist de QA (end-to-end)
-- Landing:
-  1) Acessar “/” deslogado: ver landing completa, fundo, seções, CTA funcionando.
-  2) Mobile: checar que texto longo continua legível (sem ficar “miúdo”).
-- Lista de espera:
-  3) Enviar e-mail válido → sucesso.
-  4) Enviar e-mail inválido → mensagem de erro.
-  5) Enviar o mesmo e-mail repetido → comportamento consistente (sem expor duplicidade).
-- Autenticação / área de membros:
-  6) Clicar “Entrar” → /auth.
-  7) Logar com sucesso → redireciona para “/app”.
-  8) Sidebar “Home” abre “/app”.
-  9) Usuário logado acessando “/” → redireciona para “/app” (se ativarmos essa regra).
-
-Arquivos que provavelmente serão criados/alterados
+Arquivos que serão alterados/criados (resumo)
 - Alterar:
-  - `src/App.tsx` (rotas)
-  - `src/components/AppSidebar.tsx` (Home → /app)
-  - `src/pages/Auth.tsx` (redirect padrão pós-login para /app)
-- Criar:
-  - `src/pages/Landing.tsx`
-  - (opcional) `src/components/landing/*` para organizar seções (se o arquivo ficar grande)
-- Backend:
-  - Nova migração SQL para `waitlist_leads` + políticas de acesso
-  - Nova função de backend `waitlist-signup` (para validação/rate limit)
+  - `src/pages/Landing.tsx` (tirar waitlist do topo; usar classe de fundo da landing; inserir seção final)
+  - `src/components/landing/WaitlistHero.tsx` (refactor: virar seção final + modal + 3 campos)
+  - `src/components/landing/ManifestoSections.tsx` (reorganização editorial; reduzir “quadrados”)
+  - `src/styles/invictus-auth.css` (adicionar `.invictus-landing-page` apontando para nova imagem)
+  - `supabase/functions/waitlist-signup/index.ts` (aceitar e persistir full_name + phone)
+- Banco de dados (migração):
+  - alterar `public.waitlist_leads` (adicionar colunas)
+  - atualizar policy “Anyone can join waitlist” com checks mínimos
 
-Observações para próxima etapa (personalização)
-- Assim que essa primeira landing estiver no ar, você pode me mandar:
-  - frases finais que você quer como headline/subheadline,
-  - links oficiais (Instagram/WhatsApp/site),
-  - se a lista de espera deve disparar e-mail automático (confirmação) ou apenas armazenar no backend,
-  - se haverá página “Aplicar/Ser convidado” separada.
+Notas rápidas de estilo (para ficar “select/luxo”)
+- Em vez de “cards” para tudo:
+  - usar colunas, separadores finos, e destaques curtos
+  - reservar “moldura premium” apenas para trechos-chave (ex.: Aviso final e/ou CTA final)
+- Manter “dark + dourado” com parcimônia, para não parecer “template”.
+
+Depois que eu implementar, o próximo passo (se você quiser)
+- Eu posso criar uma “página aplicar” (mais completa, com intenção/objetivo) separada da waitlist, mas por enquanto vamos manter a captação simples e direta como você descreveu.

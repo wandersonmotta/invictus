@@ -20,7 +20,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-import waitlistMedia from "@/assets/invictus-landing-waitlist-media-color.jpg";
+import waitlistMedia from "@/assets/invictus-landing-waitlist-media-color-v3c.jpg";
+import invictusLogo from "@/assets/invictus-logo.png";
 
 const waitlistSchema = z.object({
   fullName: z
@@ -106,11 +107,22 @@ export function WaitlistHero() {
           <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:items-center">
               {/* reduzido e escondido no mobile para não tomar tela */}
-              <EditorialMedia
-                src={waitlistMedia}
-                className="sm:w-[240px] md:w-[260px]"
-                loading="eager"
-              />
+              <div className="relative sm:w-[240px] md:w-[260px]">
+                <EditorialMedia src={waitlistMedia} className="w-full" loading="eager" />
+                {/* Logo como overlay real (evita artefatos de texto na geração) */}
+                <div
+                  className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                  aria-hidden="true"
+                >
+                  <img
+                    src={invictusLogo}
+                    alt=""
+                    className="w-16 opacity-70 mix-blend-overlay"
+                    loading="eager"
+                    decoding="async"
+                  />
+                </div>
+              </div>
 
               <div className="inline-flex items-center gap-3 rounded-lg border border-border/60 bg-background/40 px-4 py-3 backdrop-blur">
                 <span className="text-sm text-muted-foreground">Sem promessa fácil.</span>

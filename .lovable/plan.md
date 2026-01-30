@@ -1,103 +1,72 @@
 
-Contexto do que você quer (comparando seus prints)
-- Hoje: ao clicar na publicação abre um modal com a mídia à esquerda e, à direita, botões “Curtir / Comentários” + legenda + botão “Ir para o Feed”. Para ver comentários você ainda precisa abrir o Drawer.
-- Objetivo (estilo Instagram): ao abrir a publicação, os comentários já aparecem “do lado” (painel direito), com rolagem própria e UM ÚNICO formulário fixo embaixo para comentar, sem abrir drawer/modal extra. E remover “Ir para o Feed” (já existe o X para fechar).
+Objetivo
+- Corrigir o modal da publicação que ficou “tomando a tela toda” e/ou desalinhado.
+- Deixar o modal com “cara de modal do Instagram”: centralizado, com folga nas bordas, tamanho máximo controlado e sem distorcer o layout mídia + comentários.
+- Fazer isso nos dois lugares onde o modal existe:
+  - `/membro/:username` (arquivo `src/pages/Membro.tsx`)
+  - Preview do perfil (`src/components/profile/MyProfilePreview.tsx`)
 
-Diagnóstico do que está no código agora
-- O modal “Publicação” que aparece no perfil está em:
-  - `src/pages/Membro.tsx` (rota atual do print: `/membro/:username`)
-  - `src/components/profile/MyProfilePreview.tsx` (preview do próprio perfil)
-- Ambos renderizam:
-  - Esquerda: `<ReelsMedia />`
-  - Direita: botões + legenda (e no Membro tem “Ir para o Feed”)
-  - Comentários: via `<CommentsDrawer postId count />` (abrindo Drawer)
-- O “Ir para o Feed” está explicitamente em `src/pages/Membro.tsx` (linhas ~303–305).
+Diagnóstico (com base no print + código atual)
+- O `DialogContent` (Radix) está dentro de um wrapper fixo: `fixed inset-0 flex items-start justify-center ...` e o próprio conteúdo tem `mt-[10vh] sm:mt-24`.
+- Nós forçamos o modal a ter `h-[85vh]` e `w-[min(1100px,...)]`.
+  - Em telas menores/médias isso pode ficar grande demais (parece “tela cheia”).
+  - A altura fixa grande também dá sensação de “ocupando tudo”, mesmo com overlay.
+- Como o wrapper do Dialog usa `items-start`, por padrão ele não fica centralizado verticalmente (fica “mais para cima”), e dependendo do print o usuário interpreta como “não centralizado”.
 
-O que vamos construir (para ficar igual ao modelo do Instagram)
-1) Criar um painel fixo de comentários (sem Drawer)
-- Criar um novo componente reutilizável (ex.: `src/components/feed/PostCommentsPanel.tsx`) que:
-  - Recebe `post` (para mostrar autor/legenda/contagens) e `postId`
-  - Busca comentários via RPC `list_feed_post_comments` SEM depender de “open”
-  - Renderiza em layout de coluna:
-    - Header do painel (autor + menu opcional)
-    - “Bloco da legenda” (username + caption) no topo da lista (igual Instagram)
-    - Lista de comentários rolável (`ScrollArea` com `min-h-0 flex-1`)
-    - Footer fixo com o composer (reutilizando `FeedCommentComposer`, que você já aprovou)
-  - Mantém ações de comentário que já existem hoje:
-    - Curtir comentário (coração) via `toggle_feed_comment_like`
-    - Editar/Apagar via menu (⋯) como você pediu
-    - Add comentário via `add_feed_post_comment`
-- Importante: não vamos criar novas tabelas nem mexer no backend. É 100% UI reaproveitando as mesmas RPCs.
+O que vou ajustar (mudanças pontuais e seguras)
+1) Reduzir a largura máxima do modal (desktop)
+- Trocar `1100px` por um valor mais próximo do Instagram no desktop (ex.: 935px).
+- Manter responsivo: continuar usando `min(..., calc(100vw - ...))` para não estourar em telas menores.
 
-2) Ajustar o modal da publicação para layout “mídia + painel”
-- Atualizar `src/pages/Membro.tsx` e `src/components/profile/MyProfilePreview.tsx` para:
-  - Remover o botão “Comentários (N)” que abre Drawer
-  - Renderizar o novo `<PostCommentsPanel />` no lado direito do modal
-  - Manter “Curtir” do post, mas colocar no padrão do painel (no header do painel ou numa barra abaixo do header)
-- Layout sugerido (desktop):
-  - `DialogContent`: mais largo (ex.: `sm:max-w-5xl` ou `max-w-6xl`) e altura controlada
-  - Grid: esquerda flexível, direita com largura fixa tipo Instagram (ex.: `md:grid-cols-[minmax(0,1fr)_420px]`)
-  - Altura: `max-h-[85vh]` e `overflow-hidden` para permitir rolagem só no painel de comentários
-- Layout (mobile):
-  - Em telas pequenas, empilhar:
-    - Mídia em cima
-    - Painel de comentários embaixo
-  - Composer sempre visível no final do painel
+2) Ajustar altura para não parecer “tela cheia”, mantendo o scroll interno funcionando
+- Em vez de “empurrar” o modal para quase a tela toda, vou:
+  - reduzir a altura fixa (ex.: `h-[min(80vh,720px)]`) ou
+  - usar `max-h` + um `h` mais conservador para garantir que:
+    - o painel de comentários continue com scroll interno
+    - o composer continue visível
+    - o modal não pareça ocupar “100%” da tela
 
-3) Remover “Ir para o Feed”
-- Remover o botão “Ir para o Feed” de `src/pages/Membro.tsx` (não faz sentido com o X do modal, como no seu print).
+3) Centralizar melhor (sem “mudança errada” no layout)
+- Como o `DialogContent` fica dentro de um container flex com `items-start`, vou aplicar no `DialogContent`:
+  - `self-center` para centralizar no eixo vertical dentro desse wrapper
+  - `mt-0` para neutralizar a margem superior padrão do Dialog quando for esse modal específico
+- Isso mantém o padrão global de “estabilidade” do projeto, mas permite que esse modal específico fique centralizado como você quer.
 
-4) Manter consistência visual “Invictus Glass”
-- Aplicar `invictus-surface invictus-frame border-border/70` no painel direito
-- Separadores como no Instagram: borda suave (`border-border/60`) entre header / lista / composer
-- Garantir que o ScrollArea não “estoura” o modal:
-  - `min-h-0` no container e `flex-1` no miolo do painel
+4) Garantir que o layout interno (mídia + comentários) não quebre
+- Manter:
+  - `overflow-hidden p-0` no `DialogContent`
+  - `min-h-0` e `h-full` no container interno
+- Conferir se o grid `md:grid-cols-[minmax(0,1fr)_420px]` continua correto após ajuste de tamanho.
 
-5) Atualizar contadores (evitar “bug visual” depois de comentar)
-Hoje você já viu situações em que o comentário existe mas o contador/visual não atualiza “na hora”.
-Para o painel lateral, vamos garantir:
-- Ao comentar:
-  - invalidar `["feed_comments", postId]`
-  - invalidar `["feed_posts"]` (para feed)
-  - invalidar também listas de perfil:
-    - `invalidateQueries({ queryKey: ["profile_feed"], exact: false })`
-    - `invalidateQueries({ queryKey: ["my-profile-feed"], exact: false })`
-- Opcional (recomendado): o painel pode atualizar o contador na UI imediatamente via callback:
-  - `onCommentCountChange(delta)` para o componente pai atualizar `selectedPost.comment_count` sem esperar refetch
+Arquivos que vou alterar
+- `src/pages/Membro.tsx`
+  - Ajustar somente a string de classes do `DialogContent`.
+- `src/components/profile/MyProfilePreview.tsx`
+  - Mesma correção do `DialogContent` para manter consistência.
 
-Arquivos que serão criados/alterados
-- Criar:
-  - `src/components/feed/PostCommentsPanel.tsx` (novo painel estilo Instagram)
-- Alterar:
-  - `src/pages/Membro.tsx` (trocar Drawer por painel e remover “Ir para o Feed”)
-  - `src/components/profile/MyProfilePreview.tsx` (trocar Drawer por painel)
-  - (Possível) pequenos ajustes de classe em `DialogContent` (largura/altura) nos dois arquivos
-- Reutilizar sem mexer:
-  - `src/components/feed/FeedCommentRow.tsx` (já está com menu ⋯ e coração)
-  - `src/components/feed/FeedCommentComposer.tsx` (já está no padrão do Instagram)
-  - RPCs existentes (sem mudanças no backend)
+Exemplo de ajuste (o que muda, conceitualmente)
+- Antes (atual):
+  - `h-[85vh] w-[min(1100px,calc(100vw-1.5rem))] max-w-none ...`
+- Depois (proposto):
+  - `h-[min(80vh,720px)] w-[min(935px,calc(100vw-1.5rem))] max-w-none self-center mt-0 ...`
+- Observação: posso ajustar finamente os números (935/720/80vh) após ver o resultado no preview.
 
-Checklist de testes (end-to-end) que eu vou executar após implementar
-1) Perfil (/membro/:username)
-   - Abrir uma publicação: confirmar que comentários aparecem do lado sem clicar em “Comentários”
-   - Rolar a lista de comentários (ScrollArea)
-   - Comentar no formulário fixo: comentário aparece e contador atualiza
-   - Curtir um comentário (coração): atualiza o estado/contador
-   - No seu comentário: abrir menu ⋯ → Editar → Salvar; depois ⋯ → Apagar
-2) Preview do próprio perfil (MyProfilePreview)
-   - Repetir os mesmos testes
-3) Responsividade
-   - Desktop: mídia + painel lado a lado
-   - Mobile: painel abaixo, composer sempre acessível (sem “sumir” atrás do teclado)
-4) Remoção do botão
-   - Confirmar que “Ir para o Feed” não aparece mais no modal
+Como vou validar (com “print” e teste)
+1) Abrir `/membro/wandersonmota`
+2) Clicar em um post e:
+   - conferir se ficou centralizado com folga nas bordas
+   - confirmar que não parece “tela cheia”
+   - confirmar que a coluna de comentários continua com scroll e o composer aparece
+3) Repetir no preview do próprio perfil (aba “Ver como fica” em `/perfil`)
+4) Testar responsividade:
+   - desktop: lado a lado (mídia esquerda / comentários direita)
+   - mobile: empilhado (mídia em cima / comentários embaixo), sem cortar o composer
 
-Riscos/atenções (para evitar ficar “bugado”)
-- Altura/overflow: se o `DialogContent` não tiver `max-h` + `overflow-hidden`, a rolagem pode “quebrar” e empurrar o modal (vou travar isso).
-- Cache/contadores: se só invalidar `feed_posts`, o perfil pode não atualizar; por isso vou invalidar também as queries de perfil e (opcionalmente) atualizar o contador local.
+Possíveis ajustes finos (se necessário após ver no preview)
+- Se ainda ficar grande: reduzir para `w-[min(900px,...)]` e/ou `h-[min(75vh,680px)]`
+- Se ficar pequeno demais: subir para `w-[min(980px,...)]`
+- Se centralizar verticalmente atrapalhar o padrão visual do app: manter `items-start`, mas reduzir apenas tamanho e espaçamentos (sem `self-center`)
 
-Resultado final esperado (como no Instagram)
-- Clique na publicação → abre modal
-- Mídia grande à esquerda
-- À direita: header + legenda + comentários roláveis + campo “Adicione um comentário…” com botão “Postar” fixo embaixo
-- Sem botão “Ir para o Feed” (fecha no X)
+Resultado esperado
+- Modal realmente “parece modal”: centralizado, com respiro ao redor, não ocupa a tela toda.
+- Layout Instagram-style preservado: mídia + painel de comentários + campo de comentar sempre disponível, sem drawer extra.

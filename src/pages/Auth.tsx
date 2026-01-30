@@ -53,7 +53,7 @@ export default function AuthPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = (location.state as any)?.from ?? "/";
+  const from = (location.state as any)?.from ?? "/app";
 
   React.useEffect(() => {
     if (session) navigate(from, { replace: true });

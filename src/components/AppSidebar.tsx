@@ -20,7 +20,7 @@ const navSections = [
   {
     label: "Início",
     items: [
-      { title: "Home", url: "/", icon: HomeIcon },
+      { title: "Home", url: "/app", icon: HomeIcon },
       { title: "Feed", url: "/feed", icon: Newspaper },
       { title: "Mapa", url: "/mapa", icon: MapPin },
       { title: "Buscar", url: "/buscar", icon: Search },

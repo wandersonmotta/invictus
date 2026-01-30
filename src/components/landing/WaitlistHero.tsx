@@ -10,8 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { GoldHoverText } from "@/components/GoldHoverText";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { LoopVideo } from "@/components/landing/LoopVideo";
+import { EditorialMedia } from "@/components/landing/EditorialMedia";
 import {
   Dialog,
   DialogContent,
@@ -105,14 +104,11 @@ export function WaitlistHero() {
           <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:items-center">
               {/* reduzido e escondido no mobile para não tomar tela */}
-              <div className="overflow-hidden rounded-xl border border-border/60 bg-background/20 sm:w-[240px] md:w-[260px]">
-                <AspectRatio ratio={16 / 9}>
-                  <LoopVideo
-                    src="/videos/invictus-loop-waitlist-exec.mp4"
-                    ariaLabel="Vídeo abstrato em loop com detalhes dourados"
-                  />
-                </AspectRatio>
-              </div>
+              <EditorialMedia
+                src="/images/invictus-landing-waitlist-media-v1.jpg"
+                className="sm:w-[240px] md:w-[260px]"
+                loading="lazy"
+              />
 
               <div className="inline-flex items-center gap-3 rounded-lg border border-border/60 bg-background/40 px-4 py-3 backdrop-blur">
                 <span className="text-sm text-muted-foreground">Sem promessa fácil.</span>

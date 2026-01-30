@@ -14,10 +14,10 @@ export function LandingBackground() {
       <picture>
         <source
           media="(min-width: 768px)"
-          srcSet="/images/invictus-landing-bg-1920x1080.jpg"
+          srcSet="/images/invictus-landing-bg-1920x1080-v2.jpg"
         />
         <img
-          src="/images/invictus-landing-bg-1536x1920.jpg"
+          src="/images/invictus-landing-bg-1536x1920-v2.jpg"
           alt=""
           className="h-full w-full object-cover"
           loading="eager"

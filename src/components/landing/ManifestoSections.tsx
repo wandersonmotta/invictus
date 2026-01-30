@@ -1,7 +1,6 @@
 import { GoldHoverText } from "@/components/GoldHoverText";
 import { Card } from "@/components/ui/card";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { LoopVideo } from "@/components/landing/LoopVideo";
+import { EditorialMedia } from "@/components/landing/EditorialMedia";
 import { SectionShell } from "@/components/landing/SectionShell";
 import { BulletList } from "@/components/landing/BulletList";
 import { Eye, Shield, Target, Zap, Layers, Cpu, Briefcase } from "lucide-react";
@@ -57,11 +56,11 @@ export function Manifesto() {
 
         <div className="invictus-stagger space-y-5">
           {/* Vídeo decorativo: menor no mobile, maior no desktop */}
-          <div className="overflow-hidden rounded-xl border border-border/60 bg-background/20 sm:max-w-[420px]">
-            <AspectRatio ratio={16 / 9}>
-              <LoopVideo src="/videos/invictus-loop-manifesto-exec.mp4" ariaLabel="Vídeo corporativo em loop" />
-            </AspectRatio>
-          </div>
+          <EditorialMedia
+            src="/images/invictus-landing-manifesto-media-v1.jpg"
+            className="sm:max-w-[420px]"
+            loading="eager"
+          />
           <h3 className="invictus-subtitle">Nossa visão</h3>
           <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
             Criar uma elite capaz de dominar o próprio destino financeiro, operar negócios reais com clareza e estratégia,

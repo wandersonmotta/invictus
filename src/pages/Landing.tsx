@@ -13,6 +13,7 @@ import {
 } from "@/components/landing/ManifestoSections";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { useAuth } from "@/auth/AuthProvider";
+import { LandingBackground } from "@/components/landing/LandingBackground";
 
 export default function Landing() {
   const { session } = useAuth();
@@ -31,6 +32,7 @@ export default function Landing() {
 
   return (
     <main className="invictus-landing-page min-h-svh">
+      <LandingBackground />
       <LandingTopbar />
       <Manifesto />
       <Pillars />

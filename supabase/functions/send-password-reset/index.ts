@@ -32,6 +32,16 @@ function isValidEmail(email: string) {
   return email.length <= 255 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function isValidFrom(from: string) {
+  const v = from.trim();
+  // Either a plain email or the classic RFC-ish display format: Name <email@domain>
+  if (isValidEmail(v)) return true;
+  const m = v.match(/^(.+?)\s*<([^>]+)>$/);
+  if (!m) return false;
+  const addr = (m[2] ?? "").trim();
+  return isValidEmail(addr);
+}
+
 function safeUrl(url: string) {
   try {
     const u = new URL(url);
@@ -187,10 +197,17 @@ Deno.serve(async (req) => {
   </body>
 </html>`;
 
+    const fromRaw = (RESEND_FROM_EMAIL ?? "").trim();
+    if (!fromRaw || !isValidFrom(fromRaw)) {
+      console.error("send-password-reset: invalid_from_config", {
+        fromPreview: fromRaw.slice(0, 80),
+      });
+      // Provider misconfigured/unavailable (UI can show temporary outage).
+      return ok(false);
+    }
+
     // Allow either a plain email (noreply@domain.com) or already-formatted value (Brand <noreply@domain.com>)
-    const from = RESEND_FROM_EMAIL.includes("<")
-      ? RESEND_FROM_EMAIL
-      : `${brand} <${RESEND_FROM_EMAIL}>`;
+    const from = fromRaw.includes("<") ? fromRaw : `${brand} <${fromRaw}>`;
     const { error: sendErr } = await resend.emails.send({
       from,
       to: [email],

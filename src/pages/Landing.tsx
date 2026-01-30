@@ -23,15 +23,15 @@ export default function Landing() {
   }, [session, navigate]);
 
   return (
-    <main className="invictus-auth-page min-h-svh">
+    <main className="invictus-landing-page min-h-svh">
       <LandingTopbar />
-      <WaitlistHero />
       <Manifesto />
       <Pillars />
       <WhatYouFindHere />
       <WhoIsFor />
       <LeadershipAndRule />
       <FinalWarning />
+      <WaitlistHero />
       <LandingFooter />
     </main>
   );

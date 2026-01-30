@@ -13,6 +13,8 @@ const corsHeaders = {
 
 type WaitlistPayload = {
   email?: unknown;
+  full_name?: unknown;
+  phone?: unknown;
   source?: unknown;
 };
 
@@ -47,11 +49,32 @@ Deno.serve(async (req) => {
 
     const emailRaw = typeof body.email === "string" ? body.email : "";
     const email = emailRaw.trim().toLowerCase();
+
+    const fullNameRaw = typeof body.full_name === "string" ? body.full_name : "";
+    const fullName = fullNameRaw.replace(/\s+/g, " ").trim();
+
+    const phoneRaw = typeof body.phone === "string" ? body.phone : "";
+    const phoneDigits = phoneRaw.replace(/\D+/g, "");
+
     const sourceRaw = typeof body.source === "string" ? body.source : "";
     const source = sourceRaw.trim().slice(0, 80) || null;
 
     if (!email || email.length > 255 || !isEmailLike(email)) {
       return new Response(JSON.stringify({ error: "invalid_email" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!fullName || fullName.length < 3 || fullName.length > 120) {
+      return new Response(JSON.stringify({ error: "invalid_full_name" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!phoneDigits || phoneDigits.length < 10 || phoneDigits.length > 13) {
+      return new Response(JSON.stringify({ error: "invalid_phone" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -75,6 +98,8 @@ Deno.serve(async (req) => {
 
     const { error } = await supabase.from("waitlist_leads").insert({
       email,
+      full_name: fullName,
+      phone: phoneDigits,
       source,
       ip_hash: ipHash,
     });

@@ -35,7 +35,6 @@ export default function Mensagens() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="invictus-h1">Mensagens</h1>
-            <p className="invictus-lead">Direct Invictus — Inbox + Solicitações.</p>
           </div>
 
           <NewMessageDialog

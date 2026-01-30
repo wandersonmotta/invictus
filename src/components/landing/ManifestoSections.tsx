@@ -40,8 +40,8 @@ const bullets = {
 export function Manifesto() {
   return (
     <SectionShell title="O que é a Fraternidade Invictus" id="manifesto">
-      <div className="grid gap-8 lg:grid-cols-2">
-        <div className="space-y-5">
+      <div className="invictus-stagger grid gap-8 lg:grid-cols-2">
+        <div className="invictus-stagger space-y-5">
           <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
             A Fraternidade Invictus nasce para formar homens e mulheres indestrutíveis — mentalidade de liderança,
             disciplina inegociável e obsessão por resultado.
@@ -55,7 +55,7 @@ export function Manifesto() {
           </p>
         </div>
 
-        <div className="space-y-5">
+        <div className="invictus-stagger space-y-5">
           {/* Vídeo decorativo: menor no mobile, maior no desktop */}
           <div className="overflow-hidden rounded-xl border border-border/60 bg-background/20 sm:max-w-[420px]">
             <AspectRatio ratio={16 / 9}>

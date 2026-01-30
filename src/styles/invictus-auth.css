@@ -19,6 +19,7 @@
 /* Landing-only background (keeps auth/reset untouched) */
 .invictus-landing-page {
   position: relative;
+  isolation: isolate;
   background-image:
     /* extra center contrast for readability */
     radial-gradient(900px 700px at 50% 30%, hsl(var(--background) / 0.82), transparent 60%),
@@ -56,7 +57,7 @@
 /* Overlay animado (grain + vinheta) – dá vida sem mexer a foto */
 .invictus-landing-page::after {
   content: "";
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;
@@ -84,19 +85,28 @@
     );
 
   mix-blend-mode: overlay;
-  opacity: 0.35;
+  opacity: 0.46;
   transform: translateZ(0);
-  animation: invictus-grain-drift 14s ease-in-out infinite alternate;
+  background-size: auto, auto, auto, 220px 220px, 260px 260px;
+  background-position: center, center, center, 0px 0px, 0px 0px;
+  animation: invictus-grain-drift 12s ease-in-out infinite;
 }
 
 @keyframes invictus-grain-drift {
   0% {
-    opacity: 0.28;
+    opacity: 0.36;
     filter: blur(0px);
+    background-position: center, center, center, 0px 0px, 0px 0px;
+  }
+  50% {
+    opacity: 0.50;
+    filter: blur(0.45px);
+    background-position: center, center, center, 40px 24px, -28px 18px;
   }
   100% {
     opacity: 0.40;
-    filter: blur(0.6px);
+    filter: blur(0.65px);
+    background-position: center, center, center, 80px 56px, -56px 42px;
   }
 }
 
@@ -119,7 +129,7 @@
 /* Stagger interno: “quadrados” e itens aparecem em sequência */
 .invictus-stagger > * {
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(14px);
 }
 
 .invictus-revealed .invictus-stagger > * {
@@ -129,7 +139,7 @@
 @keyframes invictus-stagger-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(14px);
   }
   to {
     opacity: 1;

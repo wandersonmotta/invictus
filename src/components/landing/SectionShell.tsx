@@ -1,0 +1,32 @@
+import * as React from "react";
+
+import { useRevealOnScroll } from "@/hooks/useRevealOnScroll";
+
+type SectionShellProps = {
+  id?: string;
+  title: string;
+  children: React.ReactNode;
+};
+
+export function SectionShell({ id, title, children }: SectionShellProps) {
+  const reveal = useRevealOnScroll<HTMLElement>({ rootMargin: "0px 0px -12% 0px", threshold: 0.12, once: true });
+
+  return (
+    <section
+      id={id}
+      ref={reveal.ref}
+      className={
+        "px-4 py-10 sm:px-6 sm:py-14 " +
+        reveal.className +
+        (reveal.visible ? " invictus-revealed" : "")
+      }
+    >
+      <div className="mx-auto w-full max-w-6xl">
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <h2 className="text-balance text-2xl font-semibold sm:text-3xl">{title}</h2>
+        </div>
+        <div className="invictus-landing-panel">{children}</div>
+      </div>
+    </section>
+  );
+}

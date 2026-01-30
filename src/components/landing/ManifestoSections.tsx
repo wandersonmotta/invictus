@@ -2,7 +2,8 @@ import { GoldHoverText } from "@/components/GoldHoverText";
 import { Card } from "@/components/ui/card";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { LoopVideo } from "@/components/landing/LoopVideo";
-import { useRevealOnScroll } from "@/hooks/useRevealOnScroll";
+import { SectionShell } from "@/components/landing/SectionShell";
+import { BulletList } from "@/components/landing/BulletList";
 import { Eye, Shield, Target, Zap, Layers, Cpu, Briefcase } from "lucide-react";
 
 const bullets = {
@@ -36,34 +37,6 @@ const bullets = {
   ],
 } as const;
 
-function SectionShell(props: { title: string; children: React.ReactNode; id?: string }) {
-  const reveal = useRevealOnScroll<HTMLElement>({ rootMargin: "0px 0px -12% 0px", threshold: 0.12, once: true });
-
-  return (
-    <section id={props.id} ref={reveal.ref} className={"px-4 py-10 sm:px-6 sm:py-14 " + reveal.className}>
-      <div className="mx-auto w-full max-w-6xl">
-        <div className="mb-6 flex items-end justify-between gap-4">
-          <h2 className="text-balance text-2xl font-semibold sm:text-3xl">{props.title}</h2>
-        </div>
-        <div className="invictus-landing-panel">{props.children}</div>
-      </div>
-    </section>
-  );
-}
-
-function BulletList({ items }: { items: readonly string[] }) {
-  return (
-    <ul className="space-y-2 text-sm text-muted-foreground">
-      {items.map((t) => (
-        <li key={t} className="flex gap-3">
-          <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" aria-hidden="true" />
-          <span>{t}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 export function Manifesto() {
   return (
     <SectionShell title="O que é a Fraternidade Invictus" id="manifesto">
@@ -89,7 +62,7 @@ export function Manifesto() {
               <LoopVideo src="/videos/invictus-loop-manifesto-exec.mp4" ariaLabel="Vídeo corporativo em loop" />
             </AspectRatio>
           </div>
-          <h3 className="text-xs font-medium tracking-wide text-muted-foreground">Nossa visão</h3>
+          <h3 className="invictus-subtitle">Nossa visão</h3>
           <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
             Criar uma elite capaz de dominar o próprio destino financeiro, operar negócios reais com clareza e estratégia,
             construir patrimônio, legado e liberdade — e viver acima da média, sem depender de ninguém.
@@ -131,7 +104,7 @@ export function Pillars() {
 
   return (
     <SectionShell title="Nossa mentalidade (pilares)">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="invictus-stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {pillars.map(({ title, Icon, desc }) => (
           <div key={title} className="rounded-xl border border-border/50 bg-background/25 p-4">
             <div className="flex items-center gap-2">
@@ -157,7 +130,7 @@ export function WhatYouFindHere() {
 
   return (
     <SectionShell title="O que você encontra aqui">
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="invictus-stagger grid gap-6 lg:grid-cols-3">
         {groups.map(({ title, Icon, items }) => (
           <div key={title} className="rounded-xl border border-border/50 bg-background/25 p-4">
             <div className="flex items-center gap-2">
@@ -166,7 +139,7 @@ export function WhatYouFindHere() {
               </span>
               <p className="text-sm font-medium">{title}</p>
             </div>
-            <div className="mt-4 space-y-3">
+            <div className="invictus-stagger mt-4 space-y-3">
               {items.map((t) => (
                 <div key={t} className="flex gap-3 border-b border-border/60 pb-3 last:border-b-0 last:pb-0">
                   <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" aria-hidden="true" />
@@ -184,15 +157,15 @@ export function WhatYouFindHere() {
 export function WhoIsFor() {
   return (
     <SectionShell title="Quem deve (e quem não deve) fazer parte">
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="invictus-stagger grid gap-8 lg:grid-cols-2">
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold tracking-wide">Você pertence se</h3>
+          <h3 className="invictus-subtitle">Você pertence se</h3>
           <BulletList items={bullets.should} />
           <p className="text-sm text-muted-foreground">Não importa de onde você veio. Importa para onde está disposto a ir.</p>
         </div>
 
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold tracking-wide">Não é para quem</h3>
+          <h3 className="invictus-subtitle">Não é para quem</h3>
           <BulletList items={bullets.shouldNot} />
           <p className="text-sm text-muted-foreground">Aqui ninguém é carregado. Cada um sustenta o próprio lugar.</p>
         </div>
@@ -204,9 +177,9 @@ export function WhoIsFor() {
 export function LeadershipAndRule() {
   return (
     <SectionShell title="Liderança e regra de permanência">
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="invictus-stagger grid gap-8 lg:grid-cols-2">
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold tracking-wide">Liderança</h3>
+          <h3 className="invictus-subtitle">Liderança</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
             A liderança da INVICTUS não promete. Mostra.
             <br />
@@ -218,7 +191,7 @@ export function LeadershipAndRule() {
         </div>
 
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold tracking-wide">Regra de permanência</h3>
+          <h3 className="invictus-subtitle">Regra de permanência</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
             Só permanece quem prospera. Não por exclusão, mas porque o ritmo elimina quem não acompanha.
           </p>
@@ -233,7 +206,7 @@ export function FinalWarning() {
   return (
     <section className="px-4 pb-12 sm:px-6 sm:pb-16">
       <div className="mx-auto w-full max-w-6xl">
-        <Card className="invictus-auth-surface invictus-auth-frame border-0 p-6 sm:p-8">
+        <Card className="invictus-auth-surface invictus-auth-frame invictus-stagger border-0 p-6 sm:p-8">
           <h2 className="text-xl font-semibold">Aviso final</h2>
           <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>Se você chegou até aqui e sentiu desconforto, provavelmente não é para você.</p>

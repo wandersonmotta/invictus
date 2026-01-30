@@ -256,7 +256,7 @@ Deno.serve(async (req) => {
     }
 
     const brand = "INVICTUS FRATERNIDADE";
-    const logoUrl = `${SUPABASE_URL}/storage/v1/object/public/email-assets/invictus-logo.png?v=1`;
+    const logoUrl = `${SUPABASE_URL}/storage/v1/object/public/email-assets/invictus-email-logo.jpg?v=2`;
     const { subject, text, html } = buildPasswordResetEmail({
       brand,
       email,

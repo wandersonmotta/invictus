@@ -20,6 +20,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+import waitlistMedia from "@/assets/invictus-landing-waitlist-media-color.jpg";
+
 const waitlistSchema = z.object({
   fullName: z
     .string()
@@ -105,7 +107,7 @@ export function WaitlistHero() {
             <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:items-center">
               {/* reduzido e escondido no mobile para não tomar tela */}
               <EditorialMedia
-                src="/images/invictus-landing-waitlist-media-color-v1.jpg"
+                src={waitlistMedia}
                 className="sm:w-[240px] md:w-[260px]"
                 loading="eager"
               />

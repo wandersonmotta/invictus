@@ -1,5 +1,7 @@
 import * as React from "react";
 import { Heart } from "lucide-react";
+import { formatDistanceToNowStrict } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 import type { FeedComment } from "@/features/feed/types";
 
@@ -39,6 +41,17 @@ export function FeedCommentRow({
   deleteDisabled,
   saveDisabled,
 }: Props) {
+  const username = comment.author_username?.replace(/^@/, "") || comment.author_display_name;
+  const likeLabel = comment.like_count === 1 ? "curtida" : "curtidas";
+  const likeCountText = new Intl.NumberFormat("pt-BR").format(comment.like_count);
+  const timeAgo = React.useMemo(() => {
+    try {
+      return formatDistanceToNowStrict(new Date(comment.created_at), { addSuffix: false, locale: ptBR });
+    } catch {
+      return "";
+    }
+  }, [comment.created_at]);
+
   return (
     <div className="flex gap-3">
       {comment.author_avatar_url ? (
@@ -52,11 +65,7 @@ export function FeedCommentRow({
         <div className="h-8 w-8 rounded-full border border-border/70 invictus-surface" />
       )}
 
-      <div className="min-w-0 flex-1 space-y-1">
-        <div className="text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">{comment.author_display_name}</span>
-          {comment.author_username ? <span className="ml-2">{comment.author_username}</span> : null}
-        </div>
+      <div className="min-w-0 flex-1">
 
         {isEditing ? (
           <div className="flex gap-2">
@@ -74,53 +83,61 @@ export function FeedCommentRow({
             </Button>
           </div>
         ) : (
-          <>
-            <div className="text-sm text-foreground">{comment.body}</div>
+          <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="text-sm text-foreground leading-snug">
+                <span className="font-semibold">{username}</span>
+                <span className="ml-2 whitespace-pre-wrap break-words">{comment.body}</span>
+              </div>
 
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant={comment.liked_by_me ? "secondary" : "ghost"}
-                size="sm"
-                className="h-7 px-2 text-xs"
-                onClick={onToggleLike}
-                disabled={likeDisabled}
-                aria-label={comment.liked_by_me ? "Descurtir comentário" : "Curtir comentário"}
-              >
-                <Heart
-                  className={comment.liked_by_me ? "text-foreground" : "text-muted-foreground"}
-                  size={14}
-                  fill={comment.liked_by_me ? "currentColor" : "none"}
-                />
-                {comment.like_count}
-              </Button>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                {timeAgo ? <span>{timeAgo}</span> : null}
+                <span className="font-medium">{likeCountText} {likeLabel}</span>
+                <span className="font-medium">Responder</span>
 
-              {isMe && (
-                <>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    onClick={onStartEdit}
-                    disabled={editDisabled}
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-                    onClick={onDelete}
-                    disabled={deleteDisabled}
-                  >
-                    Apagar
-                  </Button>
-                </>
-              )}
+                {isMe && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={onStartEdit}
+                      disabled={editDisabled}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs text-destructive hover:text-destructive"
+                      onClick={onDelete}
+                      disabled={deleteDisabled}
+                    >
+                      Apagar
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
-          </>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="mt-0.5 h-8 w-8 shrink-0"
+              onClick={onToggleLike}
+              disabled={likeDisabled}
+              aria-label={comment.liked_by_me ? "Descurtir comentário" : "Curtir comentário"}
+            >
+              <Heart
+                className={comment.liked_by_me ? "text-foreground" : "text-muted-foreground"}
+                size={18}
+                fill={comment.liked_by_me ? "currentColor" : "none"}
+              />
+            </Button>
+          </div>
         )}
       </div>
     </div>

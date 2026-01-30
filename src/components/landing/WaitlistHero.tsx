@@ -105,7 +105,7 @@ export function WaitlistHero() {
             <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:items-center">
               {/* reduzido e escondido no mobile para não tomar tela */}
               <EditorialMedia
-                src="/images/invictus-landing-waitlist-media-v1.jpg"
+                src="/images/invictus-landing-waitlist-media-color-v1.jpg"
                 className="sm:w-[240px] md:w-[260px]"
                 loading="lazy"
               />

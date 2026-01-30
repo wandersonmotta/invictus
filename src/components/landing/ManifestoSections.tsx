@@ -57,7 +57,7 @@ export function Manifesto() {
         <div className="invictus-stagger space-y-5">
           {/* Vídeo decorativo: menor no mobile, maior no desktop */}
           <EditorialMedia
-            src="/images/invictus-landing-manifesto-media-v1.jpg"
+            src="/images/invictus-landing-manifesto-media-color-v1.jpg"
             className="sm:max-w-[420px]"
             loading="eager"
           />

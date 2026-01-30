@@ -107,7 +107,7 @@ export function WaitlistHero() {
               <EditorialMedia
                 src="/images/invictus-landing-waitlist-media-color-v1.jpg"
                 className="sm:w-[240px] md:w-[260px]"
-                loading="lazy"
+                loading="eager"
               />
 
               <div className="inline-flex items-center gap-3 rounded-lg border border-border/60 bg-background/40 px-4 py-3 backdrop-blur">

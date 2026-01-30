@@ -17,20 +17,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarInset>
           <header
             className={
-              "sticky top-0 z-20 flex h-14 items-center gap-2 px-2 sm:px-3 lg:px-4 backdrop-blur-xl " +
+              "sticky top-0 z-20 flex h-14 items-center gap-2 px-2 sm:px-2 md:px-3 lg:px-4 backdrop-blur-xl " +
               "invictus-surface " +
               // barra clara SUTIL para separar do topo (sem ficar branca/estourada)
               "relative after:content-[''] after:absolute after:left-0 after:right-0 after:bottom-0 after:h-px " +
               "after:bg-gradient-to-r after:from-transparent after:via-[hsl(var(--foreground)_/_0.10)] after:to-transparent"
             }
           >
-            <div className="flex flex-1 items-center gap-2 sm:gap-2 lg:gap-3 min-w-0">
+            <div className="flex flex-1 items-center gap-2 sm:gap-1.5 lg:gap-3 min-w-0">
               <SidebarTrigger className="md:hidden" />
 
               <img
                 src={logo}
                 alt="Logo da Fraternidade Invictus"
-                className="h-4 sm:h-7 lg:h-9 w-auto select-none shrink-0"
+                className="h-4 sm:h-6 md:h-7 lg:h-9 w-auto select-none shrink-0"
                 draggable={false}
                 style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary) / 0.25))" }}
               />
@@ -41,7 +41,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
             </div>
 
-            <div className="ml-auto flex items-center gap-0.5 sm:gap-1">
+            <div className="ml-auto flex items-center gap-0.5 sm:gap-0.5 md:gap-1">
               <NotificationBell />
               <UserMenu />
             </div>

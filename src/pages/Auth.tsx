@@ -160,7 +160,7 @@ export default function AuthPage() {
   };
 
   return (
-    <main className="min-h-svh grid place-items-center p-4 sm:p-6">
+    <main className="invictus-auth-page min-h-svh grid place-items-center p-4 sm:p-6">
       <Card className="invictus-auth-surface invictus-auth-frame w-full max-w-md border-0">
         <CardHeader className="space-y-3">
           <div className="flex items-center gap-3">

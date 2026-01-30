@@ -8,7 +8,7 @@ type AuthContextValue = {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
-  resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  resetPassword: (email: string) => Promise<{ error: Error | null; accepted: boolean }>;
   signOut: () => Promise<void>;
 };
 
@@ -91,10 +91,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = async (email: string) => {
     const redirectTo = `${window.location.origin}/reset-password`;
-    const { error } = await supabase.functions.invoke("send-password-reset", {
+    const { data, error } = await supabase.functions.invoke("send-password-reset", {
       body: { email, redirectTo },
     });
-    return { error: (error as unknown as Error) ?? null };
+
+    // `accepted` indicates provider availability only (never whether the email exists).
+    const accepted = Boolean((data as any)?.accepted ?? true);
+
+    return { error: (error as unknown as Error) ?? null, accepted };
   };
 
   const signOut = async () => {

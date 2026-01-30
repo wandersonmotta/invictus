@@ -22,6 +22,12 @@ function json(status: number, payload: unknown) {
   });
 }
 
+function ok(accepted: boolean) {
+  // IMPORTANT: accepted only reflects provider availability, NOT whether the email exists.
+  // This prevents user enumeration while still allowing the UI to show provider outages.
+  return json(200, { ok: true, provider: "resend", accepted });
+}
+
 function isValidEmail(email: string) {
   return email.length <= 255 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -62,8 +68,8 @@ Deno.serve(async (req) => {
       hasResendKey: Boolean(RESEND_API_KEY),
       hasFromEmail: Boolean(RESEND_FROM_EMAIL),
     });
-    // Still return generic response (avoid leaking details)
-    return json(200, { ok: true });
+    // Provider misconfigured/unavailable (UI can show temporary outage).
+    return ok(false);
   }
 
   let body: Body;
@@ -78,7 +84,8 @@ Deno.serve(async (req) => {
 
   // Always respond generically (avoid user enumeration)
   if (!isValidEmail(email) || !redirectTo) {
-    return json(200, { ok: true });
+    // Treat as accepted so UI doesn't reveal invalid/unknown emails; simply no-op.
+    return ok(true);
   }
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
@@ -99,13 +106,15 @@ Deno.serve(async (req) => {
         code: (error as any)?.code,
         message: String((error as any)?.message ?? ""),
       });
-      return json(200, { ok: true });
+      // IMPORTANT: still return accepted=true to avoid leaking whether email exists.
+      return ok(true);
     }
 
     const actionLink = (data as any)?.properties?.action_link as string | undefined;
     if (!actionLink) {
       console.warn("send-password-reset: missing_action_link");
-      return json(200, { ok: true });
+      // Still accepted=true to avoid leaking anything.
+      return ok(true);
     }
 
     const brand = "INVICTUS FRATERNIDADE";
@@ -191,14 +200,14 @@ Deno.serve(async (req) => {
         name: (sendErr as any)?.name,
         message: String((sendErr as any)?.message ?? ""),
       });
-      // Still generic response
-      return json(200, { ok: true });
+      // Provider error (UI can show temporary outage).
+      return ok(false);
     }
 
     console.log("send-password-reset: sent");
-    return json(200, { ok: true });
+    return ok(true);
   } catch (e) {
     console.error("send-password-reset: exception", e);
-    return json(200, { ok: true });
+    return ok(false);
   }
 });

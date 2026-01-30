@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { GoldHoverText } from "@/components/GoldHoverText";
 import logo from "@/assets/invictus-logo.png";
 
 const schema = z
@@ -57,17 +58,20 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <main className="min-h-svh grid place-items-center p-4 sm:p-6">
-      <Card className="invictus-surface invictus-frame w-full max-w-md border-border/70">
+    <main className="invictus-auth-page min-h-svh grid place-items-center p-4 sm:p-6">
+      <Card className="invictus-auth-surface invictus-auth-frame w-full max-w-md border-0">
         <CardHeader className="space-y-3">
           <div className="flex items-center gap-3">
-            <img
-              src={logo}
-              alt="Logo da Invictus"
-              className="h-10 w-auto select-none"
-              draggable={false}
-              style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary) / 0.25))" }}
-            />
+            <div className="flex flex-col items-center gap-1">
+              <img
+                src={logo}
+                alt="Logo da Invictus"
+                className="h-10 w-auto select-none"
+                draggable={false}
+                style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary) / 0.25))" }}
+              />
+              <GoldHoverText className="text-[10px] font-semibold tracking-[0.35em]">FRATERNIDADE</GoldHoverText>
+            </div>
             <div>
               <CardTitle className="text-lg sm:text-xl">Redefinir senha</CardTitle>
               <CardDescription>Escolha uma nova senha para sua conta.</CardDescription>

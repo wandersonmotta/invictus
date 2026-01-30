@@ -187,7 +187,10 @@ Deno.serve(async (req) => {
   </body>
 </html>`;
 
-    const from = `${brand} <${RESEND_FROM_EMAIL}>`;
+    // Allow either a plain email (noreply@domain.com) or already-formatted value (Brand <noreply@domain.com>)
+    const from = RESEND_FROM_EMAIL.includes("<")
+      ? RESEND_FROM_EMAIL
+      : `${brand} <${RESEND_FROM_EMAIL}>`;
     const { error: sendErr } = await resend.emails.send({
       from,
       to: [email],

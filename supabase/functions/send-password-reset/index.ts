@@ -61,6 +61,134 @@ function escapeHtml(s: string) {
     .replaceAll("'", "&#039;");
 }
 
+function buildPasswordResetEmail(params: {
+  brand: string;
+  email: string;
+  actionLink: string;
+  logoUrl: string;
+}) {
+  const { brand, email, actionLink, logoUrl } = params;
+  const escapedEmail = escapeHtml(email);
+  const escapedAction = escapeHtml(actionLink);
+  const escapedLogo = escapeHtml(logoUrl);
+
+  const subject = "Redefinir sua senha";
+  // Preheader: aparece em alguns clients como “preview”, mas fica oculto no HTML.
+  const preheader = "Link seguro para redefinir sua senha. Se não solicitou, ignore.";
+
+  // Texto simples (ajuda entregabilidade e compatibilidade)
+  const text =
+    `${brand}\n\n` +
+    `Recebemos um pedido para redefinir a senha da conta: ${email}\n\n` +
+    `Use este link para continuar:\n${actionLink}\n\n` +
+    `Se você não solicitou a redefinição, ignore este e-mail.`;
+
+  const html = `
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>${brand} — Redefinição de senha</title>
+  </head>
+  <body style="margin:0;padding:0;background:#07080a;">
+    <!-- Preheader (hidden) -->
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
+      ${escapeHtml(preheader)}
+    </div>
+
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#07080a;padding:34px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#0b0d10;border:1px solid #252a33;border-radius:18px;overflow:hidden;">
+            <!-- Gold top bar -->
+            <tr>
+              <td style="height:6px;background:linear-gradient(90deg,#8a6a2f,#f2d08c,#8a6a2f);"></td>
+            </tr>
+
+            <!-- Header -->
+            <tr>
+              <td style="padding:26px 26px 12px 26px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td style="vertical-align:middle;">
+                      <div style="font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;letter-spacing:0.34em;text-transform:uppercase;color:#d8b56d;font-size:11px;font-weight:800;">
+                        ${brand}
+                      </div>
+                      <h1 style="margin:12px 0 0 0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:22px;line-height:1.25;color:#f3f4f6;">
+                        Redefinir senha
+                      </h1>
+                    </td>
+                    <td align="right" style="vertical-align:middle;">
+                      <img
+                        src="${escapedLogo}"
+                        width="120"
+                        alt="Logo da Invictus"
+                        style="display:block;max-width:120px;height:auto;opacity:0.98;"
+                      />
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Body copy -->
+            <tr>
+              <td style="padding:8px 26px 0 26px;">
+                <p style="margin:0 0 14px 0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.7;color:#c7c9cf;">
+                  Recebemos um pedido para redefinir a senha da conta <strong style="color:#f3f4f6;">${escapedEmail}</strong>.
+                </p>
+                <p style="margin:0 0 18px 0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.7;color:#c7c9cf;">
+                  Para continuar com segurança, use o botão abaixo.
+                </p>
+              </td>
+            </tr>
+
+            <!-- CTA -->
+            <tr>
+              <td align="center" style="padding:6px 26px 10px 26px;">
+                <a href="${escapedAction}" target="_blank" rel="noreferrer"
+                   style="display:inline-block;background:#d8b56d;color:#0b0d10;text-decoration:none;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;font-weight:900;letter-spacing:0.02em;padding:14px 20px;border-radius:14px;border:1px solid #f2d08c;box-shadow:0 10px 26px rgba(0,0,0,0.45);">
+                  Redefinir senha
+                </a>
+              </td>
+            </tr>
+
+            <!-- Fallback link -->
+            <tr>
+              <td style="padding:12px 26px 0 26px;">
+                <p style="margin:0 0 10px 0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:12px;line-height:1.7;color:#9aa0aa;">
+                  Se o botão não funcionar, copie e cole este link no navegador:
+                </p>
+                <p style="margin:0 0 18px 0;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;line-height:1.7;word-break:break-all;color:#d1d5db;">
+                  ${escapedAction}
+                </p>
+              </td>
+            </tr>
+
+            <!-- Security / footer -->
+            <tr>
+              <td style="padding:0 26px 22px 26px;">
+                <div style="border-top:1px solid #1f242c;padding-top:16px;">
+                  <p style="margin:0 0 10px 0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:12px;line-height:1.7;color:#9aa0aa;">
+                    Se você não solicitou a redefinição, pode ignorar este e-mail.
+                  </p>
+                  <p style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:11px;line-height:1.7;color:#6b7280;letter-spacing:0.12em;text-transform:uppercase;">
+                    ${brand}
+                  </p>
+                </div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+
+  return { subject, text, html };
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -128,74 +256,13 @@ Deno.serve(async (req) => {
     }
 
     const brand = "INVICTUS FRATERNIDADE";
-    const subject = "Redefinir sua senha";
-    const escapedEmail = escapeHtml(email);
-    const escapedAction = escapeHtml(actionLink);
-
-    const html = `
-<!doctype html>
-<html lang="pt-BR">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>${brand} — Redefinição de senha</title>
-  </head>
-  <body style="margin:0;padding:0;background:#0b0d10;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0b0d10;padding:28px 12px;">
-      <tr>
-        <td align="center">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#0f1318;border:1px solid #2b2f38;border-radius:16px;overflow:hidden;">
-            <tr>
-              <td style="padding:28px 24px 10px 24px;">
-                <div style="font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;letter-spacing:0.32em;text-transform:uppercase;color:#d8b56d;font-size:11px;font-weight:700;">
-                  ${brand}
-                </div>
-                <h1 style="margin:14px 0 0 0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:22px;line-height:1.25;color:#f3f4f6;">
-                  Redefinir senha
-                </h1>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:10px 24px 0 24px;">
-                <p style="margin:0 0 14px 0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.6;color:#c7c9cf;">
-                  Recebemos um pedido para redefinir a senha da conta <strong style="color:#f3f4f6;">${escapedEmail}</strong>.
-                </p>
-                <p style="margin:0 0 18px 0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.6;color:#c7c9cf;">
-                  Para continuar, clique no botão abaixo:
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td align="center" style="padding:0 24px 6px 24px;">
-                <a href="${escapedAction}" target="_blank" rel="noreferrer"
-                   style="display:inline-block;background:#d8b56d;color:#0b0d10;text-decoration:none;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;font-weight:800;letter-spacing:0.02em;padding:14px 18px;border-radius:12px;border:1px solid #f2d08c;">
-                  Redefinir senha
-                </a>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:10px 24px 0 24px;">
-                <p style="margin:0 0 14px 0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:12px;line-height:1.6;color:#9aa0aa;">
-                  Se o botão não funcionar, copie e cole este link no navegador:
-                </p>
-                <p style="margin:0 0 22px 0;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;line-height:1.6;word-break:break-all;color:#c7c9cf;">
-                  ${escapedAction}
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:0 24px 24px 24px;">
-                <p style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:12px;line-height:1.6;color:#9aa0aa;">
-                  Se você não solicitou a redefinição, pode ignorar este e-mail.
-                </p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
+    const logoUrl = `${SUPABASE_URL}/storage/v1/object/public/email-assets/invictus-logo.png?v=1`;
+    const { subject, text, html } = buildPasswordResetEmail({
+      brand,
+      email,
+      actionLink,
+      logoUrl,
+    });
 
     const fromRaw = (RESEND_FROM_EMAIL ?? "").trim();
     if (!fromRaw || !isValidFrom(fromRaw)) {
@@ -212,6 +279,7 @@ Deno.serve(async (req) => {
       from,
       to: [email],
       subject,
+      text,
       html,
     });
 

@@ -126,8 +126,9 @@
   }
 }
 
-/* Stagger interno: “quadrados” e itens aparecem em sequência */
-.invictus-stagger > * {
+/* Stagger interno: “quadrados” e itens aparecem em sequência
+   IMPORTANTE: só prepara/oculta dentro de seções com reveal (evita sumir texto fora do scope). */
+.invictus-reveal-scope .invictus-stagger > * {
   opacity: 0;
   transform: translateY(14px);
 }
@@ -191,7 +192,7 @@
     opacity: 0.32;
   }
 
-  .invictus-stagger > * {
+  .invictus-reveal-scope .invictus-stagger > * {
     opacity: 1;
     transform: none;
   }

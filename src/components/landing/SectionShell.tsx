@@ -16,7 +16,7 @@ export function SectionShell({ id, title, children }: SectionShellProps) {
       id={id}
       ref={reveal.ref}
       className={
-        "px-4 py-10 sm:px-6 sm:py-14 " +
+        "invictus-reveal-scope px-4 py-10 sm:px-6 sm:py-14 " +
         reveal.className +
         (reveal.visible ? " invictus-revealed" : "")
       }

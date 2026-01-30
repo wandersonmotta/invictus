@@ -30,7 +30,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <img
                 src={logo}
                 alt="Logo da Fraternidade Invictus"
-                className="h-4 sm:h-6 md:h-7 lg:h-9 w-auto select-none shrink-0"
+                className="h-4 sm:h-5 md:h-6 lg:h-9 w-auto select-none shrink-0"
                 draggable={false}
                 style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary) / 0.25))" }}
               />
@@ -41,7 +41,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
             </div>
 
-            <div className="ml-auto flex items-center gap-0.5 sm:gap-0.5 md:gap-1">
+            <div className="ml-auto flex items-center gap-0.5 sm:gap-0.5 md:gap-1 pl-1 sm:pl-2">
               <NotificationBell />
               <UserMenu />
             </div>

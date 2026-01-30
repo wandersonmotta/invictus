@@ -1,93 +1,98 @@
 
-## O que eu identifiquei no “tablet / outro modelo móvel”
-Pelo print em 768x1024 (tablet), o topo fica “apertado” porque:
-- A partir de **sm (>= 640px)**, o logo volta para `sm:h-9`, ficando grande e largo (a arte “INVICTUS” ocupa muita largura).
-- Nesse tamanho, o “FRATERNIDADE” fica com pouco espaço horizontal (ou fica visualmente esmagado/encoberto pelo conjunto logo + área do usuário).
+## Objetivo (o que você pediu)
+- Na tela **/auth**: manter o **card exatamente como está** (dourado, vidro, moldura, tipografia, botões, tudo).
+- Manter a “pegada” de **gradiente** atual do app, mas adicionar por trás uma **imagem PB (preto e branco)** com vibe “organização/elite antiga”: **prédio** + **pessoas de terno**, estética vintage.
+- Deixar **surreal/premium**, mas com a imagem **sutil** (sem roubar a cena do card).
+- Adicionar um “parallax” leve no fundo.
 
-No mobile (<= 767px) já está OK porque a logo está `h-4`.
-
-Você pediu: **mesma lógica do mobile**, sem alterar o estilo do “FRATERNIDADE” (dourado/efeito/estética), apenas “encaixar” reduzindo a logo e micro-espaçamentos quando necessário.
-
----
-
-## Objetivo do ajuste (tablet)
-- Em tablet: **diminuir a logo o suficiente para caber “FRATERNIDADE” como está**.
-- Em desktop: manter como está hoje (logo grande e premium).
-- Em mobile: manter como está hoje (logo pequena e tudo encaixado).
+Você escolheu: **Gerar por IA** + intensidade **Sutil** + **Parallax**.
 
 ---
 
-## Estratégia (mínima e segura)
-### 1) Tornar o tamanho da logo “progressivo” por breakpoint (mobile → tablet → desktop)
-**Arquivo:** `src/components/AppLayout.tsx`
-
-Hoje:
-- `className="h-4 sm:h-9 ..."`
-
-Vamos mudar para 3 níveis:
-- **mobile:** `h-4` (mantém o que já resolveu)
-- **tablet (sm/md):** reduzir para algo como `sm:h-7` (ou `sm:h-6` se ainda faltar espaço)
-- **desktop (lg+):** `lg:h-9` (mantém o desktop intacto)
-
-Exemplo de intenção:
-- `className="h-4 sm:h-7 lg:h-9 ..."`
-
-Isso preserva o desktop (só cresce no `lg`) e melhora o tablet, sem tocar no “FRATERNIDADE”.
+## O que eu já verifiquei no projeto (para encaixar sem quebrar nada)
+- A página `src/pages/Auth.tsx` usa um `<main className="min-h-svh grid place-items-center ...">` e aplica as classes:
+  - `invictus-auth-surface invictus-auth-frame` no Card e também nos Dialogs.
+- Essas classes estão definidas em `src/index.css` e já criam um “glass” premium (backdrop blur + moldura dourada).
+- Hoje o `body` já tem um fundo com **radial-gradients** (bem sutil) em `src/index.css`. Vou preservar esse “DNA” e somar a foto só no /auth.
 
 ---
 
-### 2) Ajuste fino de espaçamentos no header especificamente para tablet
-**Arquivo:** `src/components/AppLayout.tsx`
+## Abordagem (mínima e segura, sem mexer no card)
+### 1) Gerar a imagem (IA) no estilo certo
+Vou gerar **1 imagem principal** (e opcionalmente 2 variações) com estes requisitos:
+- **Preto e branco** (vintage/analógico)
+- **Arquitetura**: fachada de prédio corporativo/ institucional (imponente)
+- **Pessoas**: homens/figuras de terno estilo antigo (anos 30–60), discretos
+- **Sem texto, sem logos, sem marcas**
+- Com “grain” leve (cinema/filme) para estética antiga (mas sem poluir)
+- Enquadramento “wide” para fundo de tela
 
-Se necessário (dependendo do seu “outro modelo”), vamos “economizar” alguns pixels no tablet, sem mudar design:
-- Padding horizontal progressivo:
-  - manter `px-2` no mobile
-  - usar algo levemente menor no tablet (ex.: `sm:px-3`)
-  - manter `lg:px-4` no desktop
-- Gap progressivo no agrupamento esquerdo:
-  - manter `gap-2` no mobile
-  - manter `sm:gap-2` no tablet (em vez de aumentar)
-  - usar `lg:gap-3` no desktop
+**Formato recomendado para performance:**
+- Exportar como **WEBP** (ou PNG se necessário) em ~**1920px** de largura (ou 2560px se estiver muito detalhado e pesado não for problema).
 
-Isso é o mesmo procedimento do mobile: não muda estilo, só “encaixe” por espaço.
-
----
-
-### 3) Garantir que o “FRATERNIDADE” use o espaço real disponível (sem truncar cedo)
-Você já tem:
-- Wrapper do texto: `min-w-0 flex-1`
-- Texto: `whitespace-nowrap`
-
-Vamos manter isso.
-A correção principal no tablet tende a ser **tamanho do logo em sm/md**.
+**Resultado:** a imagem vai entrar no projeto como asset estático (ex.: `src/assets/auth-bg.webp` ou `public/auth/auth-bg.webp`).
 
 ---
 
-## Implementação (passos)
-1. Editar `src/components/AppLayout.tsx`:
-   - Alterar o `className` do `<img />` para tamanho responsivo em 3 níveis: mobile / tablet / desktop.
-   - Ajustar `px` e `gap` com breakpoints, se necessário, para o tablet.
-2. Validar em 3 viewports:
-   - **Mobile:** 390x844 (já OK, confirmar que não regrediu)
-   - **Tablet:** 768x1024 e 820x1180 (onde você relatou o detalhe)
-   - **Desktop:** 1366x768 ou 1440x900 (confirmar que ficou igual ao atual)
+### 2) Criar um “fundo exclusivo do /auth” com overlay premium (sutil)
+Sem mexer no card, vou mudar apenas o **container do /auth** para ter:
+- **Imagem de fundo**
+- **Overlay com gradientes** (para manter a identidade e garantir leitura)
+- Um toque de “vignette” discreta (para “fechar” o visual e valorizar o card)
+
+Implementação (conceito):
+- Adicionar uma classe no `<main>` da tela Auth, tipo: `invictus-auth-page`.
+- No CSS (`src/index.css`), definir:
+  - `background-image: linear-gradient(...), radial-gradient(...), url(...)`
+  - `background-size: cover`
+  - `background-position: center`
+  - `background-repeat: no-repeat`
+- **Importante:** o card já é “glass” e vai continuar idêntico. O overlay é aplicado no fundo do `main`.
 
 ---
 
-## Critérios de aceite (o que você vai ver)
-- Tablet: “FRATERNIDADE” aparece inteiro e alinhado, com o mesmo dourado/efeito, sem esconder.
-- Tablet: logo fica proporcional (um pouco menor que desktop, maior que mobile).
-- Desktop: topo igual ao que está hoje (visual premium, logo grande).
-- Mobile: continua encaixado.
+### 3) Parallax leve (sem travar mobile)
+Para “parallax” com custo baixo e sem JS pesado:
+- Em telas maiores (desktop/tablet): usar `background-attachment: fixed` no container do /auth (dá sensação de profundidade).
+- Em mobile: manter `background-attachment: scroll` (porque `fixed` pode engasgar em alguns aparelhos).
+
+Opcional (se você quiser mais “surreal” depois):
+- Parallax por mouse (desktop) com `transform: translate3d(...)` num pseudo-elemento, mas isso envolve JS e eu só faria se você pedir porque é mais delicado.
 
 ---
 
-## Observação importante (por que não vou mexer no breakpoint “isMobile”)
-O `useIsMobile()` considera mobile < 768px. Tablet (768px+) é tratado como desktop pelo layout da sidebar.
-Mudar esse breakpoint afetaria o comportamento da navegação (gaveta vs sidebar fixa) e isso é uma mudança maior de UX.
-Aqui vamos resolver com o ajuste correto do header (logo/spacing) sem alterar a navegação.
+## Como eu vou validar com “prints” (antes de você aprovar visualmente)
+1) Abrir a rota **/auth** (que você já está).
+2) Capturar print em:
+   - 390×844 (mobile)
+   - 768×1024 e/ou 820×1180 (tablet)
+   - 1366×768 ou 1440×900 (desktop)
+3) Checklist visual:
+   - Card dourado continua exatamente igual (sem alteração de cor/efeito).
+   - Fundo ficou PB + executivo antigo + prédio + pessoas.
+   - Intensidade sutil: dá clima, mas não compete com o card.
+   - Parallax perceptível no desktop/tablet e não “quebra” no mobile.
+   - Dialogs (convite / reset) continuam com o mesmo glass premium e legíveis.
 
 ---
 
-## Depois do ajuste
-Eu tiro novos prints nas resoluções tablet e te mostro o resultado para confirmar que ficou “encaixado” do jeito certo.
+## Arquivos que serão mexidos (escopo)
+- `src/pages/Auth.tsx`
+  - Apenas para adicionar/ajustar a classe do `<main>` (não mexer em Card/UI interna).
+- `src/index.css`
+  - Adicionar as regras CSS do background específico do Auth.
+- Adicionar 1 asset de imagem no projeto (ex.: `src/assets/auth-bg.webp` ou `public/...`).
+
+---
+
+## Riscos / cuidados
+- **Peso da imagem**: se ficar muito pesada, pode atrasar o carregamento. Vou otimizar para WEBP e manter o overlay ajudando a “disfarçar” compressão.
+- **Legibilidade/performance**: por isso o overlay + parallax somente onde faz sentido.
+
+---
+
+## Entrega final esperada
+- Tela de autenticação com um background PB cinematográfico (prédio + “executivos antigos”), com gradiente/overlay premium, e card Invictus intacto e dominante.
+- Em desktop/tablet: parallax leve.
+- Em mobile: mesmo visual, sem travamentos.
+

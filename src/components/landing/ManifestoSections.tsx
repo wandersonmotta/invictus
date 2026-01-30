@@ -5,6 +5,8 @@ import { SectionShell } from "@/components/landing/SectionShell";
 import { BulletList } from "@/components/landing/BulletList";
 import { Eye, Shield, Target, Zap, Layers, Cpu, Briefcase } from "lucide-react";
 
+import manifestoMedia from "@/assets/invictus-landing-manifesto-media-color.jpg";
+
 const bullets = {
   pillars: [
     "Disciplina acima de talento",
@@ -57,7 +59,7 @@ export function Manifesto() {
         <div className="invictus-stagger space-y-5">
           {/* Vídeo decorativo: menor no mobile, maior no desktop */}
           <EditorialMedia
-            src="/images/invictus-landing-manifesto-media-color-v1.jpg"
+            src={manifestoMedia}
             className="sm:max-w-[420px]"
             loading="eager"
           />

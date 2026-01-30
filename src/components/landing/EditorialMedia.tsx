@@ -23,6 +23,7 @@ export function EditorialMedia({
   loading = "lazy",
 }: EditorialMediaProps) {
   const decorative = !alt;
+  const fetchPriority = loading === "eager" ? "high" : "auto";
 
   return (
     <div className={cn("overflow-hidden rounded-xl border border-border/60 bg-background/20", className)}>
@@ -32,6 +33,7 @@ export function EditorialMedia({
           alt={decorative ? "" : alt}
           className="h-full w-full object-cover"
           loading={loading}
+          fetchPriority={fetchPriority as any}
           decoding="async"
         />
       </AspectRatio>

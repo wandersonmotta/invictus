@@ -125,13 +125,15 @@ export function WaitlistHero() {
                   className="pointer-events-none absolute inset-0 flex items-center justify-center"
                   aria-hidden="true"
                 >
-                  <img
-                    src={invictusLogo}
-                    alt=""
-                    className="w-16 opacity-70 mix-blend-overlay"
-                    loading="eager"
-                    decoding="async"
-                  />
+                  <div className="rounded-full border border-border/40 bg-background/20 p-2 backdrop-blur-sm">
+                    <img
+                      src={invictusLogo}
+                      alt=""
+                      className="w-16 opacity-90"
+                      loading="eager"
+                      decoding="async"
+                    />
+                  </div>
                 </div>
               </div>
 

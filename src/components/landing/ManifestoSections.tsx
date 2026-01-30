@@ -1,5 +1,9 @@
 import { GoldHoverText } from "@/components/GoldHoverText";
 import { Card } from "@/components/ui/card";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { LoopVideo } from "@/components/landing/LoopVideo";
+import { useRevealOnScroll } from "@/hooks/useRevealOnScroll";
+import { Eye, Shield, Target, Zap, Layers, Cpu, Briefcase } from "lucide-react";
 
 const bullets = {
   pillars: [
@@ -33,8 +37,10 @@ const bullets = {
 } as const;
 
 function SectionShell(props: { title: string; children: React.ReactNode; id?: string }) {
+  const reveal = useRevealOnScroll<HTMLElement>({ rootMargin: "0px 0px -12% 0px", threshold: 0.12, once: true });
+
   return (
-    <section id={props.id} className="px-4 py-10 sm:px-6 sm:py-14">
+    <section id={props.id} ref={reveal.ref} className={"px-4 py-10 sm:px-6 sm:py-14 " + reveal.className}>
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-6 flex items-end justify-between gap-4">
           <h2 className="text-balance text-2xl font-semibold sm:text-3xl">{props.title}</h2>
@@ -77,6 +83,14 @@ export function Manifesto() {
         </div>
 
         <div className="space-y-5">
+          <div className="overflow-hidden rounded-xl border border-border/60 bg-background/30">
+            <AspectRatio ratio={4 / 5}>
+              <LoopVideo
+                src="/videos/invictus-loop-manifesto.mp4"
+                ariaLabel="Vídeo abstrato em loop com estética cinematográfica"
+              />
+            </AspectRatio>
+          </div>
           <h3 className="text-xs font-medium tracking-wide text-muted-foreground">Nossa visão</h3>
           <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
             Criar uma elite capaz de dominar o próprio destino financeiro, operar negócios reais com clareza e estratégia,
@@ -94,13 +108,25 @@ export function Manifesto() {
 }
 
 export function Pillars() {
+  const pillars = [
+    { title: bullets.pillars[0], Icon: Shield },
+    { title: bullets.pillars[1], Icon: Zap },
+    { title: bullets.pillars[2], Icon: Target },
+    { title: bullets.pillars[3], Icon: Eye },
+  ] as const;
+
   return (
     <SectionShell title="Nossa mentalidade (pilares)">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {bullets.pillars.map((t) => (
-          <div key={t} className="border-l border-border/60 pl-4">
-            <p className="text-sm font-medium leading-snug">{t}</p>
-            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Problemas não são pauta. Soluções são obrigação.</p>
+        {pillars.map(({ title, Icon }) => (
+          <div key={title} className="rounded-xl border border-border/50 bg-background/25 p-4">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background/35">
+                <Icon className="h-4 w-4 text-primary/80" />
+              </span>
+              <p className="text-sm font-medium leading-snug">{title}</p>
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">Problemas não são pauta. Soluções são obrigação.</p>
           </div>
         ))}
       </div>
@@ -109,13 +135,31 @@ export function Pillars() {
 }
 
 export function WhatYouFindHere() {
+  const groups = [
+    { title: "Estrutura e processo", Icon: Layers, items: bullets.findHere.slice(0, 2) },
+    { title: "Tecnologia e IA", Icon: Cpu, items: bullets.findHere.slice(2, 4) },
+    { title: "Ecossistema", Icon: Briefcase, items: bullets.findHere.slice(4, 6) },
+  ] as const;
+
   return (
     <SectionShell title="O que você encontra aqui">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {bullets.findHere.map((t) => (
-          <div key={t} className="flex gap-3 border-b border-border/60 pb-3">
-            <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" aria-hidden="true" />
-            <p className="text-sm font-medium leading-snug">{t}</p>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {groups.map(({ title, Icon, items }) => (
+          <div key={title} className="rounded-xl border border-border/50 bg-background/25 p-4">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background/35">
+                <Icon className="h-4 w-4 text-primary/80" />
+              </span>
+              <p className="text-sm font-medium">{title}</p>
+            </div>
+            <div className="mt-4 space-y-3">
+              {items.map((t) => (
+                <div key={t} className="flex gap-3 border-b border-border/60 pb-3 last:border-b-0 last:pb-0">
+                  <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" aria-hidden="true" />
+                  <p className="text-sm font-medium leading-snug">{t}</p>
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>

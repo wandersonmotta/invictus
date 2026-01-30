@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Heart } from "lucide-react";
+import { Heart, MoreHorizontal } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -7,6 +7,12 @@ import type { FeedComment } from "@/features/feed/types";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type Props = {
   comment: FeedComment;
@@ -94,49 +100,52 @@ export function FeedCommentRow({
                 {timeAgo ? <span>{timeAgo}</span> : null}
                 <span className="font-medium">{likeCountText} {likeLabel}</span>
                 <span className="font-medium">Responder</span>
-
-                {isMe && (
-                  <>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2 text-xs"
-                      onClick={onStartEdit}
-                      disabled={editDisabled}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2 text-xs text-destructive hover:text-destructive"
-                      onClick={onDelete}
-                      disabled={deleteDisabled}
-                    >
-                      Apagar
-                    </Button>
-                  </>
-                )}
               </div>
             </div>
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="mt-0.5 h-8 w-8 shrink-0"
-              onClick={onToggleLike}
-              disabled={likeDisabled}
-              aria-label={comment.liked_by_me ? "Descurtir comentário" : "Curtir comentário"}
-            >
-              <Heart
-                className={comment.liked_by_me ? "text-foreground" : "text-muted-foreground"}
-                size={18}
-                fill={comment.liked_by_me ? "currentColor" : "none"}
-              />
-            </Button>
+            <div className="mt-0.5 flex shrink-0 items-start gap-1">
+              {isMe ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" aria-label="Ações">
+                      <MoreHorizontal size={18} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    sideOffset={6}
+                    className="z-[60] invictus-surface invictus-frame border-border/70"
+                  >
+                    <DropdownMenuItem onClick={onStartEdit} disabled={!!editDisabled}>
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={onDelete}
+                      disabled={!!deleteDisabled}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      Apagar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : null}
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={onToggleLike}
+                disabled={likeDisabled}
+                aria-label={comment.liked_by_me ? "Descurtir comentário" : "Curtir comentário"}
+              >
+                <Heart
+                  className={comment.liked_by_me ? "text-foreground" : "text-muted-foreground"}
+                  size={18}
+                  fill={comment.liked_by_me ? "currentColor" : "none"}
+                />
+              </Button>
+            </div>
           </div>
         )}
       </div>

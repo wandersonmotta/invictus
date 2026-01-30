@@ -1,83 +1,101 @@
 
-Contexto e decisão
-- Você quer: não usar nada externo, sem API key, mas ainda assim ter “INVICTUS FRATERNIDADE” como nome + template no padrão do site e cair direto na caixa de entrada.
-- Limitação prática: o envio “nativo” (padrão do sistema de autenticação) normalmente não permite controlar totalmente:
-  - Nome exibido do remetente (“From name”)
-  - Template/HTML do e-mail (botão, cores, identidade visual)
-  - Entregabilidade (inbox vs spam) sem ajustar provedor/DNS/SMTP
-- Portanto: para ter “INVICTUS FRATERNIDADE” + layout personalizado de forma confiável, a alternativa viável é continuar no fluxo customizado (Resend), que exige API key. Isso bate com sua escolha: “Continuar com Resend (recomendado)” e “prefiro esperar do que usar nativo sem personalizar”.
+Objetivo
+- Deixar o e-mail de recuperação com a mesma “pegada” do site (clássico, robusto, sofisticado, luxuoso, detalhes dourados) e reduzir chance de cair no spam.
+- Fazer um novo teste técnico + disparo real para o seu e-mail (wanderson.lealofc@icloud.com) depois das mudanças.
 
-O que está acontecendo hoje (por que não chega)
-- A UI sempre mostra “E-mail enviado…” mesmo quando falha (isso foi proposital para segurança: não revelar se um e-mail existe ou não).
-- Quando o Resend está mal configurado (API key errada/ausente, ou “from” não permitido), o backend tenta enviar e falha — mas a tela continua mostrando sucesso.
-- Já vimos anteriormente log do tipo “API key is invalid”. Isso normalmente significa:
-  - RESEND_API_KEY vazia, incompleta, antiga, ou copiada errada
-  - ou secret atualizada mas não é uma key válida do Resend
-- Além disso, mesmo com API key OK, se o RESEND_FROM_EMAIL não for de um domínio verificado/permitido no Resend, o envio também falha (muitas vezes com erro de “from not verified / validation error”).
+O que dá para melhorar (importante alinhar expectativa)
+- Cair no spam é muito mais “configuração de domínio” (SPF/DKIM/DMARC, reputação, alinhamento do remetente) do que “layout bonito”.
+- Mesmo com um template perfeito, se o domínio invictusfraternidade.com.br ainda não estiver 100% alinhado no provedor de e-mail, iCloud/Gmail podem mandar para spam.
+- Então vamos atacar os 2 lados:
+  1) Template/estrutura (o que controlamos no código).
+  2) Entregabilidade/DNS (o que você ajusta no provedor do seu domínio e no Resend).
 
-Estado atual do projeto (checado no código)
-- O app hoje chama o reset assim:
-  - src/auth/AuthProvider.tsx → resetPassword() → chama a função backend “send-password-reset”
-- A função backend “send-password-reset”:
-  - Gera link seguro de recuperação
-  - Envia e-mail via Resend com “INVICTUS FRATERNIDADE”
-  - Retorna sempre { ok: true } para o frontend mesmo em falha (segurança)
-- Secrets existem no projeto:
-  - RESEND_API_KEY
-  - RESEND_FROM_EMAIL
+O que está no código hoje (diagnóstico rápido)
+- A tela /auth chama `resetPassword()` (src/auth/AuthProvider.tsx), que invoca a função de backend `send-password-reset`.
+- A função `send-password-reset` (supabase/functions/send-password-reset/index.ts) gera um link de recovery e envia via Resend um HTML “ok”, mas ainda simples.
+- Ela atualmente envia apenas `html` (não envia versão `text`), e não inclui logo/identidade visual completa.
 
-Plano de execução (para fazer funcionar e você receber o e-mail)
-1) Confirmar e corrigir os 2 inputs obrigatórios (sem isso não tem como enviar)
-   1.1) RESEND_API_KEY
-   - Você precisa criar uma API key no Resend (normalmente começa com “re_”).
-   - Colar exatamente a key completa no secret RESEND_API_KEY (sem espaços, sem aspas extras).
-   1.2) RESEND_FROM_EMAIL
-   - Você vai definir um e-mail do seu domínio que está verificado no Resend (ex.: noreply@seudominio.com.br).
-   - Atualizar o secret RESEND_FROM_EMAIL com esse e-mail.
+Plano de implementação (mudanças que vou fazer quando você aprovar)
+1) Melhorar o template do e-mail (luxo/robusto + “mais profissional para filtros antispam”)
+   1.1) Melhorias visuais (mantendo compatibilidade de e-mail)
+   - Adicionar “top bar” com acabamento dourado (linha/gradiente discreto).
+   - Adicionar um bloco de “selo”/assinatura (INVICTUS FRATERNIDADE) com tipografia mais premium.
+   - Aumentar hierarquia visual: título, subtítulo, botão “dourado” com borda e sombra sutil.
+   - Rodapé com texto institucional e contexto (reduz aparência de phishing): “Você recebeu isto porque solicitou recuperação de senha…”.
+   - Preheader invisível (texto “prévia” que aparece no inbox): ex. “Link seguro para redefinir sua senha (expira em breve)”.
 
-2) Teste técnico controlado (para não ficar “no escuro”)
-   - Vou disparar uma chamada de teste para a função “send-password-reset” e checar os logs do backend:
-     - Se aparecer “send-password-reset: sent” → envio saiu do backend corretamente.
-     - Se aparecer “resend_send_failed …” → ainda há problema de API key / from / domínio.
-   - Esse teste não depende do front e elimina dúvidas de “o botão funcionou?”.
+   1.2) Melhorias técnicas para reduzir spam (sem perder segurança)
+   - Enviar também a versão `text` (plain text) junto do `html` no `resend.emails.send({ text, html })`.
+     - Isso melhora compatibilidade e pontuação em filtros.
+   - Garantir conteúdo “menos spammy”:
+     - Evitar excesso de CAPS, excesso de símbolos, e CTA muito agressivo.
+     - Assunto mais “institucional” (podemos manter “Redefinir sua senha”, mas com preheader melhor).
+   - Incluir um rodapé com informações estáveis (nome da marca + motivo do e-mail).
+   - Manter o link completo visível (já existe) e manter o botão com link igual ao link textual.
 
-3) Melhorar o diagnóstico sem “explanar” dados sensíveis (ajuste de qualidade)
-   - Ajustar a função “send-password-reset” para retornar um status técnico genérico (ex.: { ok: true, provider: 'resend', accepted: true/false }) SEM indicar se o e-mail existe.
-   - Objetivo: quando o Resend estiver quebrado, o front pode mostrar “Serviço de e-mail temporariamente indisponível. Tente novamente em instantes.” em vez de sempre “E-mail enviado”.
-   - Isso não revela se o usuário existe (continua seguro), só evita “falso positivo” quando o provedor está fora.
+2) Incluir a marca (logo) no e-mail de forma correta
+   Por que isso precisa de um passo extra:
+   - Em e-mails, imagens precisam estar em uma URL pública; não dá para usar `src/assets/...` direto.
 
-4) Ajuste fino de entregabilidade (para “cair na caixa de entrada”)
-   - Mesmo com Resend, inbox depende do DNS:
-     - SPF e DKIM do domínio precisam estar OK
-     - DMARC recomendado
-   - Se ainda cair em spam:
-     - Ajustar assunto e conteúdo (mais curto, menos “promo-like”)
-     - Evitar palavras/formatos que aumentam score de spam
-     - Garantir alinhamento do “From” com domínio verificado
+   2.1) Infra mínima (uma vez só)
+   - Criar um bucket público “email-assets” no armazenamento do backend.
+   - Criar uma policy de leitura pública apenas para esse bucket (somente SELECT).
 
-5) (Opcional) Fallback temporário
-   - Se você quiser “não ficar sem reset enquanto arruma Resend”:
-     - Criar modo híbrido: tenta Resend; se falhar por configuração, usa o nativo como fallback.
-   - Observação: isso reintroduz o problema de nome/template no fallback. Você disse que prefere esperar a usar nativo sem personalizar, então só faremos se você pedir.
+   2.2) Upload do logo do projeto
+   - Usar um asset que já existe no projeto (provável: `src/assets/invictus-logo.png` ou `src/assets/INVICTUS-GOLD_1.png`).
+   - Fazer upload para `email-assets/logo.png`.
+   - Checar o tamanho do arquivo:
+     - Se > 500KB: vou te avisar e recomendar compressão (para evitar bloqueio/slow load em clients).
+   - Referenciar no HTML com URL absoluta e cache-busting `?v=1`.
 
-Dependências / o que preciso de você agora (não técnico, direto)
-- Me diga qual e-mail você quer usar como remetente (RESEND_FROM_EMAIL), por exemplo:
-  - noreply@seudominio.com.br
-- E confirme que você vai gerar uma RESEND_API_KEY nova no Resend e colar aqui (a key é obrigatória; sem ela não existe envio personalizado).
+   2.3) Layout com fallback
+   - Se o cliente bloquear imagens, o e-mail ainda precisa ficar bonito: manter o “brand header” em texto (INVICTUS FRATERNIDADE) e usar o logo como opcional.
 
-Critérios de “funcionou”
-- Você solicita “Esqueceu a senha?” em /auth
-- Você recebe e-mail com remetente “INVICTUS FRATERNIDADE”
-- Botão “Redefinir senha” aparece bem visível (dourado/alto contraste) e abre /reset-password
-- Você consegue trocar a senha e logar com a nova senha
+3) Ajustar a experiência no /auth (opcional, mas recomendado)
+   - Hoje o app sempre mostra “E-mail enviado…” mesmo que o provedor falhe (isso é correto por segurança).
+   - Mas como agora já temos `accepted` sendo retornado pela função (no backend) e `resetPassword()` já expõe `accepted`, podemos:
+     - Se `accepted === false`: mostrar “Serviço de e-mail temporariamente indisponível. Tente novamente em instantes.”
+     - Se `accepted === true`: manter a mensagem atual (sem revelar se o e-mail existe).
+   - Também adicionar um microtexto: “Se não chegar em 2 minutos, verifique Spam/Lixo eletrônico.”
 
-Riscos e limitações (importante alinhar expectativa)
-- “Sem API externa” + “com branding total e entregabilidade controlada” não é realista: o envio nativo não dá esse nível de controle.
-- Garantir 100% inbox em todos provedores nunca é promessa absoluta, mas com domínio bem configurado (SPF/DKIM/DMARC) e conteúdo correto, melhora muito.
+4) Teste (técnico + disparo real)
+   Depois das mudanças:
+   - Rodar um teste direto na função de backend `send-password-reset` enviando para `wanderson.lealofc@icloud.com`.
+   - Confirmar logs do backend com `send-password-reset: sent`.
+   - Você confirma recebimento e se foi para inbox/spam no iCloud.
 
-Implementação (seção técnica — o que será alterado no código quando você aprovar esta próxima etapa)
+5) Checklist de entregabilidade (para sair do spam de verdade)
+   Vou te orientar com um checklist claro (sem você precisar mexer em código), mas você precisará aplicar no seu provedor de domínio/Resend:
+   - Verificar se o domínio `invictusfraternidade.com.br` está verificado no Resend.
+   - Garantir que SPF e DKIM do domínio estejam publicados e “passando”.
+   - Recomendado: configurar DMARC (mesmo que inicial “p=none” para monitorar).
+   - Confirmar alinhamento do FROM:
+     - `recuperaracesso@invictusfraternidade.com.br` deve ser do mesmo domínio autenticado.
+   - Observação: reputação leva tempo; nos primeiros envios ainda pode cair em spam até “aquecer”.
+
+Arquivos que serão alterados
 - supabase/functions/send-password-reset/index.ts
-  - Ajustar resposta para permitir UI mostrar indisponibilidade quando o envio falhar (sem revelar se o e-mail existe).
-  - Melhorar logs e mensagens de erro (somente no backend).
-- src/pages/Auth.tsx (ou manter como está)
-  - Opcional: mostrar aviso “Se não chegar, verifique spam” e/ou “serviço temporariamente indisponível” quando o backend sinalizar falha técnica.
+  - Atualizar o HTML (novo template premium)
+  - Adicionar `text` (plain text) no envio
+  - Incluir logo via URL pública (após upload)
+- src/pages/Auth.tsx (opcional, mas recomendado)
+  - Usar `accepted` para mostrar “indisponível” quando o provedor estiver fora
+  - Adicionar dica “verifique spam”
+
+Mudanças no backend (banco/armazenamento)
+- Criar bucket público `email-assets` + policy de SELECT pública (migração SQL).
+- Upload do logo para esse bucket.
+
+Critério de pronto
+- O e-mail chega com visual “Invictus” (preto, dourado, sofisticado) e com logo.
+- Existe versão texto do e-mail (para compatibilidade).
+- O fluxo completo funciona: /auth → Esqueceu a senha → link → /reset-password → trocar senha → login.
+- Entregabilidade: idealmente começa a aparecer no inbox; se ainda cair em spam, seguimos o checklist SPF/DKIM/DMARC.
+
+<lov-actions>
+<lov-suggestion message="Teste o fluxo completo /auth → Esqueceu a senha → abrir link → /reset-password → trocar senha → login, e confirme se foi para Inbox ou Spam no iCloud.">Verificar end-to-end</lov-suggestion>
+<lov-suggestion message="Adicionar logo e identidade visual completa no e-mail de recuperação (bucket público email-assets + template premium + versão texto).">Personalizar e-mail (luxo)</lov-suggestion>
+<lov-suggestion message="Ajustar a tela /auth para usar o campo accepted e mostrar 'serviço temporariamente indisponível' quando o provedor falhar (sem revelar se o e-mail existe).">Melhorar feedback no reset</lov-suggestion>
+<lov-suggestion message="Criar uma página interna (admin) com checklist de entregabilidade (SPF/DKIM/DMARC) e status do remetente, para reduzir suporte quando cair em spam.">Checklist anti-spam</lov-suggestion>
+<lov-suggestion message="Adicionar opção de reenviar link após X segundos e limitar tentativas para reduzir abuso e melhorar reputação do domínio.">Reenvio com rate limit</lov-suggestion>
+</lov-actions>

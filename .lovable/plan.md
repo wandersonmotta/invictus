@@ -1,95 +1,103 @@
 
-Objetivo
-- Ao clicar em “Comentários” no card do post, o painel (Drawer) deve abrir com estética “Invictus Glass” (vidro premium) aplicada no painel inteiro.
-- O formulário de comentário no rodapé deve seguir o modelo da imagem: botão de emoji à esquerda, campo “pill” no centro e ação “Postar” à direita, com popover de emojis (sem dependências novas), mantendo o mesmo padrão visual do painel lateral.
+Contexto do que você quer (comparando seus prints)
+- Hoje: ao clicar na publicação abre um modal com a mídia à esquerda e, à direita, botões “Curtir / Comentários” + legenda + botão “Ir para o Feed”. Para ver comentários você ainda precisa abrir o Drawer.
+- Objetivo (estilo Instagram): ao abrir a publicação, os comentários já aparecem “do lado” (painel direito), com rolagem própria e UM ÚNICO formulário fixo embaixo para comentar, sem abrir drawer/modal extra. E remover “Ir para o Feed” (já existe o X para fechar).
 
-O que já existe (e vamos reaproveitar)
-- `src/components/feed/CommentsDrawer.tsx` já lista comentários, faz add/edit/delete/like via RPCs e usa Vaul Drawer.
-- Tokens/estilos “glass” já existem no CSS (`invictus-surface`, `invictus-frame`, e também `invictus-modal-glass` para conteúdo tipo popover/modal).
-- Componentes base existentes: `Popover`, `Button`, `Input`, `ScrollArea`, `Drawer*`.
+Diagnóstico do que está no código agora
+- O modal “Publicação” que aparece no perfil está em:
+  - `src/pages/Membro.tsx` (rota atual do print: `/membro/:username`)
+  - `src/components/profile/MyProfilePreview.tsx` (preview do próprio perfil)
+- Ambos renderizam:
+  - Esquerda: `<ReelsMedia />`
+  - Direita: botões + legenda (e no Membro tem “Ir para o Feed”)
+  - Comentários: via `<CommentsDrawer postId count />` (abrindo Drawer)
+- O “Ir para o Feed” está explicitamente em `src/pages/Membro.tsx` (linhas ~303–305).
 
-Escopo exato aprovado (conforme sua escolha)
-- “Drawer inteiro em glass”: aplicar visual glass no header, lista (área rolável) e rodapé (composer).
-- Popover de emojis também ficará com glass (sem ficar transparente), com z-index alto.
+O que vamos construir (para ficar igual ao modelo do Instagram)
+1) Criar um painel fixo de comentários (sem Drawer)
+- Criar um novo componente reutilizável (ex.: `src/components/feed/PostCommentsPanel.tsx`) que:
+  - Recebe `post` (para mostrar autor/legenda/contagens) e `postId`
+  - Busca comentários via RPC `list_feed_post_comments` SEM depender de “open”
+  - Renderiza em layout de coluna:
+    - Header do painel (autor + menu opcional)
+    - “Bloco da legenda” (username + caption) no topo da lista (igual Instagram)
+    - Lista de comentários rolável (`ScrollArea` com `min-h-0 flex-1`)
+    - Footer fixo com o composer (reutilizando `FeedCommentComposer`, que você já aprovou)
+  - Mantém ações de comentário que já existem hoje:
+    - Curtir comentário (coração) via `toggle_feed_comment_like`
+    - Editar/Apagar via menu (⋯) como você pediu
+    - Add comentário via `add_feed_post_comment`
+- Importante: não vamos criar novas tabelas nem mexer no backend. É 100% UI reaproveitando as mesmas RPCs.
 
-Mudanças planejadas (Frontend)
+2) Ajustar o modal da publicação para layout “mídia + painel”
+- Atualizar `src/pages/Membro.tsx` e `src/components/profile/MyProfilePreview.tsx` para:
+  - Remover o botão “Comentários (N)” que abre Drawer
+  - Renderizar o novo `<PostCommentsPanel />` no lado direito do modal
+  - Manter “Curtir” do post, mas colocar no padrão do painel (no header do painel ou numa barra abaixo do header)
+- Layout sugerido (desktop):
+  - `DialogContent`: mais largo (ex.: `sm:max-w-5xl` ou `max-w-6xl`) e altura controlada
+  - Grid: esquerda flexível, direita com largura fixa tipo Instagram (ex.: `md:grid-cols-[minmax(0,1fr)_420px]`)
+  - Altura: `max-h-[85vh]` e `overflow-hidden` para permitir rolagem só no painel de comentários
+- Layout (mobile):
+  - Em telas pequenas, empilhar:
+    - Mídia em cima
+    - Painel de comentários embaixo
+  - Composer sempre visível no final do painel
 
-1) Deixar o Drawer inteiro no modelo glass
-Arquivo: `src/components/feed/CommentsDrawer.tsx`
-- Atualizar `DrawerContent` (classe atual: `invictus-surface`) para incluir também moldura/vidro no painel inteiro:
-  - adicionar `invictus-frame`
-  - garantir borda consistente `border-border/70` (ou equivalente)
-  - manter `overflow-hidden` para o vidro ficar “limpo”
-- Ajustar o layout interno para suportar “rodapé fixo”:
-  - transformar o miolo em um layout de coluna:
-    - topo (título)
-    - meio (lista rolável)
-    - base (composer)
-  - reduzir risco do composer “sumir” atrás do teclado no mobile:
-    - manter padding e usar `ScrollArea` para o conteúdo com altura calculada (ex.: `h-[45vh]` já existe; vamos avaliar trocar por `flex-1` com `min-h-0` para ficar mais adaptável).
-- Garantir contraste e não-transparência onde precisa:
-  - Separador `border-t border-border/60` acima do rodapé
-  - Header com o mesmo “glass surface” (sem ficar “see-through” demais)
+3) Remover “Ir para o Feed”
+- Remover o botão “Ir para o Feed” de `src/pages/Membro.tsx` (não faz sentido com o X do modal, como no seu print).
 
-2) Criar o composer no rodapé no estilo da imagem (emoji + pill + Postar)
-Novo arquivo: `src/components/feed/FeedCommentComposer.tsx`
-- UI:
-  - Container do rodapé com `invictus-surface`
-  - “pill” interno com borda suave: `rounded-full border border-border/60 bg-background/40` (ajustado para não ficar transparente demais no dark)
-  - Botão de emoji (ícone) à esquerda
-  - Campo de digitação central (single-line) com placeholder “Adicione um comentário…”
-  - Botão “Postar” à direita (desabilitado quando vazio/pending)
-- Comportamento:
-  - Enter envia (como hoje), sem mandar se estiver vazio
-  - Após enviar com sucesso: limpar input e manter foco
-  - API/Mutations continuam no `CommentsDrawer` (composer recebe `value`, `onChange`, `onSubmit`, `disabled`), mantendo a lógica atual intacta.
+4) Manter consistência visual “Invictus Glass”
+- Aplicar `invictus-surface invictus-frame border-border/70` no painel direito
+- Separadores como no Instagram: borda suave (`border-border/60`) entre header / lista / composer
+- Garantir que o ScrollArea não “estoura” o modal:
+  - `min-h-0` no container e `flex-1` no miolo do painel
 
-3) Adicionar um Emoji Picker leve (Popover) com estética glass
-Novo arquivo: `src/components/ui/emoji-popover.tsx` (ou `src/components/feed/emoji-popover.tsx`; vou seguir a pasta `ui/` por ser reutilizável)
-- Implementar usando `Popover`, `PopoverTrigger`, `PopoverContent`
-- Conteúdo:
-  - Grid de emojis mais usados (sem lib externa)
-  - Clique em um emoji insere no texto atual (versão 1: insere no final; versão 2 opcional: inserção na posição do cursor usando ref e selectionStart/selectionEnd)
-- Estilo:
-  - `PopoverContent` com `invictus-surface invictus-frame border-border/70` para ficar premium e não transparente
-  - `z-50` já existe no popover base; manter/elevar se necessário (ex.: `z-[60]`) para não ficar atrás do Drawer
-
-4) Integrar o composer dentro do CommentsDrawer
-Arquivo: `src/components/feed/CommentsDrawer.tsx`
-- Substituir o bloco atual de input + botão “Enviar” por `<FeedCommentComposer />`
-- Conectar o botão “Postar” ao `addMutation.mutate()`
-- Ligar o emoji picker para atualizar `body` do comentário (ex.: `setBody(prev => prev + emoji)`)
-- Melhorias de UX:
-  - Ao abrir o Drawer: focar automaticamente o campo do composer (passando ref do input para o `CommentsDrawer` ou expondo `autoFocus` controlado pelo open state)
-
-5) (Opcional, mas combina com o visual) Atualizar o trigger “Comentários (N)”
-Arquivos possíveis:
-- `src/components/feed/CommentsDrawer.tsx` (no `DrawerTrigger`)
-- Se preferir no card: `src/components/feed/FeedPostCard.tsx`
-Mudança:
-- Trocar o botão textual por ícone + contador (ex.: `MessageCircle`) mantendo acessibilidade (`sr-only` com “Abrir comentários”).
-Observação: isso é opcional; só farei se você confirmar que quer esse ajuste também.
-
-Pontos de atenção / qualidade
-- Evitar “dropdown see-through”: Popover e Drawer terão `bg`/surface suficiente para não ficar transparente demais.
-- Z-index: garantir que o popover de emojis fique acima do Drawer e não seja cortado; se necessário, aumentar z-index do `PopoverContent`.
-- Responsividade: manter max-width e estética minimalista já existente; o Drawer é full width, mas o conteúdo interno pode continuar centralizado e legível.
-- Consistência com o app: usar os tokens/classe “Invictus” existentes, sem criar dependências.
-
-Checklist de testes (end-to-end)
-1) Feed → abrir um post → clicar em Comentários → confirmar que o painel inteiro está em glass (fundo + moldura).
-2) Digitar comentário no “pill” → “Postar” habilita/desabilita corretamente → enviar → comentário aparece e contador atualiza.
-3) Abrir emoji picker → escolher emoji → emoji entra no campo → enviar.
-4) Mobile: abrir comentários, abrir teclado, garantir que o campo continua acessível e a lista rola normalmente.
-5) Verificar que o popover de emojis não fica transparente e não fica atrás do painel.
+5) Atualizar contadores (evitar “bug visual” depois de comentar)
+Hoje você já viu situações em que o comentário existe mas o contador/visual não atualiza “na hora”.
+Para o painel lateral, vamos garantir:
+- Ao comentar:
+  - invalidar `["feed_comments", postId]`
+  - invalidar `["feed_posts"]` (para feed)
+  - invalidar também listas de perfil:
+    - `invalidateQueries({ queryKey: ["profile_feed"], exact: false })`
+    - `invalidateQueries({ queryKey: ["my-profile-feed"], exact: false })`
+- Opcional (recomendado): o painel pode atualizar o contador na UI imediatamente via callback:
+  - `onCommentCountChange(delta)` para o componente pai atualizar `selectedPost.comment_count` sem esperar refetch
 
 Arquivos que serão criados/alterados
 - Criar:
-  - `src/components/feed/FeedCommentComposer.tsx`
-  - `src/components/ui/emoji-popover.tsx`
-- Editar:
-  - `src/components/feed/CommentsDrawer.tsx`
-  - (Opcional) `src/components/feed/FeedPostCard.tsx` se formos trocar o trigger por ícone
+  - `src/components/feed/PostCommentsPanel.tsx` (novo painel estilo Instagram)
+- Alterar:
+  - `src/pages/Membro.tsx` (trocar Drawer por painel e remover “Ir para o Feed”)
+  - `src/components/profile/MyProfilePreview.tsx` (trocar Drawer por painel)
+  - (Possível) pequenos ajustes de classe em `DialogContent` (largura/altura) nos dois arquivos
+- Reutilizar sem mexer:
+  - `src/components/feed/FeedCommentRow.tsx` (já está com menu ⋯ e coração)
+  - `src/components/feed/FeedCommentComposer.tsx` (já está no padrão do Instagram)
+  - RPCs existentes (sem mudanças no backend)
 
-Observação importante
-- Isso é 100% frontend/UI. Não exige nenhuma alteração no backend, nem em tabelas/RPCs, porque vamos reutilizar exatamente o fluxo atual de comentários.
+Checklist de testes (end-to-end) que eu vou executar após implementar
+1) Perfil (/membro/:username)
+   - Abrir uma publicação: confirmar que comentários aparecem do lado sem clicar em “Comentários”
+   - Rolar a lista de comentários (ScrollArea)
+   - Comentar no formulário fixo: comentário aparece e contador atualiza
+   - Curtir um comentário (coração): atualiza o estado/contador
+   - No seu comentário: abrir menu ⋯ → Editar → Salvar; depois ⋯ → Apagar
+2) Preview do próprio perfil (MyProfilePreview)
+   - Repetir os mesmos testes
+3) Responsividade
+   - Desktop: mídia + painel lado a lado
+   - Mobile: painel abaixo, composer sempre acessível (sem “sumir” atrás do teclado)
+4) Remoção do botão
+   - Confirmar que “Ir para o Feed” não aparece mais no modal
+
+Riscos/atenções (para evitar ficar “bugado”)
+- Altura/overflow: se o `DialogContent` não tiver `max-h` + `overflow-hidden`, a rolagem pode “quebrar” e empurrar o modal (vou travar isso).
+- Cache/contadores: se só invalidar `feed_posts`, o perfil pode não atualizar; por isso vou invalidar também as queries de perfil e (opcionalmente) atualizar o contador local.
+
+Resultado final esperado (como no Instagram)
+- Clique na publicação → abre modal
+- Mídia grande à esquerda
+- À direita: header + legenda + comentários roláveis + campo “Adicione um comentário…” com botão “Postar” fixo embaixo
+- Sem botão “Ir para o Feed” (fecha no X)

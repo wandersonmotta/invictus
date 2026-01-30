@@ -1,136 +1,193 @@
 
-Objetivo (o que você pediu agora)
-- Melhorar os “quadrados/painéis” para ficarem mais premium e menos “caixa pesada”, mantendo a legibilidade.
-- Colocar ícones (discretos) em pontos estratégicos:
-  - Nos 4 pilares
-  - Em “O que você encontra aqui”
-- Adicionar animações leves de entrada (sem poluir).
-- Adicionar até 2 vídeos em loop (tipo GIF), abstratos e elegantes, sem texto, em preto e branco com detalhes dourados, colocados estrategicamente.
+Objetivo (próximo nível, do jeito que você descreveu)
+- Fazer a landing ficar “premium de verdade”: mais clean, mais sofisticada, com hierarquia visual forte (quem entra sente exclusividade).
+- Corrigir a qualidade ruim do background no mobile: trocar por uma imagem nova em alta resolução (4K) gerada por IA, com versões otimizadas.
+- Parar o “mexer ruim” do fundo ao rolar: fundo 100% estático (sem parallax/attachment fixed).
+- Dar impacto com animação: os painéis/“quadrados” entram conforme a pessoa desce, e os itens internos entram em sequência (stagger), sem poluir.
+- Manter performance boa no mobile.
 
-O que existe hoje (base atual)
-- As seções da landing usam um wrapper comum (`SectionShell`) que agora envolve o conteúdo com `.invictus-landing-panel`.
-- O componente `WaitlistHero` já está no final e usa `Dialog` com animação nativa (tailwind-animate via data-state).
-- O projeto já usa `lucide-react` e já tem infra de animações via `tailwindcss-animate` (classes `animate-in`, `fade-in-*`, `slide-in-*`, etc.).
+O que eu vi no código (pontos que explicam o problema)
+1) O fundo da landing está em CSS como background-image (invictus-landing-page) e, em telas >= 768px, existe:
+   - background-attachment: fixed (isso cria o “parallax”/efeito de deslocamento no scroll).
+   Mesmo que seja “sutil”, em alguns devices fica com sensação “ruim”/bugada.
 
-Parte 1 — Refinar os “quadrados” (painéis) sem perder legibilidade
-1) Ajustar o estilo do painel `.invictus-landing-panel` para ficar menos “quadrado” e mais “luxo editorial”
-- Trocar o fundo chapado por um “glass” mais sofisticado (gradiente + leve vinheta interna):
-  - background com gradient (ex.: de background/0.62 para background/0.42)
-  - border com opacidade menor + “borda dourada” bem sutil (via `box-shadow` ou `border-image`/pseudo-elemento)
-  - aumentar um pouco o blur (ou manter 10px e ajustar contraste)
-- Adicionar variações leves para densidade:
-  - `.invictus-landing-panel--soft` (mais transparente)
-  - `.invictus-landing-panel--strong` (mais opaco para trechos com muita letra)
-  (isso permite aplicar “strong” só nas seções com muito texto)
+2) O fundo atual usa um único arquivo: /images/invictus-landing-bg.jpg
+   - Quando o arquivo não é grande/otimizado para retina/mobile moderno, a imagem “estoura”/pixeliza, principalmente em telas altas (mobile) e com scaling.
 
-2) Ajustar tipografia e espaçamento dentro do painel
-- Aumentar levemente line-height e/ou tamanho de fonte em parágrafos longos (sem “inflar” demais)
-- Garantir contraste: textos `text-muted-foreground` podem ficar claros demais no fundo; vamos:
-  - reduzir o uso de `muted-foreground` em blocos grandes e usar `text-foreground/90` em trechos críticos
-  - manter `muted` apenas para subtítulos, descrições curtas
+3) As animações de entrada já existem via useRevealOnScroll (IntersectionObserver) aplicado no SectionShell:
+   - Hoje: a seção entra toda de uma vez.
+   - Você pediu: seção + stagger interno (itens entram em sequência para dar impacto editorial).
 
-3) Manter performance
-- Evitar blur exagerado e evitar sombras pesadas.
-- Manter o parallax/fixed background apenas em telas maiores (já está assim).
+Decisões aprovadas (pela sua última resposta)
+- Background: estático + overlay animado (sutil)
+- Conteúdo animado: seção + stagger interno
+- Imagem 4K: gerar nova (IA)
 
-Parte 2 — Ícones (Pilares + “O que você encontra aqui”)
-4) Pilares: adicionar ícone por pilar (discreto, dourado, pequeno)
-- Em `Pillars()`, trocar o bloco atual por layout com:
-  - ícone no topo (ou à esquerda) + título + texto curto
-- Escolha de ícones (exemplo de mapeamento, ajustável):
-  - Disciplina: `Shield` ou `BadgeCheck`
-  - Execução: `Zap` ou `Hammer`
-  - Resultado: `Target`
-  - Verdade: `Eye` ou `ScanFace`
-- Estilo:
-  - `size={18}` ou `20`
-  - cor: `text-primary/80` (sem ficar neon)
-  - adicionar um “halo” sutil (ex.: `drop-shadow` bem leve) só se necessário
+Plano de implementação (passo a passo)
 
-5) “O que você encontra aqui”: adicionar ícone por item (sem virar lista infantil)
-- Em `WhatYouFindHere()`, trocar a bolinha por:
-  - ícone minimalista (ex.: `ChevronRight`/`Sparkle`/`Dot`)
-  - OU (melhor): 1 ícone por categoria (3 colunas) e dentro de cada coluna manter bullets — para não ter 6 ícones diferentes e poluir.
-- Vou implementar a versão mais limpa:
-  - 3 grupos (2 itens cada) com um ícone por grupo
-  - mantém leitura premium e reduz “ruído visual”
+Parte A — Background 4K (novo), responsivo e “parado”
+A1) Gerar um novo background 4K com IA (visual executivo/corporativo)
+- Vou gerar 1 imagem principal com “cara de Invictus”:
+  - Preto e branco cinematográfico (arquitetura corporativa, pessoas de terno/negócios, editorial)
+  - Detalhes dourados discretos (nada chamativo)
+  - Sem texto, sem elementos óbvios “de banco de imagem”
+- Entregável: 1 arte “hero background” que funciona bem em desktop e mobile (composição pensada para corte vertical também).
 
-Parte 3 — Animações leves de entrada (sem poluição)
-6) Implementar animação “entrada suave” por seção quando aparecer na tela
-- Criar um hook simples com `IntersectionObserver` (ex.: `useRevealOnScroll`) que:
-  - aplica `opacity: 0` + `translateY(8px)` inicialmente
-  - quando entra no viewport, adiciona classes `animate-in fade-in-0 slide-in-from-bottom-2` (ou equivalente)
-  - respeita `prefers-reduced-motion` (se usuário preferir reduzir, não anima)
-- Aplicar no wrapper do `SectionShell` (ou no `.invictus-landing-panel`) para animar cada seção uma vez.
+A2) Criar versões otimizadas (sem perder qualidade)
+- A partir da imagem master, vou criar variações de tamanho (mesmo visual, só resolução diferente):
+  - 3840px (4K) para desktop grande
+  - 2560px para desktop normal/retina
+  - 1440px para tablet
+  - 1080px para mobile (ainda alta qualidade)
+  - (Opcional) versões .webp se estiver ok para o projeto; caso contrário, JPG alta qualidade bem comprimido
+- Isso reduz peso e melhora carregamento no mobile.
 
-7) Garantir consistência com Radix UI (Dialog etc.)
-- Não mexer nas animações do modal (já estão corretas).
-- Só adicionar as animações de entrada nas seções da landing.
+A3) Trocar o CSS para usar image-set (resolução certa por device)
+- Atualizar .invictus-landing-page para usar image-set() no background:
+  - o navegador escolhe automaticamente a imagem mais adequada (ex.: 1x/2x, ou por tamanho).
+- Ajustar:
+  - background-position pensado para manter rosto/área principal do fundo em foco no mobile.
+  - background-size: cover (mantém o impacto)
+  - background-attachment: scroll (sempre) para ficar totalmente estático.
+- Remover/alterar o @media(min-width:768px) que hoje aplica “fixed”.
 
-Parte 4 — Vídeos abstratos em loop (máximo 2) e colocação estratégica
-8) Gerar 2 vídeos curtos, abstratos, estilo “cinemagraph”
-- Formato recomendado:
-  - `.mp4` com H.264 (compatibilidade) + opcional `.webm` (melhor compressão)
-  - duração 3–6s, loop perfeito
-  - sem áudio
-  - resolução moderada (ex.: 720p) para não pesar
-- Conteúdo visual (brief de geração):
-  - preto e branco (textura de concreto/metal, skyline abstrato, linhas arquitetônicas)
-  - pequenos brilhos dourados (poucos, sofisticados)
-  - sem texto, sem símbolos óbvios
+Critério de sucesso dessa parte
+- No celular, a imagem fica nítida (sem “lavar”, sem pixel).
+- Rolou a página: o fundo não “mexe”/não dá sensação de bug.
 
-9) Onde colocar os vídeos (2 pontos bem estratégicos)
-- Vídeo 1: na seção Manifesto (coluna direita), como “janela” vertical pequena (ou 4:5), com borda sutil e blur no fundo.
-- Vídeo 2: na seção final (Lista de espera), ao lado do CTA, para reforçar “premium” sem poluir o texto.
+Parte B — Overlay animado “luxo” (sem mexer a foto)
+B1) Criar um overlay sutil por cima do background (sem parallax)
+- Vamos manter a imagem parada e colocar um pseudo-elemento por cima (ex.: ::before) na .invictus-landing-page com:
+  - film grain / noise bem sutil (ou uma textura via gradiente)
+  - vignette suave
+  - leve variação de opacidade/posição (animação lenta, quase imperceptível)
+- Objetivo: dar vida premium sem “mexer a imagem” e sem tirar legibilidade.
 
-10) Implementação de componente reutilizável de “LoopVideo”
-- Criar um componente simples `LoopVideo` (React) que renderiza:
-  - `<video autoPlay muted loop playsInline preload="metadata" />`
-  - com `poster` opcional
-  - com fallback visual (div com gradient) se o vídeo não carregar
-  - respeita `prefers-reduced-motion`: se reduzir movimento, pausa o autoplay e mostra poster
+B2) Garantir acessibilidade e performance
+- Respeitar prefers-reduced-motion: se o usuário preferir reduzir movimento, o overlay fica estático (sem animation).
+- Animação lenta (ex.: 10–16s) e apenas em opacity/transform leve, para não travar mobile.
 
-11) Layout e responsividade dos vídeos
-- Desktop: vídeo ao lado do texto (coluna).
-- Mobile: vídeo vai para baixo (stack) e com altura limitada para não “empurrar” demais.
+Critério de sucesso dessa parte
+- Sensação de “cinema”/editorial, mas sem distração.
+- Não piorar o tempo de carregamento nem o scroll.
 
-Checklist de QA (o que vou testar depois de implementar)
-1) Legibilidade:
-- Em desktop e mobile, rolar página inteira e verificar se nenhum texto “some” no fundo.
-2) Ícones:
-- Conferir se não virou “poluição” e se os ícones estão consistentes (mesmo peso/estilo/cor).
-3) Animações:
-- Conferir que é suave, não “pula”, e só acontece uma vez por seção.
-- Conferir `prefers-reduced-motion` (simulado no browser).
-4) Vídeos:
-- Autoplay funciona no mobile (muted + playsInline).
-- Não há áudio, não trava rolagem, e não pesa demais.
-5) Regressão:
-- Modal da lista de espera continua funcionando (validação + envio).
-- /auth e /reset-password continuam com o fundo antigo.
+Parte C — Animação de entrada com stagger interno (impacto editorial)
+C1) Manter a animação da seção (já existe) e acrescentar o stagger dos itens dentro
+- Hoje o SectionShell aplica reveal.className na <section>.
+- Vou evoluir para:
+  1) Seção anima (fade/slide) como base.
+  2) Elementos internos marcados (ex.: cards, bullets, colunas) entram em sequência com delays leves.
 
-Arquivos que eu vou mexer (implementação)
-- `src/styles/invictus-auth.css`
-  - refinar `.invictus-landing-panel` e adicionar variações
-- `src/components/landing/ManifestoSections.tsx`
-  - adicionar ícones em Pillars e reorganizar “O que você encontra aqui” em 3 grupos
-  - aplicar animação de entrada via hook/atributo
-  - inserir vídeo 1 no Manifesto
-- `src/components/landing/WaitlistHero.tsx`
-  - inserir vídeo 2 de forma discreta na área do CTA
-- Novo(s) arquivo(s) de util/hook e componente:
-  - `src/hooks/useRevealOnScroll.ts` (ou similar)
-  - `src/components/landing/LoopVideo.tsx` (ou similar)
-- Novos assets:
-  - `public/videos/…` (2 vídeos em loop) + posters opcionais em `public/images/…`
+C2) Como implementar o stagger sem bagunçar o layout
+Opção escolhida: classe utilitária de stagger que funciona “por seção”
+- Criar uma classe CSS do tipo:
+  - .invictus-stagger > * { animation-delay: var(...) } com nth-child
+- Aplicar .invictus-stagger apenas nos containers certos (grid de pilares, grupos, listas) para não animar “tudo indiscriminadamente”.
+- Aplicar apenas quando a seção já estiver “visible” no hook.
 
-Observações de “não poluir”
-- Ícones: pequenos, monocromáticos dourados, sem animação própria (a animação fica só na entrada da seção).
-- Vídeos: apenas 2, sem texto, com moldura discreta e tamanho controlado.
-- O painel continua existindo para legibilidade, mas mais “luxo” (menos caixa pesada).
+C3) Onde aplicar para dar o efeito que você quer (“vai aparecendo os quadrados”)
+- Cada SectionShell:
+  - O painel “entra” primeiro.
+  - Em seguida, dentro do painel, os blocos entram (colunas/cards/bullets).
+- Locais ideais:
+  - Pillars (os 4 cards entram em sequência)
+  - WhatYouFindHere (3 grupos entram em sequência; e dentro de cada grupo, os 2 itens podem ter micro-delay)
+  - WhoIsFor (2 colunas entram; e os bullets podem entrar com delay curto)
+  - FinalWarning (card entra e textos internos entram em sequência leve)
 
-Entrega incremental (para você validar rápido)
-- Etapa 1: Refino do painel + tipografia (legibilidade perfeita).
-- Etapa 2: Ícones (pilares + encontra aqui).
-- Etapa 3: Animação de entrada suave.
-- Etapa 4: Inserir 2 vídeos em loop (gerados) + ajuste fino de tamanho e posição.
+Critério de sucesso dessa parte
+- Ao rolar, a página “ganha vida” e parece uma apresentação editorial.
+- Sem exagero e sem “poluição”.
+
+Parte D — Hierarquia tipográfica “premium”: subtítulos e destaques
+Você comentou que vários pontos não estão destacando como deveriam (ex.: “Você pertence se”).
+Eu vou padronizar por seção (subtítulos), como você aprovou.
+
+D1) Padronizar subtítulos (H3) para sempre “parecer importante”
+- Criar um estilo consistente para subtítulos dentro das seções da landing:
+  - fonte um pouco maior
+  - negrito
+  - tracking leve (executivo)
+  - e, quando fizer sentido, uma “linha dourada” discreta ou ícone pequeno (sem infantilizar)
+
+Exemplos de alvos diretos no ManifestoSections.tsx (já existem):
+- “Nossa visão”
+- “Você pertence se”
+- “Não é para quem”
+- “Liderança”
+- “Regra de permanência”
+
+D2) Ajustar contraste e legibilidade (sem deixar “cinza demais”)
+- Reduzir uso de muted-foreground em blocos longos quando necessário (manter para descrições curtas).
+- Garantir que frases-chave usem text-foreground/90 ou text-foreground.
+
+Critério de sucesso dessa parte
+- Subtítulos saltam aos olhos e guiam a leitura.
+- A landing fica “cara de produto caro” (hierarquia clara, sem excesso).
+
+Parte E — Revisão visual estratégica (posicionamento de mídia e “clean premium”)
+E1) Reposicionar o vídeo (se mantivermos) para ser “estratégico” e não competir com o texto
+- No screenshot atual, o vídeo está na coluna “Nossa visão” e chama atenção, mas pode parecer “bloco a mais” em vez de um detalhe editorial.
+- Ajuste pro próximo nível:
+  - tratar vídeo como “insert editorial”: menor que um card, com moldura mais fina, e alinhado de forma a apoiar o texto, não dominar.
+  - no mobile: vídeo menor, acima de um trecho-chave (não entre parágrafos demais).
+
+E2) Ajustar padding/ritmo dos painéis para “respirar”
+- Manter painéis premium, mas com:
+  - menos elementos competindo (linhas divisórias só onde precisa)
+  - espaçamento mais consistente entre blocos
+
+Arquivos que serão alterados/criados (escopo)
+1) CSS
+- src/styles/invictus-auth.css
+  - Trocar o background da landing para image-set com imagens novas
+  - Remover background-attachment: fixed da landing
+  - Adicionar overlay animado no background (pseudo-elemento + keyframes)
+  - Adicionar utilitários de stagger (classes)
+
+2) Landing components
+- src/components/landing/ManifestoSections.tsx
+  - Aplicar “stagger interno” nos grids e listas
+  - Padronizar subtítulos (H3) com classe/estilo consistente
+  - Ajustar posicionamento do vídeo para ficar editorial/estratégico
+
+- src/components/landing/WaitlistHero.tsx
+  - Ajustar posicionamento do vídeo para ficar estratégico e premium (mobile menor, desktop equilibrado)
+  - Garantir que o CTA continue sendo o foco
+
+3) Assets
+- public/images/
+  - Adicionar a nova imagem 4K e variações otimizadas (múltiplos tamanhos)
+  - (Opcional) adicionar uma versão poster/thumbnail para fallback
+
+Checklist de validação (QA)
+1) Mobile (principal)
+- Fundo nítido (sem pixel) e sem “mexer” ao rolar.
+- Conteúdo aparece com impacto (seção + stagger), mas sem travar.
+- Vídeos aparecem menores no mobile e não “comem” a tela.
+
+2) Desktop
+- Fundo continua premium e estático.
+- Overlay animado é perceptível só como “vida”, não como efeito chamativo.
+- Layout respira: leitura fácil, hierarquia forte.
+
+3) Acessibilidade / preferências
+- prefers-reduced-motion: sem animações (ou mínimo necessário).
+- Texto sempre legível sobre o background.
+
+4) Regressão
+- Modal da lista de espera continua perfeito (abrir/fechar, envio).
+- Rotas /auth e /reset-password continuam com identidade própria (sem afetar).
+
+Entregas em etapas (para você aprovar visual rápido)
+- Etapa 1: Novo background 4K + image-set + remover “mexer ruim”
+- Etapa 2: Overlay animado sutil (film grain/vignette)
+- Etapa 3: Seção + stagger interno (impacto ao rolar)
+- Etapa 4: Ajuste fino de posicionamento da mídia + tipografia (subtítulos com presença)
+
+Observação importante (para ficar realmente “nível produto caro”)
+O maior salto de percepção de valor aqui vai vir de:
+1) Background 4K bem escolhido (composição certa para mobile)
+2) Fundo parado + overlay “cinema”
+3) Ritmo editorial (stagger + subtítulos fortes)
+Isso cria aquela sensação imediata: “tem direção, tem curadoria, é seleto”.

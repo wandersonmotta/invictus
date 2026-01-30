@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_logs: {
+        Row: {
+          action: string
+          admin_user_id: string
+          created_at: string
+          id: string
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          admin_user_id: string
+          created_at?: string
+          id?: string
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          admin_user_id?: string
+          created_at?: string
+          id?: string
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       community_channels: {
         Row: {
           created_at: string
@@ -865,6 +889,30 @@ export type Database = {
       add_feed_post_comment: {
         Args: { p_body: string; p_post_id: string }
         Returns: string
+      }
+      admin_list_pending_profiles: {
+        Args: { p_limit?: number }
+        Returns: {
+          access_status: Database["public"]["Enums"]["access_status"]
+          created_at: string
+          display_name: string
+          id: string
+          user_id: string
+        }[]
+      }
+      admin_list_pending_profiles_logged: {
+        Args: { p_limit?: number }
+        Returns: {
+          access_status: Database["public"]["Enums"]["access_status"]
+          created_at: string
+          display_name: string
+          id: string
+          user_id: string
+        }[]
+      }
+      admin_log: {
+        Args: { p_action: string; p_target_user_id?: string }
+        Returns: undefined
       }
       can_view_author: { Args: { p_author_id: string }; Returns: boolean }
       can_view_feed_media: { Args: { p_object_name: string }; Returns: boolean }

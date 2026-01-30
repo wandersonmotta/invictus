@@ -253,6 +253,35 @@ body.invictus-landing-body {
   padding: 1.5rem;
 }
 
+/* Assinatura Invictus (título + separador) */
+.invictus-section-eyebrow {
+  font-size: 0.6875rem;
+  line-height: 1.1;
+  font-weight: 650;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground) / 0.95);
+}
+
+.invictus-landing-title {
+  letter-spacing: -0.01em;
+}
+
+.invictus-section-separator {
+  height: 1px;
+  width: 28%;
+  max-width: 220px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(var(--gold-hot) / 0.55),
+    hsl(var(--gold-soft) / 0.25),
+    transparent
+  );
+  filter: blur(0px);
+  opacity: 0.95;
+}
+
 /* Opções de densidade para evitar poluição: use só onde precisa */
 .invictus-landing-panel--soft {
   background:
@@ -282,10 +311,139 @@ body.invictus-landing-body {
   opacity: 0.9;
 }
 
+/* Moldura champagne + highlights internos (tira “cara de slide”) */
+.invictus-landing-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--gold-soft) / 0.08),
+    hsl(var(--gold-hot) / 0.28) 35%,
+    hsl(var(--gold-soft) / 0.16) 70%,
+    hsl(var(--gold-hot) / 0.18)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.9;
+}
+
 .invictus-landing-panel > * {
   position: relative;
   z-index: 1;
 }
+
+/* Cards premium internos */
+.invictus-landing-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid hsl(var(--border) / 0.55);
+  background:
+    radial-gradient(700px 320px at 10% 0%, hsl(var(--foreground) / 0.08), transparent 60%),
+    linear-gradient(180deg, hsl(var(--background) / 0.52), hsl(var(--background) / 0.34));
+  box-shadow:
+    0 18px 70px -48px hsl(var(--foreground) / 0.55),
+    0 0 0 1px hsl(var(--primary) / 0.08) inset;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.invictus-landing-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(440px 220px at 14% 10%, hsl(var(--primary) / 0.10), transparent 62%),
+    linear-gradient(180deg, hsl(var(--foreground) / 0.08), transparent 42%);
+  mix-blend-mode: screen;
+  opacity: 0.75;
+}
+
+.invictus-landing-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* “Metal plate” dos ícones */
+.invictus-icon-plate {
+  position: relative;
+  border-radius: 0.75rem;
+  border: 1px solid hsl(var(--border) / 0.55);
+  background:
+    linear-gradient(
+      135deg,
+      hsl(var(--foreground) / 0.14),
+      hsl(var(--foreground) / 0.06) 35%,
+      hsl(var(--gold-hot) / 0.12)
+    );
+  box-shadow:
+    0 1px 0 0 hsl(var(--foreground) / 0.14) inset,
+    0 0 0 1px hsl(var(--gold-soft) / 0.12) inset,
+    0 14px 40px -28px hsl(var(--foreground) / 0.55);
+}
+
+.invictus-icon-plate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, hsl(var(--foreground) / 0.10), transparent 55%);
+  opacity: 0.9;
+}
+
+/* CTA premium (aplicar só na landing via className) */
+.invictus-cta {
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px hsl(var(--gold-hot) / 0.55) inset,
+    0 18px 70px -52px hsl(var(--foreground) / 0.65),
+    0 0 90px -58px hsl(var(--gold-hot) / 0.55);
+}
+
+.invictus-cta::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(420px 220px at 18% 10%, hsl(var(--foreground) / 0.18), transparent 60%),
+    linear-gradient(180deg, hsl(var(--foreground) / 0.14), transparent 48%);
+  opacity: 0.85;
+}
+
+.invictus-cta > * {
+  position: relative;
+  z-index: 1;
+}
+
+.invictus-cta--outline {
+  box-shadow:
+    0 0 0 1px hsl(var(--gold-hot) / 0.65) inset,
+    0 18px 70px -52px hsl(var(--foreground) / 0.65),
+    0 0 90px -58px hsl(var(--gold-hot) / 0.40);
+}
+
+@media (min-width: 768px) {
+  .invictus-cta:hover {
+    box-shadow:
+      0 0 0 1px hsl(var(--gold-hot) / 0.72) inset,
+      0 22px 90px -58px hsl(var(--foreground) / 0.70),
+      0 0 110px -56px hsl(var(--gold-hot) / 0.58);
+  }
+}
+
+/* (mantido acima) */
 
 @media (min-width: 640px) {
   .invictus-landing-panel {

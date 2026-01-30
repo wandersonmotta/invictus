@@ -22,9 +22,13 @@ export function SectionShell({ id, title, children }: SectionShellProps) {
       }
     >
       <div className="mx-auto w-full max-w-6xl">
-        <div className="mb-6 flex items-end justify-between gap-4">
-          <h2 className="text-balance text-2xl font-semibold sm:text-3xl">{title}</h2>
-        </div>
+        <header className="invictus-section-head mb-6 flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            <p className="invictus-section-eyebrow">INVICTUS</p>
+            <h2 className="invictus-landing-title text-balance text-2xl font-semibold sm:text-3xl">{title}</h2>
+          </div>
+          <div className="invictus-section-separator hidden sm:block" aria-hidden="true" />
+        </header>
         <div className="invictus-landing-panel">{children}</div>
       </div>
     </section>

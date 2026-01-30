@@ -145,7 +145,7 @@ export function WaitlistHero() {
 
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                <Button className="h-11 w-full sm:w-auto" disabled={loading}>
+                <Button className="invictus-cta h-11 w-full sm:w-auto" disabled={loading}>
                   Quero fazer parte
                 </Button>
               </DialogTrigger>
@@ -199,7 +199,7 @@ export function WaitlistHero() {
                     )}
                   </div>
 
-                  <Button type="submit" className="h-11 w-full" disabled={loading}>
+                  <Button type="submit" className="invictus-cta h-11 w-full" disabled={loading}>
                     {loading ? "Enviando…" : "Entrar na lista"}
                   </Button>
 

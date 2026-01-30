@@ -22,7 +22,7 @@ export function LandingTopbar() {
         </Link>
 
         <nav className="flex items-center gap-2">
-          <Button asChild variant="outline" className="h-10">
+          <Button asChild variant="outline" className="invictus-cta invictus-cta--outline h-10">
             <Link to="/auth">Entrar</Link>
           </Button>
         </nav>

@@ -866,6 +866,30 @@ export type Database = {
         }
         Relationships: []
       }
+      waitlist_leads: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          ip_hash: string | null
+          source: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          ip_hash?: string | null
+          source?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          ip_hash?: string | null
+          source?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

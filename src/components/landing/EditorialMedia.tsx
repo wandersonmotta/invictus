@@ -10,6 +10,8 @@ type EditorialMediaProps = {
   className?: string;
   ratio?: number;
   loading?: "eager" | "lazy";
+  onError?: React.ReactEventHandler<HTMLImageElement>;
+  onLoad?: React.ReactEventHandler<HTMLImageElement>;
 };
 
 /**
@@ -21,6 +23,8 @@ export function EditorialMedia({
   className,
   ratio = 16 / 9,
   loading = "lazy",
+  onError,
+  onLoad,
 }: EditorialMediaProps) {
   const decorative = !alt;
   const fetchPriority = loading === "eager" ? "high" : "auto";
@@ -35,6 +39,8 @@ export function EditorialMedia({
           loading={loading}
           fetchPriority={fetchPriority as any}
           decoding="async"
+          onError={onError}
+          onLoad={onLoad}
         />
       </AspectRatio>
     </div>

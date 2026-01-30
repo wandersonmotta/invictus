@@ -182,6 +182,24 @@ body.invictus-landing-body {
   }
 }
 
+/* Reveal premium (seções/painéis) – transição suave e perceptível no desktop */
+.invictus-reveal {
+  opacity: 0;
+  transform: translateY(12px);
+  filter: blur(0.45px);
+  transition:
+    opacity 640ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 640ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 640ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: opacity, transform, filter;
+}
+
+.invictus-reveal.invictus-revealed {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
 /* Delays (até 12 itens) */
 .invictus-revealed .invictus-stagger > *:nth-child(1) {
   animation-delay: 70ms;
@@ -224,6 +242,19 @@ body.invictus-landing-body {
   .invictus-landing-page::after {
     animation: none;
     opacity: 0.32;
+  }
+
+  .invictus-reveal,
+  .invictus-media-reveal {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition: none;
+  }
+
+  .invictus-media-reveal img {
+    transform: none;
+    transition: none;
   }
 
   .invictus-reveal-scope .invictus-stagger > * {
@@ -404,6 +435,11 @@ body.invictus-landing-body {
 .invictus-cta {
   position: relative;
   overflow: hidden;
+  transform: translateZ(0);
+  transition:
+    transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 320ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
   box-shadow:
     0 0 0 1px hsl(var(--gold-hot) / 0.55) inset,
     0 18px 70px -52px hsl(var(--foreground) / 0.65),
@@ -420,6 +456,22 @@ body.invictus-landing-body {
     radial-gradient(420px 220px at 18% 10%, hsl(var(--foreground) / 0.18), transparent 60%),
     linear-gradient(180deg, hsl(var(--foreground) / 0.14), transparent 48%);
   opacity: 0.85;
+}
+
+/* Sheen discreto no hover (luxo, não chamativo) */
+.invictus-cta::after {
+  content: "";
+  position: absolute;
+  top: -30%;
+  bottom: -30%;
+  left: -60%;
+  width: 45%;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(90deg, transparent, hsl(var(--gold-soft) / 0.18), transparent);
+  transform: translateX(-120%) rotate(12deg);
+  transition: transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  opacity: 0;
 }
 
 .invictus-cta > * {
@@ -441,6 +493,44 @@ body.invictus-landing-body {
       0 22px 90px -58px hsl(var(--foreground) / 0.70),
       0 0 110px -56px hsl(var(--gold-hot) / 0.58);
   }
+
+  .invictus-cta:hover::after {
+    opacity: 1;
+    transform: translateX(320%) rotate(12deg);
+  }
+}
+
+.invictus-cta:active {
+  transform: translateY(1px) scale(0.995);
+  filter: brightness(0.98);
+}
+
+/* Reveal premium para mídias (foto) */
+.invictus-media-reveal {
+  opacity: 0;
+  transform: translateY(10px) scale(1.01);
+  filter: blur(0.55px);
+  transition:
+    opacity 620ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 620ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 620ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: opacity, transform, filter;
+}
+
+.invictus-media-reveal img {
+  transform: scale(1.02);
+  transition: transform 760ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+}
+
+.invictus-media-reveal.is-in {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+.invictus-media-reveal.is-in img {
+  transform: scale(1);
 }
 
 /* (mantido acima) */

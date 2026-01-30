@@ -9,15 +9,21 @@ type SectionShellProps = {
 };
 
 export function SectionShell({ id, title, children }: SectionShellProps) {
-  const reveal = useRevealOnScroll<HTMLElement>({ rootMargin: "0px 0px -12% 0px", threshold: 0.12, once: true });
+  const reveal = useRevealOnScroll<HTMLElement>({
+    // Desktop: viewport maior = precisamos “segurar” o reveal um pouco
+    rootMargin: "0px 0px -18% 0px",
+    threshold: 0.22,
+    once: true,
+    enterDelayMs: 56,
+    disableClasses: true,
+  });
 
   return (
     <section
       id={id}
       ref={reveal.ref}
       className={
-        "invictus-reveal-scope px-4 py-10 sm:px-6 sm:py-14 " +
-        reveal.className +
+        "invictus-reveal-scope invictus-reveal px-4 py-10 sm:px-6 sm:py-14 " +
         (reveal.visible ? " invictus-revealed" : "")
       }
     >

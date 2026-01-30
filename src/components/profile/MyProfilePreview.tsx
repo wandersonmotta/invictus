@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { ReelsMedia } from "@/components/feed/ReelsMedia";
-import { CommentsDrawer } from "@/components/feed/CommentsDrawer";
+import { PostCommentsPanel } from "@/components/feed/PostCommentsPanel";
 import { ExpertisesChips } from "@/components/profile/ExpertisesChips";
 
 type MyProfilePreviewRow = {
@@ -195,14 +195,14 @@ export function MyProfilePreview({ userId, refreshKey }: { userId: string; refre
           )}
 
           <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
-            <DialogContent className="sm:max-w-3xl invictus-surface invictus-frame border-border/70">
-              <DialogHeader>
+            <DialogContent className="sm:max-w-5xl h-[85vh] overflow-hidden p-0 invictus-surface invictus-frame border-border/70">
+              <DialogHeader className="sr-only">
                 <DialogTitle>Publicação</DialogTitle>
               </DialogHeader>
 
               {selectedPost ? (
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
+                <div className="grid h-full md:grid-cols-[minmax(0,1fr)_420px]">
+                  <div className="min-h-0 border-b border-border/60 md:border-b-0 md:border-r">
                     {selectedMediaUrls[0] ? (
                       <ReelsMedia
                         url={selectedMediaUrls[0].url}
@@ -210,6 +210,7 @@ export function MyProfilePreview({ userId, refreshKey }: { userId: string; refre
                         trimStartSeconds={(selectedPost.media?.[0] as any)?.trim_start_seconds ?? null}
                         trimEndSeconds={(selectedPost.media?.[0] as any)?.trim_end_seconds ?? null}
                         alt="Mídia do post"
+                        className="h-full rounded-none border-0"
                       />
                     ) : (
                       <div className="rounded-xl border border-border/60 bg-muted p-6 text-sm text-muted-foreground">
@@ -218,25 +219,24 @@ export function MyProfilePreview({ userId, refreshKey }: { userId: string; refre
                     )}
                   </div>
 
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        type="button"
-                        variant={selectedPost.liked_by_me ? "secondary" : "ghost"}
-                        onClick={async () => {
-                          await supabase.rpc("toggle_feed_post_like", { p_post_id: selectedPost.post_id });
-                          await postsQuery.refetch();
-                        }}
-                      >
-                        Curtir ({selectedPost.like_count})
-                      </Button>
-                      <CommentsDrawer postId={selectedPost.post_id} count={selectedPost.comment_count} />
-                    </div>
-
-                    {selectedPost.caption ? (
-                      <div className="text-sm text-foreground whitespace-pre-wrap">{selectedPost.caption}</div>
-                    ) : null}
-                  </div>
+                  <PostCommentsPanel
+                    postId={selectedPost.post_id}
+                    author={{
+                      displayName: (p?.display_name ?? "Você") as string,
+                      username: p?.username ?? null,
+                      avatarUrl: p?.avatar_url ?? null,
+                    }}
+                    caption={selectedPost.caption}
+                    likeCount={selectedPost.like_count}
+                    likedByMe={selectedPost.liked_by_me}
+                    commentCount={selectedPost.comment_count}
+                    onPostLikeChange={(next) =>
+                      setSelectedPost((prev) => (prev ? { ...prev, like_count: next.likeCount, liked_by_me: next.likedByMe } : prev))
+                    }
+                    onCommentCountChange={(delta) =>
+                      setSelectedPost((prev) => (prev ? { ...prev, comment_count: Math.max(0, prev.comment_count + delta) } : prev))
+                    }
+                  />
                 </div>
               ) : null}
             </DialogContent>

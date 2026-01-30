@@ -138,22 +138,13 @@ export default function AuthPage() {
     if (resetLoading) return;
     setResetLoading(true);
 
-    const { error, accepted } = await resetPassword(values.email);
+    const { error } = await resetPassword(values.email);
     setResetLoading(false);
 
     if (error) {
       toast({
         title: "Não foi possível enviar o link",
         description: "Tente novamente em instantes.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!accepted) {
-      toast({
-        title: "Serviço temporariamente indisponível",
-        description: "No momento não foi possível enviar o e-mail. Tente novamente em instantes.",
         variant: "destructive",
       });
       return;

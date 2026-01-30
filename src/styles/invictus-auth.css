@@ -167,6 +167,85 @@ body.invictus-landing-body {
   transform: translateY(14px);
 }
 
+/* Stagger premium (cards) com direção alternada L/R
+   - Use APENAS em grids de cards (ex.: Pilares / O que encontra aqui)
+   - Mantém o stagger vertical padrão para textos/listas
+*/
+.invictus-reveal-scope .invictus-stagger--lr > * {
+  --invictus-d: 0ms;
+  opacity: 0;
+  transform: translateY(10px) translateX(var(--invictus-lr-x, 16px));
+  transition:
+    opacity var(--invictus-card-dur, 560ms) cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform var(--invictus-card-dur, 560ms) cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter var(--invictus-card-dur, 560ms) cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition-delay: var(--invictus-d);
+  will-change: opacity, transform, filter;
+}
+
+.invictus-reveal-scope .invictus-stagger--lr > *:nth-child(even) {
+  transform: translateY(10px) translateX(calc(var(--invictus-lr-x, 16px) * -1));
+}
+
+@media (min-width: 768px) {
+  .invictus-reveal-scope .invictus-stagger--lr > * {
+    --invictus-lr-x: 26px;
+    filter: blur(0.35px);
+  }
+}
+
+.invictus-revealed .invictus-stagger--lr > * {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+@media (min-width: 768px) {
+  .invictus-revealed .invictus-stagger--lr > * {
+    --invictus-card-dur: 640ms;
+  }
+}
+
+/* (intencionalmente sem keyframes: a variação odd/even do translateX fica mais consistente via transition) */
+
+/* Sistema de delay por CSS var (até 12 itens) – reaproveitável para card + ícone */
+.invictus-revealed .invictus-stagger--lr > *:nth-child(1) {
+  --invictus-d: 70ms;
+}
+.invictus-revealed .invictus-stagger--lr > *:nth-child(2) {
+  --invictus-d: 140ms;
+}
+.invictus-revealed .invictus-stagger--lr > *:nth-child(3) {
+  --invictus-d: 210ms;
+}
+.invictus-revealed .invictus-stagger--lr > *:nth-child(4) {
+  --invictus-d: 280ms;
+}
+.invictus-revealed .invictus-stagger--lr > *:nth-child(5) {
+  --invictus-d: 350ms;
+}
+.invictus-revealed .invictus-stagger--lr > *:nth-child(6) {
+  --invictus-d: 420ms;
+}
+.invictus-revealed .invictus-stagger--lr > *:nth-child(7) {
+  --invictus-d: 490ms;
+}
+.invictus-revealed .invictus-stagger--lr > *:nth-child(8) {
+  --invictus-d: 560ms;
+}
+.invictus-revealed .invictus-stagger--lr > *:nth-child(9) {
+  --invictus-d: 630ms;
+}
+.invictus-revealed .invictus-stagger--lr > *:nth-child(10) {
+  --invictus-d: 700ms;
+}
+.invictus-revealed .invictus-stagger--lr > *:nth-child(11) {
+  --invictus-d: 770ms;
+}
+.invictus-revealed .invictus-stagger--lr > *:nth-child(12) {
+  --invictus-d: 840ms;
+}
+
 .invictus-revealed .invictus-stagger > * {
   animation: invictus-stagger-in 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
@@ -262,8 +341,25 @@ body.invictus-landing-body {
     transform: none;
   }
 
+  .invictus-reveal-scope .invictus-stagger--lr > * {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition: none;
+  }
+
   .invictus-revealed .invictus-stagger > * {
     animation: none;
+  }
+
+  .invictus-revealed .invictus-stagger--lr > * {
+    animation: none;
+  }
+
+  .invictus-icon-plate {
+    animation: none !important;
+    transform: none;
+    filter: none;
   }
 }
 
@@ -419,6 +515,57 @@ body.invictus-landing-body {
     0 1px 0 0 hsl(var(--foreground) / 0.14) inset,
     0 0 0 1px hsl(var(--gold-soft) / 0.12) inset,
     0 14px 40px -28px hsl(var(--foreground) / 0.55);
+}
+
+/* Pop suave do plate (entra um pouco depois do card) */
+.invictus-reveal-scope .invictus-stagger--lr > * .invictus-icon-plate {
+  opacity: 0;
+  transform: translateY(2px) scale(0.92);
+  filter: brightness(0.98);
+  will-change: transform, opacity, filter, box-shadow;
+}
+
+.invictus-revealed .invictus-stagger--lr > * .invictus-icon-plate {
+  animation: invictus-icon-pop 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--invictus-d) + 90ms);
+}
+
+@media (min-width: 768px) {
+  .invictus-revealed .invictus-stagger--lr > * .invictus-icon-plate {
+    animation-duration: 580ms;
+    animation-delay: calc(var(--invictus-d) + 110ms);
+  }
+}
+
+@keyframes invictus-icon-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(2px) scale(0.92);
+    filter: brightness(0.98);
+    box-shadow:
+      0 1px 0 0 hsl(var(--foreground) / 0.14) inset,
+      0 0 0 1px hsl(var(--gold-soft) / 0.12) inset,
+      0 14px 40px -28px hsl(var(--foreground) / 0.55);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(0) scale(1.02);
+    filter: brightness(1.03);
+    box-shadow:
+      0 1px 0 0 hsl(var(--foreground) / 0.16) inset,
+      0 0 0 1px hsl(var(--gold-hot) / 0.24) inset,
+      0 20px 56px -34px hsl(var(--foreground) / 0.62),
+      0 0 60px -46px hsl(var(--gold-hot) / 0.55);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    box-shadow:
+      0 1px 0 0 hsl(var(--foreground) / 0.14) inset,
+      0 0 0 1px hsl(var(--gold-soft) / 0.12) inset,
+      0 14px 40px -28px hsl(var(--foreground) / 0.55);
+  }
 }
 
 .invictus-icon-plate::after {

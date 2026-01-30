@@ -196,7 +196,7 @@ export function MyProfilePreview({ userId, refreshKey }: { userId: string; refre
 
           <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
             <DialogContent
-              className="h-[85vh] w-[min(1100px,calc(100vw-1.5rem))] overflow-hidden p-0 invictus-surface invictus-frame border-border/70"
+              className="h-[85vh] w-[min(1100px,calc(100vw-1.5rem))] max-w-none overflow-hidden p-0 invictus-surface invictus-frame border-border/70"
             >
               <DialogHeader className="sr-only">
                 <DialogTitle>Publicação</DialogTitle>

@@ -259,7 +259,7 @@ export default function Membro() {
 
           <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
             <DialogContent
-              className="h-[85vh] w-[min(1100px,calc(100vw-1.5rem))] max-w-none overflow-hidden p-0 invictus-surface invictus-frame border-border/70"
+              className="h-[min(80vh,720px)] w-[min(935px,calc(100vw-1.5rem))] max-w-none self-center mt-0 overflow-hidden p-0 invictus-surface invictus-frame border-border/70"
             >
               <DialogHeader className="sr-only">
                 <DialogTitle>Publicação</DialogTitle>

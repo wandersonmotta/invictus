@@ -25,6 +25,7 @@ export type PostCommentsPanelProps = {
   likeCount: number;
   likedByMe: boolean;
   commentCount: number;
+  autoFocusComposer?: boolean;
   onCommentCountChange?: (delta: number) => void;
   onPostLikeChange?: (next: { likeCount: number; likedByMe: boolean }) => void;
 };
@@ -36,6 +37,7 @@ export function PostCommentsPanel({
   likeCount,
   likedByMe,
   commentCount,
+  autoFocusComposer,
   onCommentCountChange,
   onPostLikeChange,
 }: PostCommentsPanelProps) {
@@ -63,6 +65,11 @@ export function PostCommentsPanel({
       mounted = false;
     };
   }, []);
+
+  React.useEffect(() => {
+    if (!autoFocusComposer) return;
+    queueMicrotask(() => composerRef.current?.focus());
+  }, [autoFocusComposer, postId]);
 
   const commentsQuery = useQuery({
     queryKey: ["feed_comments", postId],

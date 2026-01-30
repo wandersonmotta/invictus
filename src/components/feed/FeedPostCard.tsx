@@ -5,12 +5,26 @@ import type { FeedPost } from "@/features/feed/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { ReelsMedia } from "@/components/feed/ReelsMedia";
-import { CommentsDrawer } from "@/components/feed/CommentsDrawer";
 import { Link } from "react-router-dom";
+import { Heart, MessageCircle } from "lucide-react";
 
-export function FeedPostCard({ post }: { post: FeedPost & { media_urls: { url: string; contentType: string | null }[] } }) {
+import { FeedPostViewerDialog, type FeedPostWithUrls } from "@/components/feed/FeedPostViewerDialog";
+
+export function FeedPostCard({
+  post,
+}: {
+  post: FeedPost & {
+    media_urls: {
+      url: string;
+      contentType: string | null;
+      trimStartSeconds?: number | null;
+      trimEndSeconds?: number | null;
+    }[];
+  };
+}) {
   const qc = useQueryClient();
+  const [viewerOpen, setViewerOpen] = React.useState(false);
+  const [initialFocus, setInitialFocus] = React.useState<"comment" | "none">("none");
 
   const likeMutation = useMutation({
     mutationFn: async () => {
@@ -22,10 +36,51 @@ export function FeedPostCard({ post }: { post: FeedPost & { media_urls: { url: s
     },
   });
 
-  const primary = post.media_urls[0] as any;
+  const primary = post.media_urls[0];
   const authorHref = post.author_username
     ? `/membro/${encodeURIComponent(post.author_username.replace(/^@/, ""))}`
     : null;
+
+  const isVideo = Boolean(primary?.contentType?.startsWith("video/"));
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+
+  React.useEffect(() => {
+    if (!viewerOpen) {
+      setInitialFocus("none");
+    }
+  }, [viewerOpen]);
+
+  React.useEffect(() => {
+    if (!isVideo) return;
+    const el = videoRef.current;
+    if (!el) return;
+
+    const start = typeof primary?.trimStartSeconds === "number" ? primary.trimStartSeconds : null;
+    const end = typeof primary?.trimEndSeconds === "number" ? primary.trimEndSeconds : null;
+
+    const onLoaded = () => {
+      if (start != null && Number.isFinite(start)) {
+        try {
+          el.currentTime = Math.max(0, start);
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    const onTimeUpdate = () => {
+      if (end != null && Number.isFinite(end) && el.currentTime >= end) {
+        el.pause();
+      }
+    };
+
+    el.addEventListener("loadedmetadata", onLoaded);
+    el.addEventListener("timeupdate", onTimeUpdate);
+    return () => {
+      el.removeEventListener("loadedmetadata", onLoaded);
+      el.removeEventListener("timeupdate", onTimeUpdate);
+    };
+  }, [isVideo, primary?.trimStartSeconds, primary?.trimEndSeconds, primary?.url]);
 
   return (
     <Card className="invictus-surface invictus-frame border-border/70 mx-auto w-full max-w-[480px] overflow-hidden">
@@ -79,28 +134,95 @@ export function FeedPostCard({ post }: { post: FeedPost & { media_urls: { url: s
         </div>
 
         {primary ? (
-          <ReelsMedia
-            url={primary.url}
-            contentType={primary.contentType}
-            trimStartSeconds={primary.trimStartSeconds ?? null}
-            trimEndSeconds={primary.trimEndSeconds ?? null}
-            alt={`Mídia de ${post.author_display_name}`}
-            className="rounded-none border-0"
-          />
+          <button
+            type="button"
+            onClick={() => {
+              setInitialFocus("none");
+              setViewerOpen(true);
+            }}
+            className="block w-full bg-muted"
+            aria-label="Abrir publicação"
+          >
+            <div className="max-h-[70svh] w-full overflow-hidden">
+              {isVideo ? (
+                <video
+                  ref={videoRef}
+                  src={primary.url}
+                  className="mx-auto block w-full max-h-[70svh] object-contain"
+                  playsInline
+                  controls
+                  preload="metadata"
+                />
+              ) : (
+                <img
+                  src={primary.url}
+                  alt={`Mídia de ${post.author_display_name}`}
+                  className="mx-auto block w-full max-h-[70svh] object-contain"
+                  loading="lazy"
+                />
+              )}
+            </div>
+          </button>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-2 px-4 py-3">
-          <Button type="button" variant={post.liked_by_me ? "secondary" : "ghost"} onClick={() => likeMutation.mutate()}>
-            Curtir ({post.like_count})
-          </Button>
-          <CommentsDrawer postId={post.post_id} count={post.comment_count} />
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => likeMutation.mutate()}
+              aria-label={post.liked_by_me ? "Descurtir" : "Curtir"}
+              disabled={likeMutation.isPending}
+            >
+              <Heart className={post.liked_by_me ? "fill-current" : ""} />
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setInitialFocus("comment");
+                setViewerOpen(true);
+              }}
+              aria-label="Comentar"
+            >
+              <MessageCircle />
+            </Button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setInitialFocus("comment");
+              setViewerOpen(true);
+            }}
+            className="text-xs text-muted-foreground hover:underline"
+          >
+            Ver comentários ({post.comment_count})
+          </button>
+        </div>
+
+        <div className="px-4 pb-3 text-sm">
+          <span className="font-semibold">{post.like_count}</span> <span className="text-muted-foreground">curtidas</span>
         </div>
 
         {post.caption ? (
-          <div className="px-4 pb-4 text-sm text-foreground whitespace-pre-wrap">{post.caption}</div>
+          <div className="px-4 pb-4 text-sm text-foreground">
+            <span className="font-semibold">{post.author_username?.replace(/^@/, "") ?? post.author_display_name}</span>
+            <span className="ml-2 whitespace-pre-wrap break-words">{post.caption}</span>
+          </div>
         ) : (
           <div className="pb-2" />
         )}
+
+        <FeedPostViewerDialog
+          open={viewerOpen}
+          onOpenChange={setViewerOpen}
+          post={post as unknown as FeedPostWithUrls}
+          initialFocus={initialFocus}
+        />
       </CardContent>
     </Card>
   );

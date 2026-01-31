@@ -16,69 +16,25 @@
   background-repeat: no-repeat;
 }
 
-/* Landing-only background (keeps auth/reset untouched) */
+/* ========================================================
+   LANDING PAGE - OTIMIZADO PARA PERFORMANCE
+   ========================================================
+   A imagem de fundo vem EXCLUSIVAMENTE do componente
+   LandingBackground.tsx. O CSS aqui apenas adiciona
+   overlays leves para legibilidade.
+   ======================================================== */
+
+/* Landing page: SEM background-image (usa <img> do componente) */
 .invictus-landing-page {
   position: relative;
   isolation: isolate;
-  background-image:
-    /* extra center contrast for readability */
-    radial-gradient(900px 700px at 50% 30%, hsl(var(--background) / 0.82), transparent 60%),
-    radial-gradient(900px 700px at 50% 0%, hsl(var(--foreground) / 0.10), transparent 55%),
-    radial-gradient(1200px 900px at 50% 120%, hsl(var(--background) / 0.92), transparent 60%),
-    radial-gradient(900px 700px at 18% 6%, hsl(var(--primary) / 0.10), transparent 55%),
-    radial-gradient(800px 600px at 82% 8%, hsl(var(--primary) / 0.06), transparent 55%),
-    url("/images/invictus-landing-bg-1536x1920.jpg");
-
-  background-size: auto, auto, auto, auto, auto, cover;
-  background-position: center, center, center, center, center;
-  background-repeat: no-repeat;
-  background-attachment: scroll;
+  /* Imagem vem do LandingBackground.tsx - não duplicar aqui */
 }
 
-/* Fallback: aplica o mesmo background no body durante a landing. */
+/* Body durante landing: apenas cor base (imagem vem do componente) */
 body.invictus-landing-body {
-  background-image:
-    radial-gradient(1200px 800px at 20% 0%, hsl(var(--primary) / 0.12), transparent 55%),
-    radial-gradient(900px 600px at 80% 10%, hsl(var(--primary) / 0.08), transparent 50%),
-    radial-gradient(900px 900px at 50% 120%, hsl(var(--foreground) / 0.05), transparent 55%),
-    radial-gradient(900px 700px at 50% 30%, hsl(var(--background) / 0.82), transparent 60%),
-    radial-gradient(900px 700px at 50% 0%, hsl(var(--foreground) / 0.10), transparent 55%),
-    radial-gradient(1200px 900px at 50% 120%, hsl(var(--background) / 0.92), transparent 60%),
-    radial-gradient(900px 700px at 18% 6%, hsl(var(--primary) / 0.10), transparent 55%),
-    radial-gradient(800px 600px at 82% 8%, hsl(var(--primary) / 0.06), transparent 55%),
-    url("/images/invictus-landing-bg-1536x1920.jpg");
-  background-size: auto, auto, auto, auto, auto, auto, auto, auto, cover;
-  background-position: center, center, center, center, center, center, center, center, center;
-  background-repeat: no-repeat;
-  background-attachment: scroll;
-}
-
-@media (min-width: 768px) {
-  body.invictus-landing-body {
-    background-image:
-      radial-gradient(1200px 800px at 20% 0%, hsl(var(--primary) / 0.12), transparent 55%),
-      radial-gradient(900px 600px at 80% 10%, hsl(var(--primary) / 0.08), transparent 50%),
-      radial-gradient(900px 900px at 50% 120%, hsl(var(--foreground) / 0.05), transparent 55%),
-      radial-gradient(900px 700px at 50% 30%, hsl(var(--background) / 0.82), transparent 60%),
-      radial-gradient(900px 700px at 50% 0%, hsl(var(--foreground) / 0.10), transparent 55%),
-      radial-gradient(1200px 900px at 50% 120%, hsl(var(--background) / 0.92), transparent 60%),
-      radial-gradient(900px 700px at 18% 6%, hsl(var(--primary) / 0.10), transparent 55%),
-      radial-gradient(800px 600px at 82% 8%, hsl(var(--primary) / 0.06), transparent 55%),
-      url("/images/invictus-landing-bg-1920x1080.jpg");
-  }
-}
-
-@media (min-width: 768px) {
-  .invictus-landing-page {
-    background-image:
-      radial-gradient(900px 700px at 50% 30%, hsl(var(--background) / 0.82), transparent 60%),
-      radial-gradient(900px 700px at 50% 0%, hsl(var(--foreground) / 0.10), transparent 55%),
-      radial-gradient(1200px 900px at 50% 120%, hsl(var(--background) / 0.92), transparent 60%),
-      radial-gradient(900px 700px at 18% 6%, hsl(var(--primary) / 0.10), transparent 55%),
-      radial-gradient(800px 600px at 82% 8%, hsl(var(--primary) / 0.06), transparent 55%),
-      url("/images/invictus-landing-bg-1920x1080.jpg");
-    background-attachment: scroll;
-  }
+  background-color: hsl(var(--background));
+  /* Removido: background-image duplicado que causava recarregamento */
 }
 
 /* Conteúdo sempre acima do overlay */
@@ -87,60 +43,32 @@ body.invictus-landing-body {
   z-index: 1;
 }
 
-/* Overlay animado (grain + vinheta) – dá vida sem mexer a foto */
+/* Overlay estático simplificado - SEM animação contínua */
 .invictus-landing-page::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-
+  
+  /* Apenas 2 gradientes essenciais (vs 5+ anteriores) */
   background:
-    /* vinheta suave */
-    radial-gradient(1400px 900px at 50% 20%, transparent 55%, hsl(var(--background) / 0.34) 100%),
-    /* aura dourada bem discreta */
-    radial-gradient(520px 320px at 18% 8%, hsl(var(--primary) / 0.10), transparent 60%),
-    radial-gradient(420px 260px at 86% 10%, hsl(var(--primary) / 0.07), transparent 60%),
-    /* grain (sem asset) */
+    /* vinheta suave nas bordas */
+    radial-gradient(1400px 900px at 50% 20%, transparent 55%, hsl(var(--background) / 0.28) 100%),
+    /* grain sutil estático (sem animação) */
     repeating-linear-gradient(
       0deg,
-      hsl(var(--foreground) / 0.05) 0px,
-      hsl(var(--foreground) / 0.05) 1px,
-      transparent 1px,
-      transparent 3px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      hsl(var(--foreground) / 0.04) 0px,
-      hsl(var(--foreground) / 0.04) 1px,
+      hsl(var(--foreground) / 0.03) 0px,
+      hsl(var(--foreground) / 0.03) 1px,
       transparent 1px,
       transparent 4px
     );
-
-  mix-blend-mode: overlay;
-  opacity: 0.46;
-  transform: translateZ(0);
-  background-size: auto, auto, auto, 220px 220px, 260px 260px;
-  background-position: center, center, center, 0px 0px, 0px 0px;
-  animation: invictus-grain-drift 12s ease-in-out infinite;
-}
-
-@keyframes invictus-grain-drift {
-  0% {
-    opacity: 0.36;
-    filter: blur(0px);
-    background-position: center, center, center, 0px 0px, 0px 0px;
-  }
-  50% {
-    opacity: 0.50;
-    filter: blur(0.45px);
-    background-position: center, center, center, 40px 24px, -28px 18px;
-  }
-  100% {
-    opacity: 0.40;
-    filter: blur(0.65px);
-    background-position: center, center, center, 80px 56px, -56px 42px;
-  }
+  
+  /* Removido: mix-blend-mode (causa recomposição constante) */
+  /* Removido: animation (causa trabalho contínuo do browser) */
+  opacity: 0.35;
+  transform: translateZ(0); /* GPU layer */
+  background-size: auto, 200px 200px;
 }
 
 /* Subtítulos com presença (padrão editorial) */

@@ -129,12 +129,10 @@ All colors MUST be HSL.
 }
 
 @layer base {
-  /* Subtle premium noise + vignette using only tokens */
+  /* Aura dourada sutil - único gradiente otimizado */
   body {
     background-image:
-      radial-gradient(1200px 800px at 20% 0%, hsl(var(--primary) / 0.12), transparent 55%),
-      radial-gradient(900px 600px at 80% 10%, hsl(var(--primary) / 0.08), transparent 50%),
-      radial-gradient(900px 900px at 50% 120%, hsl(var(--foreground) / 0.05), transparent 55%);
+      radial-gradient(1000px 600px at 30% 5%, hsl(var(--primary) / 0.10), transparent 50%);
     background-attachment: fixed;
   }
 }

@@ -1,43 +1,60 @@
 import * as React from "react";
 
 /**
- * Fallback ultra-robusto para o background da landing.
- * Alguns browsers/mobile podem falhar ao renderizar `background-image` em body/containers.
- * Aqui renderizamos a imagem como um layer fixo atrás do conteúdo.
+ * FONTE ÚNICA do background da landing - otimizado para performance.
+ * 
+ * Estratégia:
+ * - Imagem com fetchPriority="high" para prioridade máxima
+ * - will-change: transform promove layer na GPU (evita descarregamento)
+ * - Overlay simplificado (3 gradientes vs 5+) para menos recomposição
+ * - Sem animação contínua para reduzir trabalho do browser
  */
 export function LandingBackground() {
   return (
     <div
       aria-hidden
       className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+      style={{
+        willChange: "transform",
+        transform: "translateZ(0)", // força GPU layer
+        contain: "paint layout", // otimização de rendering
+      }}
     >
       <picture>
         <source
           media="(min-width: 768px)"
           srcSet="/images/invictus-landing-bg-1920x1080-v2.jpg"
+          type="image/jpeg"
         />
         <img
           src="/images/invictus-landing-bg-1536x1920-v2.jpg"
           alt=""
           className="h-full w-full object-cover"
           loading="eager"
-          decoding="async"
+          decoding="sync"
+          fetchPriority="high"
+          style={{
+            willChange: "transform",
+            transform: "translateZ(0)",
+          }}
         />
       </picture>
 
-      {/* Overlays de legibilidade usando tokens (sem cores hardcoded) */}
+      {/* Overlay simplificado: 3 gradientes essenciais (vs 5+) */}
       <div
         className="absolute inset-0"
         style={{
           backgroundImage: [
-            // centro mais legível
-            "radial-gradient(900px 700px at 50% 30%, hsl(var(--background) / 0.82), transparent 60%)",
-            "radial-gradient(900px 700px at 50% 0%, hsl(var(--foreground) / 0.10), transparent 55%)",
-            "radial-gradient(1200px 900px at 50% 120%, hsl(var(--background) / 0.92), transparent 60%)",
-            // aura dourada
-            "radial-gradient(900px 700px at 18% 6%, hsl(var(--primary) / 0.10), transparent 55%)",
-            "radial-gradient(800px 600px at 82% 8%, hsl(var(--primary) / 0.06), transparent 55%)",
+            // vinheta central para legibilidade
+            "radial-gradient(1000px 700px at 50% 30%, hsl(var(--background) / 0.75), transparent 55%)",
+            // sombra inferior suave
+            "radial-gradient(1400px 800px at 50% 110%, hsl(var(--background) / 0.85), transparent 50%)",
+            // aura dourada sutil (única)
+            "radial-gradient(800px 500px at 25% 5%, hsl(var(--primary) / 0.08), transparent 50%)",
           ].join(", "),
+          // GPU layer para evitar recomposição
+          willChange: "transform",
+          transform: "translateZ(0)",
         }}
       />
     </div>

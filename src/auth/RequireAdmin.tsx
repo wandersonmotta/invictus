@@ -9,6 +9,12 @@ export function RequireAdmin({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const isAdminQuery = useIsAdmin(user?.id);
 
+  // If a non-authenticated user somehow reaches here, send them to auth.
+  // (Normally /admin is already wrapped by <RequireAuth />.)
+  if (!user) {
+    return <Navigate to="/auth" replace state={{ from: location.pathname }} />;
+  }
+
   if (isAdminQuery.isLoading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
@@ -18,7 +24,8 @@ export function RequireAdmin({ children }: { children: React.ReactNode }) {
   }
 
   if (isAdminQuery.isError || !isAdminQuery.data) {
-    return <Navigate to="/app" replace state={{ from: location.pathname }} />;
+    // Logged-in non-admins: send them back to their own page.
+    return <Navigate to="/perfil" replace state={{ from: location.pathname }} />;
   }
 
   return <>{children}</>;

@@ -1,5 +1,4 @@
 import * as React from "react";
-import { useNavigate } from "react-router-dom";
 
 import { LandingTopbar } from "@/components/landing/LandingTopbar";
 import { WaitlistHero } from "@/components/landing/WaitlistHero";
@@ -12,23 +11,15 @@ import {
   WhoIsFor,
 } from "@/components/landing/ManifestoSections";
 import { LandingFooter } from "@/components/landing/LandingFooter";
-import { useAuth } from "@/auth/AuthProvider";
 import { LandingBackground } from "@/components/landing/LandingBackground";
 
 export default function Landing() {
-  const { session } = useAuth();
-  const navigate = useNavigate();
-
   React.useEffect(() => {
     // Fallback robusto: garante o background premium mesmo se algum device
     // não aplicar corretamente o background no container principal.
     document.body.classList.add("invictus-landing-body");
     return () => document.body.classList.remove("invictus-landing-body");
   }, []);
-
-  React.useEffect(() => {
-    if (session) navigate("/app", { replace: true });
-  }, [session, navigate]);
 
   return (
     <main className="invictus-landing-page min-h-svh">

@@ -1,0 +1,191 @@
+import * as React from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+
+import { isAppHost as isAppHostFn, buildAppUrlFromCurrentLocation } from "@/lib/appOrigin";
+
+import Landing from "@/pages/Landing";
+import AuthPage from "@/pages/Auth";
+import ResetPasswordPage from "@/pages/ResetPassword";
+import { AppLayout } from "@/components/AppLayout";
+import { RequireAuth } from "@/auth/RequireAuth";
+
+const Home = React.lazy(() => import("@/pages/Home"));
+const Index = React.lazy(() => import("@/pages/Index"));
+const NotFound = React.lazy(() => import("@/pages/NotFound"));
+const Buscar = React.lazy(() => import("@/pages/Buscar"));
+const Mensagens = React.lazy(() => import("@/pages/Mensagens"));
+const Perfil = React.lazy(() => import("@/pages/Perfil"));
+const Admin = React.lazy(() => import("@/pages/Admin"));
+const ClassPage = React.lazy(() => import("@/pages/Class"));
+const AguardandoAprovacao = React.lazy(() => import("@/pages/AguardandoAprovacao"));
+const Comunidade = React.lazy(() => import("@/pages/Comunidade"));
+const Feed = React.lazy(() => import("@/pages/Feed"));
+const Membro = React.lazy(() => import("@/pages/Membro"));
+
+function RedirectToApp() {
+  const location = useLocation();
+
+  React.useEffect(() => {
+    const url = buildAppUrlFromCurrentLocation(location.pathname);
+    window.location.assign(url);
+  }, [location.pathname]);
+
+  return null;
+}
+
+export function HostRouter() {
+  const hostname = window.location.hostname;
+  const isAppHost = isAppHostFn(hostname);
+
+  // Root domain: only Landing. Anything else -> app subdomain (preserving path).
+  if (!isAppHost) {
+    return (
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="*" element={<RedirectToApp />} />
+      </Routes>
+    );
+  }
+
+  // App subdomain: no landing. Root path -> /app.
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/app" replace />} />
+
+      <Route path="/auth" element={<AuthPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+      <Route
+        path="/aguardando-aprovacao"
+        element={
+          <RequireAuth>
+            <AguardandoAprovacao />
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/app"
+        element={
+          <RequireAuth>
+            <AppLayout>
+              <Home />
+            </AppLayout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/mapa"
+        element={
+          <RequireAuth>
+            <AppLayout>
+              <Index />
+            </AppLayout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/feed"
+        element={
+          <RequireAuth>
+            <AppLayout>
+              <Feed />
+            </AppLayout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/membro/:username"
+        element={
+          <RequireAuth>
+            <AppLayout>
+              <Membro />
+            </AppLayout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/buscar"
+        element={
+          <RequireAuth>
+            <AppLayout>
+              <Buscar />
+            </AppLayout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/mensagens"
+        element={
+          <RequireAuth>
+            <AppLayout>
+              <Mensagens />
+            </AppLayout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/mensagens/:conversationId"
+        element={
+          <RequireAuth>
+            <AppLayout>
+              <Mensagens />
+            </AppLayout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/comunidade"
+        element={
+          <RequireAuth>
+            <AppLayout>
+              <Comunidade />
+            </AppLayout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/comunidade/:threadId"
+        element={
+          <RequireAuth>
+            <AppLayout>
+              <Comunidade />
+            </AppLayout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/perfil"
+        element={
+          <RequireAuth>
+            <AppLayout>
+              <Perfil />
+            </AppLayout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/class"
+        element={
+          <RequireAuth>
+            <AppLayout>
+              <ClassPage />
+            </AppLayout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <RequireAuth>
+            <AppLayout>
+              <Admin />
+            </AppLayout>
+          </RequireAuth>
+        }
+      />
+
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}

@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { getAppOrigin } from "@/lib/appOrigin";
 
 type AuthContextValue = {
   session: Session | null;
@@ -80,7 +81,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/`;
+    // Always send users back to the app subdomain in custom domains.
+    const redirectUrl = `${getAppOrigin()}/auth`;
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -90,7 +92,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
-    const redirectTo = `${window.location.origin}/reset-password`;
+    // Ensure password reset links always target the app subdomain.
+    const redirectTo = `${getAppOrigin()}/reset-password`;
     const { data, error } = await supabase.functions.invoke("send-password-reset", {
       body: { email, redirectTo },
     });

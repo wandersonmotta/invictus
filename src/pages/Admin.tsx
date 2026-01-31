@@ -23,6 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { Download, Search } from "lucide-react";
 type Category = {
   id: string;
   name: string;
@@ -57,6 +58,15 @@ type PendingProfile = {
   display_name: string | null;
   created_at: string;
   access_status: "pending" | "approved" | "rejected";
+};
+
+type WaitlistLead = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  phone: string | null;
+  source: string | null;
+  created_at: string;
 };
 export default function Admin() {
   const {
@@ -140,6 +150,73 @@ export default function Admin() {
       return (data ?? []) as PendingProfile[];
     }
   });
+
+  // --- Waitlist Leads ---
+  const { data: waitlistLeads } = useQuery({
+    queryKey: ["waitlist_leads"],
+    enabled: !!isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("waitlist_leads")
+        .select("id, email, full_name, phone, source, created_at")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as WaitlistLead[];
+    }
+  });
+
+  const [leadsSearch, setLeadsSearch] = React.useState("");
+
+  const filteredLeads = React.useMemo(() => {
+    const list = waitlistLeads ?? [];
+    if (!leadsSearch.trim()) return list;
+    const q = leadsSearch.toLowerCase();
+    return list.filter(
+      (l) =>
+        (l.full_name?.toLowerCase().includes(q)) ||
+        l.email.toLowerCase().includes(q)
+    );
+  }, [waitlistLeads, leadsSearch]);
+
+  const formatPhone = (phone: string | null) => {
+    if (!phone) return "—";
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length === 11) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    }
+    if (digits.length === 10) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+    return phone;
+  };
+
+  const exportLeadsToCSV = () => {
+    const list = filteredLeads;
+    if (list.length === 0) {
+      toast({ title: "Nenhum lead para exportar" });
+      return;
+    }
+    const headers = ["Nome", "WhatsApp", "Email", "Origem", "Data"];
+    const rows = list.map((lead) => [
+      lead.full_name || "",
+      formatPhone(lead.phone),
+      lead.email,
+      lead.source || "",
+      new Date(lead.created_at).toLocaleString("pt-BR")
+    ]);
+    const bom = "\uFEFF";
+    const csv = bom + [headers, ...rows]
+      .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `leads-waitlist-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: `${list.length} lead(s) exportado(s)` });
+  };
 
   // --- Category form ---
   const [catName, setCatName] = React.useState("");
@@ -477,11 +554,12 @@ export default function Admin() {
             <p>Se você deveria ser admin, peça para um administrador validar sua conta e permissões.</p>
           </CardContent>
         </Card> : <Tabs defaultValue="approvals" className="w-full">
-          <TabsList className="grid h-11 w-full grid-cols-4">
+          <TabsList className="grid h-11 w-full grid-cols-5">
             <TabsTrigger value="approvals">Aprovações</TabsTrigger>
             <TabsTrigger value="invites">Convites</TabsTrigger>
             <TabsTrigger value="categories">Categorias</TabsTrigger>
             <TabsTrigger value="trainings">Treinamentos</TabsTrigger>
+            <TabsTrigger value="leads">Leads</TabsTrigger>
           </TabsList>
 
           <TabsContent value="approvals" className="mt-4 space-y-4">
@@ -800,6 +878,76 @@ export default function Admin() {
                         </div>
                       </div>)}
                   </div>}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="leads" className="mt-4 space-y-4">
+            <Card className="invictus-surface invictus-frame border-border/70">
+              <CardHeader>
+                <CardTitle className="text-base">Leads da Lista de Espera</CardTitle>
+                <CardDescription>Pessoas interessadas que preencheram o formulário na landing page.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por nome ou email..."
+                      value={leadsSearch}
+                      onChange={(e) => setLeadsSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Button variant="outline" onClick={exportLeadsToCSV} disabled={(waitlistLeads ?? []).length === 0}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar CSV
+                  </Button>
+                </div>
+
+                {filteredLeads.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {leadsSearch.trim() ? "Nenhum lead encontrado com esse filtro." : "Nenhum lead cadastrado ainda."}
+                  </p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>WhatsApp</TableHead>
+                        <TableHead>E-mail</TableHead>
+                        <TableHead>Origem</TableHead>
+                        <TableHead>Data</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredLeads.map((lead) => (
+                        <TableRow key={lead.id}>
+                          <TableCell className="font-medium">{lead.full_name || "—"}</TableCell>
+                          <TableCell className="text-muted-foreground">{formatPhone(lead.phone)}</TableCell>
+                          <TableCell className="text-muted-foreground">{lead.email}</TableCell>
+                          <TableCell className="text-muted-foreground">{lead.source || "—"}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {new Date(lead.created_at).toLocaleString("pt-BR", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            })}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+
+                <p className="text-xs text-muted-foreground">
+                  Total: {filteredLeads.length} lead(s)
+                  {leadsSearch.trim() && waitlistLeads && filteredLeads.length !== waitlistLeads.length && 
+                    ` (de ${waitlistLeads.length} total)`
+                  }
+                </p>
               </CardContent>
             </Card>
           </TabsContent>

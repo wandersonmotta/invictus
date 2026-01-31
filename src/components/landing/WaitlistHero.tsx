@@ -14,19 +14,21 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import waitlistMediaPrimary from "@/assets/invictus-landing-waitlist-media-color-v3d.jpg";
 import waitlistMediaFallback from "@/assets/invictus-landing-waitlist-media-color.jpg";
 import invictusLogo from "@/assets/invictus-logo.png";
+
 const waitlistSchema = z.object({
   fullName: z.string().trim().min(3, "Informe seu nome completo").max(120, "Nome muito longo"),
   phone: z.string().trim().min(8, "Informe seu WhatsApp").max(32, "Número muito longo"),
   email: z.string().trim().max(255, "E-mail muito longo").email("Informe um e-mail válido")
 });
+
 type WaitlistValues = z.infer<typeof waitlistSchema>;
+
 export function WaitlistHero() {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [loading, setLoading] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const [mediaSrc, setMediaSrc] = React.useState<string>(waitlistMediaPrimary);
+
   const form = useForm<WaitlistValues>({
     resolver: zodResolver(waitlistSchema),
     defaultValues: {
@@ -35,7 +37,9 @@ export function WaitlistHero() {
       email: ""
     }
   });
+
   const phoneDigits = (raw: string) => raw.replace(/\D+/g, "");
+
   const onSubmit = async (values: WaitlistValues) => {
     if (loading) return;
     setLoading(true);
@@ -47,9 +51,7 @@ export function WaitlistHero() {
         });
         return;
       }
-      const {
-        error
-      } = await supabase.functions.invoke("waitlist-signup", {
+      const { error } = await supabase.functions.invoke("waitlist-signup", {
         body: {
           email: values.email,
           full_name: values.fullName,
@@ -75,7 +77,9 @@ export function WaitlistHero() {
       setLoading(false);
     }
   };
-  return <section className="px-4 pb-12 pt-6 sm:px-6 sm:pb-16" aria-labelledby="waitlist-title">
+
+  return (
+    <section className="px-4 pb-12 pt-6 sm:px-6 sm:pb-16" aria-labelledby="waitlist-title">
       <div className="mx-auto w-full max-w-6xl">
         <Card className="invictus-auth-surface invictus-auth-frame border-0">
           <CardHeader className="space-y-2">
@@ -83,17 +87,24 @@ export function WaitlistHero() {
             <CardTitle id="waitlist-title" className="text-balance text-2xl sm:text-3xl">
               Lista de espera
             </CardTitle>
-            <p className="max-w-2xl leading-relaxed text-muted-foreground text-base font-sans font-extralight">Se você quer elevar o seu nível, é só preencher o formulário  para ser avisado quando liberarmos novas vagas.</p>
+            <p className="max-w-2xl leading-relaxed text-muted-foreground text-base font-sans font-extralight">
+              Se você quer elevar o seu nível, preencha o formulário para ser avisado quando liberarmos novas vagas.
+            </p>
           </CardHeader>
 
           <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:items-center">
               {/* reduzido e escondido no mobile para não tomar tela */}
               <div className="relative sm:w-[240px] md:w-[260px]">
-                <EditorialMedia src={mediaSrc} className="w-full" loading="eager" onError={() => {
-                // Se o asset novo falhar por algum motivo, usamos o fallback já estável (1x).
-                setMediaSrc(prev => prev !== waitlistMediaFallback ? waitlistMediaFallback : prev);
-              }} />
+                <EditorialMedia
+                  src={mediaSrc}
+                  className="w-full"
+                  loading="eager"
+                  onError={() => {
+                    // Se o asset novo falhar por algum motivo, usamos o fallback já estável (1x).
+                    setMediaSrc(prev => prev !== waitlistMediaFallback ? waitlistMediaFallback : prev);
+                  }}
+                />
 
                 {/* Logo como overlay real (evita artefatos de texto na geração) */}
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
@@ -155,5 +166,6 @@ export function WaitlistHero() {
           </CardContent>
         </Card>
       </div>
-    </section>;
+    </section>
+  );
 }

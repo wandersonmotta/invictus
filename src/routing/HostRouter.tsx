@@ -8,6 +8,7 @@ import AuthPage from "@/pages/Auth";
 import ResetPasswordPage from "@/pages/ResetPassword";
 import { AppLayout } from "@/components/AppLayout";
 import { RequireAuth } from "@/auth/RequireAuth";
+import { RequireAdmin } from "@/auth/RequireAdmin";
 
 const Home = React.lazy(() => import("@/pages/Home"));
 const Index = React.lazy(() => import("@/pages/Index"));
@@ -169,9 +170,11 @@ export function HostRouter() {
           path="/admin"
           element={
             <RequireAuth>
-              <AppLayout>
-                <Admin />
-              </AppLayout>
+              <RequireAdmin>
+                <AppLayout>
+                  <Admin />
+                </AppLayout>
+              </RequireAdmin>
             </RequireAuth>
           }
         />
@@ -322,9 +325,11 @@ export function HostRouter() {
         path="/admin"
         element={
           <RequireAuth>
-            <AppLayout>
-              <Admin />
-            </AppLayout>
+            <RequireAdmin>
+              <AppLayout>
+                <Admin />
+              </AppLayout>
+            </RequireAdmin>
           </RequireAuth>
         }
       />

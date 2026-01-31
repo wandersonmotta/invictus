@@ -24,6 +24,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Download, Search } from "lucide-react";
+import { Navigate } from "react-router-dom";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 type Category = {
   id: string;
   name: string;
@@ -69,28 +71,26 @@ type WaitlistLead = {
   created_at: string;
 };
 export default function Admin() {
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
   const {
     toast
   } = useToast();
   const qc = useQueryClient();
-  const {
-    data: isAdmin
-  } = useQuery({
-    queryKey: ["is_admin", user?.id],
-    enabled: !!user?.id,
-    queryFn: async () => {
-      if (!user?.id) return false;
-      const {
-        data,
-        error
-      } = await supabase.from("user_roles").select("id").eq("user_id", user.id).eq("role", "admin").maybeSingle();
-      if (error) throw error;
-      return !!data;
-    }
-  });
+
+  const { data: isAdmin, isLoading: isAdminLoading, isError: isAdminError } = useIsAdmin(user?.id);
+
+  // Defense in depth: even if someone reaches this component, never render admin UI unless admin.
+  if (isAdminLoading) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="text-sm text-muted-foreground">Carregando…</div>
+      </div>
+    );
+  }
+
+  if (isAdminError || !isAdmin) {
+    return <Navigate to="/app" replace />;
+  }
   const {
     data: categories
   } = useQuery({

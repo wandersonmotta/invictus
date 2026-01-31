@@ -3,6 +3,8 @@ import { Home as HomeIcon, MapPin, Search, Send, User, Shield, Clapperboard, Mes
 
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/auth/AuthProvider";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import {
   Sidebar,
   SidebarContent,
@@ -40,13 +42,12 @@ const navSections = [
       { title: "Class", url: "/class", icon: Clapperboard },
     ],
   },
-  {
-    label: "Administração",
-    items: [{ title: "Admin", url: "/admin", icon: Shield }],
-  },
 ] as const;
 
 export function AppSidebar() {
+  const { user } = useAuth();
+  const { data: isAdmin } = useIsAdmin(user?.id);
+
   const location = useLocation();
   const currentPath = location.pathname;
   const { isMobile, setOpenMobile } = useSidebar();
@@ -69,7 +70,17 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            {navSections.map((section) => (
+            {[
+              ...navSections,
+              ...(isAdmin
+                ? ([
+                    {
+                      label: "Administração",
+                      items: [{ title: "Admin", url: "/admin", icon: Shield }],
+                    },
+                  ] as const)
+                : []),
+            ].map((section) => (
               <div key={section.label} className="invictus-sidebar-section">
                 <SidebarGroupLabel className="invictus-sidebar-sectionLabel">{section.label}</SidebarGroupLabel>
 

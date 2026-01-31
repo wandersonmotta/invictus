@@ -35,8 +35,7 @@
   background-attachment: scroll;
 }
 
-/* Fallback: aplica o mesmo background no body durante a landing.
-   Isso resolve casos (alguns mobiles/browsers) em que o background do container não aparece. */
+/* Fallback: aplica o mesmo background no body durante a landing. */
 body.invictus-landing-body {
   background-image:
     radial-gradient(1200px 800px at 20% 0%, hsl(var(--primary) / 0.12), transparent 55%),
@@ -160,100 +159,119 @@ body.invictus-landing-body {
   }
 }
 
-/* Stagger interno: “quadrados” e itens aparecem em sequência
-   IMPORTANTE: só prepara/oculta dentro de seções com reveal (evita sumir texto fora do scope). */
+/* ========================================================
+   STAGGER INTERNO - Textos e itens aparecem em sequência
+   ======================================================== */
 .invictus-reveal-scope .invictus-stagger > * {
   opacity: 0;
-  transform: translateY(14px);
+  transform: translateY(16px);
 }
 
-/* Stagger premium (cards) com direção alternada L/R
-   - Use APENAS em grids de cards (ex.: Pilares / O que encontra aqui)
-   - Mantém o stagger vertical padrão para textos/listas
-*/
+/* ========================================================
+   STAGGER PREMIUM - Cards entrando da DIREITA com "encaixe"
+   ======================================================== */
 .invictus-reveal-scope .invictus-stagger--lr > * {
   --invictus-d: 0ms;
   opacity: 0;
-  transform: translateY(10px) translateX(var(--invictus-lr-x, 16px));
-  transition:
-    opacity var(--invictus-card-dur, 560ms) cubic-bezier(0.2, 0.8, 0.2, 1),
-    transform var(--invictus-card-dur, 560ms) cubic-bezier(0.2, 0.8, 0.2, 1),
-    filter var(--invictus-card-dur, 560ms) cubic-bezier(0.2, 0.8, 0.2, 1);
-  transition-delay: var(--invictus-d);
-  will-change: opacity, transform, filter;
-}
-
-.invictus-reveal-scope .invictus-stagger--lr > *:nth-child(even) {
-  transform: translateY(10px) translateX(calc(var(--invictus-lr-x, 16px) * -1));
+  transform: translateX(60px) translateY(8px);
+  will-change: opacity, transform;
 }
 
 @media (min-width: 768px) {
   .invictus-reveal-scope .invictus-stagger--lr > * {
-    --invictus-lr-x: 26px;
-    filter: blur(0.35px);
+    transform: translateX(70px) translateY(10px);
+    filter: blur(0.4px);
   }
 }
 
+/* Animação de encaixe com overshoot */
 .invictus-revealed .invictus-stagger--lr > * {
-  opacity: 1;
-  transform: none;
-  filter: none;
+  animation: invictus-card-slide-in 650ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 @media (min-width: 768px) {
   .invictus-revealed .invictus-stagger--lr > * {
-    --invictus-card-dur: 640ms;
+    animation-duration: 720ms;
   }
 }
 
-/* (intencionalmente sem keyframes: a variação odd/even do translateX fica mais consistente via transition) */
+@keyframes invictus-card-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateX(60px) translateY(8px);
+    filter: blur(0.4px);
+  }
+  65% {
+    opacity: 1;
+    transform: translateX(-6px) translateY(0);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+    filter: blur(0);
+  }
+}
 
-/* Sistema de delay por CSS var (até 12 itens) – reaproveitável para card + ícone */
+/* Sistema de delay stagger (120ms entre cards para ser perceptível) */
 .invictus-revealed .invictus-stagger--lr > *:nth-child(1) {
-  --invictus-d: 70ms;
+  animation-delay: 80ms;
+  --invictus-d: 80ms;
 }
 .invictus-revealed .invictus-stagger--lr > *:nth-child(2) {
-  --invictus-d: 140ms;
+  animation-delay: 200ms;
+  --invictus-d: 200ms;
 }
 .invictus-revealed .invictus-stagger--lr > *:nth-child(3) {
-  --invictus-d: 210ms;
+  animation-delay: 320ms;
+  --invictus-d: 320ms;
 }
 .invictus-revealed .invictus-stagger--lr > *:nth-child(4) {
-  --invictus-d: 280ms;
+  animation-delay: 440ms;
+  --invictus-d: 440ms;
 }
 .invictus-revealed .invictus-stagger--lr > *:nth-child(5) {
-  --invictus-d: 350ms;
-}
-.invictus-revealed .invictus-stagger--lr > *:nth-child(6) {
-  --invictus-d: 420ms;
-}
-.invictus-revealed .invictus-stagger--lr > *:nth-child(7) {
-  --invictus-d: 490ms;
-}
-.invictus-revealed .invictus-stagger--lr > *:nth-child(8) {
+  animation-delay: 560ms;
   --invictus-d: 560ms;
 }
+.invictus-revealed .invictus-stagger--lr > *:nth-child(6) {
+  animation-delay: 680ms;
+  --invictus-d: 680ms;
+}
+.invictus-revealed .invictus-stagger--lr > *:nth-child(7) {
+  animation-delay: 800ms;
+  --invictus-d: 800ms;
+}
+.invictus-revealed .invictus-stagger--lr > *:nth-child(8) {
+  animation-delay: 920ms;
+  --invictus-d: 920ms;
+}
 .invictus-revealed .invictus-stagger--lr > *:nth-child(9) {
-  --invictus-d: 630ms;
+  animation-delay: 1040ms;
+  --invictus-d: 1040ms;
 }
 .invictus-revealed .invictus-stagger--lr > *:nth-child(10) {
-  --invictus-d: 700ms;
+  animation-delay: 1160ms;
+  --invictus-d: 1160ms;
 }
 .invictus-revealed .invictus-stagger--lr > *:nth-child(11) {
-  --invictus-d: 770ms;
+  animation-delay: 1280ms;
+  --invictus-d: 1280ms;
 }
 .invictus-revealed .invictus-stagger--lr > *:nth-child(12) {
-  --invictus-d: 840ms;
+  animation-delay: 1400ms;
+  --invictus-d: 1400ms;
 }
 
+/* Stagger vertical padrão (para textos/listas) */
 .invictus-revealed .invictus-stagger > * {
-  animation: invictus-stagger-in 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: invictus-stagger-in 560ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 @keyframes invictus-stagger-in {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -261,15 +279,17 @@ body.invictus-landing-body {
   }
 }
 
-/* Reveal premium (seções/painéis) – transição suave e perceptível no desktop */
+/* ========================================================
+   REVEAL PREMIUM - Seções/painéis com mais presença
+   ======================================================== */
 .invictus-reveal {
   opacity: 0;
-  transform: translateY(12px);
-  filter: blur(0.45px);
+  transform: translateY(22px);
+  filter: blur(0.5px);
   transition:
-    opacity 640ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    transform 640ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    filter 640ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    opacity 700ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
   will-change: opacity, transform, filter;
 }
 
@@ -279,44 +299,47 @@ body.invictus-landing-body {
   filter: none;
 }
 
-/* Delays (até 12 itens) */
+/* Delays para stagger vertical (90ms entre itens) */
 .invictus-revealed .invictus-stagger > *:nth-child(1) {
-  animation-delay: 70ms;
+  animation-delay: 90ms;
 }
 .invictus-revealed .invictus-stagger > *:nth-child(2) {
-  animation-delay: 140ms;
+  animation-delay: 180ms;
 }
 .invictus-revealed .invictus-stagger > *:nth-child(3) {
-  animation-delay: 210ms;
+  animation-delay: 270ms;
 }
 .invictus-revealed .invictus-stagger > *:nth-child(4) {
-  animation-delay: 280ms;
+  animation-delay: 360ms;
 }
 .invictus-revealed .invictus-stagger > *:nth-child(5) {
-  animation-delay: 350ms;
+  animation-delay: 450ms;
 }
 .invictus-revealed .invictus-stagger > *:nth-child(6) {
-  animation-delay: 420ms;
+  animation-delay: 540ms;
 }
 .invictus-revealed .invictus-stagger > *:nth-child(7) {
-  animation-delay: 490ms;
-}
-.invictus-revealed .invictus-stagger > *:nth-child(8) {
-  animation-delay: 560ms;
-}
-.invictus-revealed .invictus-stagger > *:nth-child(9) {
   animation-delay: 630ms;
 }
+.invictus-revealed .invictus-stagger > *:nth-child(8) {
+  animation-delay: 720ms;
+}
+.invictus-revealed .invictus-stagger > *:nth-child(9) {
+  animation-delay: 810ms;
+}
 .invictus-revealed .invictus-stagger > *:nth-child(10) {
-  animation-delay: 700ms;
+  animation-delay: 900ms;
 }
 .invictus-revealed .invictus-stagger > *:nth-child(11) {
-  animation-delay: 770ms;
+  animation-delay: 990ms;
 }
 .invictus-revealed .invictus-stagger > *:nth-child(12) {
-  animation-delay: 840ms;
+  animation-delay: 1080ms;
 }
 
+/* ========================================================
+   ACESSIBILIDADE - Respeitar preferência de movimento
+   ======================================================== */
 @media (prefers-reduced-motion: reduce) {
   .invictus-landing-page::after {
     animation: none;
@@ -336,30 +359,23 @@ body.invictus-landing-body {
     transition: none;
   }
 
-  .invictus-reveal-scope .invictus-stagger > * {
-    opacity: 1;
-    transform: none;
-  }
-
+  .invictus-reveal-scope .invictus-stagger > *,
   .invictus-reveal-scope .invictus-stagger--lr > * {
     opacity: 1;
     transform: none;
     filter: none;
-    transition: none;
   }
 
-  .invictus-revealed .invictus-stagger > * {
-    animation: none;
-  }
-
+  .invictus-revealed .invictus-stagger > *,
   .invictus-revealed .invictus-stagger--lr > * {
     animation: none;
   }
 
   .invictus-icon-plate {
     animation: none !important;
-    transform: none;
-    filter: none;
+    transform: none !important;
+    filter: none !important;
+    opacity: 1 !important;
   }
 }
 
@@ -438,7 +454,7 @@ body.invictus-landing-body {
   opacity: 0.9;
 }
 
-/* Moldura champagne + highlights internos (tira “cara de slide”) */
+/* Moldura champagne + highlights internos (tira "cara de slide") */
 .invictus-landing-panel::after {
   content: "";
   position: absolute;
@@ -499,7 +515,9 @@ body.invictus-landing-body {
   z-index: 1;
 }
 
-/* “Metal plate” dos ícones */
+/* ========================================================
+   ÍCONES "LED" - Acendem dourado quando o card encaixa
+   ======================================================== */
 .invictus-icon-plate {
   position: relative;
   border-radius: 0.75rem;
@@ -509,62 +527,80 @@ body.invictus-landing-body {
       135deg,
       hsl(var(--foreground) / 0.14),
       hsl(var(--foreground) / 0.06) 35%,
-      hsl(var(--gold-hot) / 0.12)
+      hsl(var(--gold-hot) / 0.08)
     );
   box-shadow:
     0 1px 0 0 hsl(var(--foreground) / 0.14) inset,
-    0 0 0 1px hsl(var(--gold-soft) / 0.12) inset,
+    0 0 0 1px hsl(var(--gold-soft) / 0.08) inset,
     0 14px 40px -28px hsl(var(--foreground) / 0.55);
 }
 
-/* Pop suave do plate (entra um pouco depois do card) */
+/* Estado inicial: ícone invisível */
 .invictus-reveal-scope .invictus-stagger--lr > * .invictus-icon-plate {
   opacity: 0;
-  transform: translateY(2px) scale(0.92);
-  filter: brightness(0.98);
-  will-change: transform, opacity, filter, box-shadow;
+  transform: scale(0.85);
+  will-change: transform, opacity, box-shadow, background;
 }
 
+/* Animação de "acender LED" */
 .invictus-revealed .invictus-stagger--lr > * .invictus-icon-plate {
-  animation: invictus-icon-pop 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  animation-delay: calc(var(--invictus-d) + 90ms);
+  animation: invictus-icon-glow 600ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(var(--invictus-d) + 180ms);
 }
 
 @media (min-width: 768px) {
   .invictus-revealed .invictus-stagger--lr > * .invictus-icon-plate {
-    animation-duration: 580ms;
-    animation-delay: calc(var(--invictus-d) + 110ms);
+    animation-duration: 680ms;
+    animation-delay: calc(var(--invictus-d) + 200ms);
   }
 }
 
-@keyframes invictus-icon-pop {
+@keyframes invictus-icon-glow {
   0% {
     opacity: 0;
-    transform: translateY(2px) scale(0.92);
-    filter: brightness(0.98);
+    transform: scale(0.85);
+    background:
+      linear-gradient(
+        135deg,
+        hsl(var(--foreground) / 0.14),
+        hsl(var(--foreground) / 0.06) 35%,
+        hsl(var(--gold-hot) / 0.08)
+      );
     box-shadow:
       0 1px 0 0 hsl(var(--foreground) / 0.14) inset,
-      0 0 0 1px hsl(var(--gold-soft) / 0.12) inset,
+      0 0 0 1px hsl(var(--gold-soft) / 0.08) inset,
       0 14px 40px -28px hsl(var(--foreground) / 0.55);
   }
   55% {
     opacity: 1;
-    transform: translateY(0) scale(1.02);
-    filter: brightness(1.03);
+    transform: scale(1.04);
+    background:
+      linear-gradient(
+        135deg,
+        hsl(var(--gold-hot) / 0.28),
+        hsl(var(--gold-soft) / 0.18) 50%,
+        hsl(var(--gold-hot) / 0.24)
+      );
     box-shadow:
-      0 1px 0 0 hsl(var(--foreground) / 0.16) inset,
-      0 0 0 1px hsl(var(--gold-hot) / 0.24) inset,
-      0 20px 56px -34px hsl(var(--foreground) / 0.62),
-      0 0 60px -46px hsl(var(--gold-hot) / 0.55);
+      0 0 0 1px hsl(var(--gold-hot) / 0.55) inset,
+      0 0 28px -4px hsl(var(--gold-hot) / 0.80),
+      0 0 44px -10px hsl(var(--gold-hot) / 0.55);
   }
   100% {
     opacity: 1;
-    transform: none;
-    filter: none;
+    transform: scale(1);
+    /* ESTADO PERMANENTE: LED ligado */
+    background:
+      linear-gradient(
+        135deg,
+        hsl(var(--gold-hot) / 0.22),
+        hsl(var(--gold-soft) / 0.14) 50%,
+        hsl(var(--gold-hot) / 0.18)
+      );
     box-shadow:
-      0 1px 0 0 hsl(var(--foreground) / 0.14) inset,
-      0 0 0 1px hsl(var(--gold-soft) / 0.12) inset,
-      0 14px 40px -28px hsl(var(--foreground) / 0.55);
+      0 0 0 1px hsl(var(--gold-hot) / 0.45) inset,
+      0 0 18px -4px hsl(var(--gold-hot) / 0.65),
+      0 0 30px -8px hsl(var(--gold-hot) / 0.45);
   }
 }
 
@@ -679,8 +715,6 @@ body.invictus-landing-body {
 .invictus-media-reveal.is-in img {
   transform: scale(1);
 }
-
-/* (mantido acima) */
 
 @media (min-width: 640px) {
   .invictus-landing-panel {

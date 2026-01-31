@@ -34,158 +34,195 @@ function RouteFallback() {
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AuthProvider>
-        <BrowserRouter>
-          <React.Suspense fallback={<RouteFallback />}>
-            <Routes>
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route
-                path="/aguardando-aprovacao"
-                element={
-                  <RequireAuth>
-                    <AguardandoAprovacao />
-                  </RequireAuth>
-                }
-              />
-              <Route path="/" element={<Landing />} />
+const preloaders = [
+  () => import("./pages/Home"),
+  () => import("./pages/Index"),
+  () => import("./pages/NotFound"),
+  () => import("./pages/Buscar"),
+  () => import("./pages/Mensagens"),
+  () => import("./pages/Perfil"),
+  () => import("./pages/Admin"),
+  () => import("./pages/Class"),
+  () => import("./pages/AguardandoAprovacao"),
+  () => import("./pages/Comunidade"),
+  () => import("./pages/Feed"),
+  () => import("./pages/Membro"),
+] as const;
 
-              <Route
-                path="/app"
-                element={
-                  <RequireAuth>
-                    <AppLayout>
-                      <Home />
-                    </AppLayout>
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/mapa"
-                element={
-                  <RequireAuth>
-                    <AppLayout>
-                      <Index />
-                    </AppLayout>
-                  </RequireAuth>
-                }
-              />
+function scheduleIdle(cb: () => void) {
+  const w = window as any;
+  if (typeof w.requestIdleCallback === "function") return w.requestIdleCallback(cb, { timeout: 2500 });
+  return window.setTimeout(cb, 700);
+}
 
-              <Route
-                path="/feed"
-                element={
-                  <RequireAuth>
-                    <AppLayout>
-                      <Feed />
-                    </AppLayout>
-                  </RequireAuth>
-                }
-              />
+function App() {
+  // Pré-carrega rotas em idle para evitar qualquer fallback visual durante navegação,
+  // mantendo a landing mais leve no primeiro paint.
+  React.useEffect(() => {
+    const id = scheduleIdle(() => {
+      for (const p of preloaders) p();
+    });
+    return () => {
+      const w = window as any;
+      if (typeof w.cancelIdleCallback === "function") w.cancelIdleCallback(id);
+      else window.clearTimeout(id);
+    };
+  }, []);
 
-              <Route
-                path="/membro/:username"
-                element={
-                  <RequireAuth>
-                    <AppLayout>
-                      <Membro />
-                    </AppLayout>
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/buscar"
-                element={
-                  <RequireAuth>
-                    <AppLayout>
-                      <Buscar />
-                    </AppLayout>
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/mensagens"
-                element={
-                  <RequireAuth>
-                    <AppLayout>
-                      <Mensagens />
-                    </AppLayout>
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/mensagens/:conversationId"
-                element={
-                  <RequireAuth>
-                    <AppLayout>
-                      <Mensagens />
-                    </AppLayout>
-                  </RequireAuth>
-                }
-              />
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AuthProvider>
+          <BrowserRouter>
+            {/* Sem fallback visual */}
+            <React.Suspense fallback={null}>
+              <Routes>
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route
+                  path="/aguardando-aprovacao"
+                  element={
+                    <RequireAuth>
+                      <AguardandoAprovacao />
+                    </RequireAuth>
+                  }
+                />
+                <Route path="/" element={<Landing />} />
 
-              <Route
-                path="/comunidade"
-                element={
-                  <RequireAuth>
-                    <AppLayout>
-                      <Comunidade />
-                    </AppLayout>
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/comunidade/:threadId"
-                element={
-                  <RequireAuth>
-                    <AppLayout>
-                      <Comunidade />
-                    </AppLayout>
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/perfil"
-                element={
-                  <RequireAuth>
-                    <AppLayout>
-                      <Perfil />
-                    </AppLayout>
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/class"
-                element={
-                  <RequireAuth>
-                    <AppLayout>
-                      <ClassPage />
-                    </AppLayout>
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/admin"
-                element={
-                  <RequireAuth>
-                    <AppLayout>
-                      <Admin />
-                    </AppLayout>
-                  </RequireAuth>
-                }
-              />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </React.Suspense>
-        </BrowserRouter>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+                <Route
+                  path="/app"
+                  element={
+                    <RequireAuth>
+                      <AppLayout>
+                        <Home />
+                      </AppLayout>
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/mapa"
+                  element={
+                    <RequireAuth>
+                      <AppLayout>
+                        <Index />
+                      </AppLayout>
+                    </RequireAuth>
+                  }
+                />
+
+                <Route
+                  path="/feed"
+                  element={
+                    <RequireAuth>
+                      <AppLayout>
+                        <Feed />
+                      </AppLayout>
+                    </RequireAuth>
+                  }
+                />
+
+                <Route
+                  path="/membro/:username"
+                  element={
+                    <RequireAuth>
+                      <AppLayout>
+                        <Membro />
+                      </AppLayout>
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/buscar"
+                  element={
+                    <RequireAuth>
+                      <AppLayout>
+                        <Buscar />
+                      </AppLayout>
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/mensagens"
+                  element={
+                    <RequireAuth>
+                      <AppLayout>
+                        <Mensagens />
+                      </AppLayout>
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/mensagens/:conversationId"
+                  element={
+                    <RequireAuth>
+                      <AppLayout>
+                        <Mensagens />
+                      </AppLayout>
+                    </RequireAuth>
+                  }
+                />
+
+                <Route
+                  path="/comunidade"
+                  element={
+                    <RequireAuth>
+                      <AppLayout>
+                        <Comunidade />
+                      </AppLayout>
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/comunidade/:threadId"
+                  element={
+                    <RequireAuth>
+                      <AppLayout>
+                        <Comunidade />
+                      </AppLayout>
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/perfil"
+                  element={
+                    <RequireAuth>
+                      <AppLayout>
+                        <Perfil />
+                      </AppLayout>
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/class"
+                  element={
+                    <RequireAuth>
+                      <AppLayout>
+                        <ClassPage />
+                      </AppLayout>
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <RequireAuth>
+                      <AppLayout>
+                        <Admin />
+                      </AppLayout>
+                    </RequireAuth>
+                  }
+                />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </React.Suspense>
+          </BrowserRouter>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;

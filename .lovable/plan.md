@@ -1,163 +1,83 @@
 
-Objetivo
-- Manter a landing pública em `invictusfraternidade.com.br` (e/ou `www.invictusfraternidade.com.br`)
-- Mover toda a experiência “não-landing” para `app.invictusfraternidade.com.br`, incluindo:
-  - Login (/auth)
-  - Recuperação de senha (/reset-password)
-  - Área logada (/app, /feed, /mapa, etc.)
-- “Forçar tudo no app”: qualquer tentativa de abrir rotas de app/auth no domínio raiz deve redirecionar para o subdomínio `app.`
+Contexto (o que está acontecendo)
+- Você publicou e, ao clicar em “Entrar” na landing no domínio raiz, a tela “pisca” com branco e não chega no subdomínio.
+- Pelo seu relato e pelo fato de no painel de domínios existir “Primary domain” definido, o sintoma é extremamente compatível com um loop de redirecionamento entre domínios:
+  - a landing tenta mandar para https://app.seudominio.com/auth
+  - mas a plataforma redireciona o subdomínio de volta para o domínio “Primary”
+  - o frontend detecta que não está no app host e tenta mandar de novo para o app host
+  - isso vira um loop (pisca/tela branca) e “parece” que não direciona.
 
-Importante (limite/realidade da plataforma)
-- A plataforma não tem um recurso “nativo” de separar rotas por subdomínio automaticamente.
-- O jeito correto (e que funciona bem) é: conectar também o subdomínio `app.` ao MESMO projeto e, no frontend, decidir o que mostrar/redirecionar com base no hostname (domínio acessado).
+Causa provável (alta confiança)
+- O projeto está com 2 domínios conectados (root + app), porém o “Primary domain” está ligado.
+- Quando um domínio é “Primary”, os outros podem ser redirecionados automaticamente para ele.
+- Para o seu caso (root = landing e app = app), você NÃO quer que um redirecione pro outro pela camada de domínio; você quer que ambos “sirvam o projeto” e o app decida o que mostrar com base no hostname (HostRouter).
 
-O que já existe hoje (baseado no código)
-- Rotas:
-  - Landing: `/` (componente `Landing`)
-  - Auth: `/auth`, `/reset-password`
-  - App: `/app`, `/feed`, `/mapa`, etc. (protegidas por `RequireAuth`)
-- Atualmente a landing tenta redirecionar usuários com sessão para `/app`:
-  - `src/pages/Landing.tsx` tem `if (session) navigate("/app")`
-  - Com a separação por subdomínio, isso deixa de fazer sentido (sessão não é compartilhada entre domínios), então vamos ajustar.
+Objetivo do ajuste
+- Root (invictusfraternidade.com.br e/ou www) deve sempre servir a landing e, se tentar /auth, /admin, /app etc., redirecionar para app.* via nosso HostRouter.
+- App (app.invictusfraternidade.com.br) deve servir o app/auth e nunca redirecionar automaticamente para o root por causa de “Primary domain”.
+- Eliminar o loop e o “piscar” na navegação do “Entrar”.
 
-Plano de implementação (mesmo projeto, “forçar tudo no app”)
-
-1) Configuração de domínios (sem mexer no código ainda)
-1.1) Conectar o subdomínio do app ao mesmo projeto
-- Em Settings → Domains:
-  - Garantir que `invictusfraternidade.com.br` está conectado (já está)
-  - Adicionar e conectar `app.invictusfraternidade.com.br`
-  - (Opcional, mas recomendado) Conectar também `www.invictusfraternidade.com.br` se vocês usam www
-- DNS:
-  - Criar o registro (A ou CNAME conforme o assistente de domínio do Lovable pedir) para `app` apontando para o Lovable, igual ao root/www.
+Plano de correção (sem mexer no código primeiro)
+1) Corrigir a configuração de Domínios no painel (passo crítico)
+1.1) Desmarcar/remover “Primary domain”
+- Vá em: Settings → Domains.
+- Se existir um domínio marcado como Primary:
+  - Remova o Primary (deixe “sem Primary”).
 - Resultado esperado:
-  - O mesmo build do site responde tanto no root quanto no `app.`
+  - Tanto invictusfraternidade.com.br quanto app.invictusfraternidade.com.br passam a servir o mesmo projeto “direto”, sem redirecionamento automático entre eles.
 
-1.2) Configurar redirecionamentos/URLs permitidas do sistema de autenticação (Lovable Cloud)
-- Precisamos permitir redirecionamentos de autenticação e recuperação também para o `app.`.
-- Ajustar nas configurações de autenticação:
-  - Site URL: `https://app.invictusfraternidade.com.br` (recomendado, já que “tudo no app”)
-  - Redirect URLs allowlist: incluir pelo menos:
-    - `https://app.invictusfraternidade.com.br/*`
-    - (opcional) `https://invictusfraternidade.com.br/*` e/ou `https://www.invictusfraternidade.com.br/*` se quiser robustez
-- Isso é crítico para evitar links de reset quebrados ou bloqueados por redirect não permitido.
+1.2) Validar status e DNS/SSL do subdomínio app
+- Confirme que o status do app.* está “Active”.
+- Confirme que o app.* tem SSL (abre em https sem aviso).
+- Se o app.* ainda estiver propagando/verificando, aguarde a ativação antes de testar novamente.
 
-2) Mudanças de código (roteamento por hostname)
-2.1) Criar um “modo” por domínio
-- No `src/App.tsx`, detectar:
-  - `isAppHost = hostname começa com "app."`
-  - `isRootHost = !isAppHost` (inclui root e www)
-- Criar helpers simples:
-  - `getAppOrigin()` que monta o origin do app a partir do host atual:
-    - Se já está no `app.`: retorna `window.location.origin`
-    - Se está em `www.`: troca para `app.` + domínio sem `www.`
-    - Se está no root: retorna `https://app.` + hostname atual
-  - `redirectToApp(pathname)` que faz `window.location.assign(appOrigin + pathname + search + hash)` para trocar domínio de verdade (React Router não troca domínio).
+2) Testes obrigatórios pós-configuração (para confirmar que o loop acabou)
+2.1) Teste no domínio raiz (landing)
+- Acesse: https://invictusfraternidade.com.br/
+- Clique “Entrar”
+- Esperado:
+  - Abrir https://app.invictusfraternidade.com.br/auth diretamente (sem piscar/loop).
 
-2.2) Forçar regras de roteamento conforme domínio (sem “tela carregando”)
-- No domínio raiz:
-  - Permitir apenas a landing em `/`
-  - Qualquer outra rota (ex.: `/auth`, `/app`, `/feed`, `/mapa`, etc.) deve redirecionar para o `app.` preservando path/query
-- No domínio app:
-  - Não permitir landing em `/`:
-    - Se entrar em `https://app.../`, redirecionar para:
-      - `/app` se tiver sessão (ou apenas mandar pra `/auth` e deixar o `RequireAuth` lidar)
-    - Para “forçar tudo no app”, o mais consistente é:
-      - `/` no app -> `/app` (e o RequireAuth leva pra /auth se não logado)
+2.2) Teste de acesso direto (anti-loop)
+- Cole no navegador:
+  - https://invictusfraternidade.com.br/auth
+  - https://invictusfraternidade.com.br/admin
+- Esperado:
+  - Redireciona para o app.* mantendo o path (auth/admin).
+  - /admin no app deve aplicar as regras:
+    - deslogado: vai para /auth
+    - logado não-admin: vai para /perfil
+    - admin: entra no admin
 
-Como implementaremos isso tecnicamente no Router
-- Introduzir componentes leves:
-  - `<RedirectToApp />` (só faz `useEffect(() => window.location.assign(...))` e retorna `null`)
-  - `<RedirectToRoot />` (opcional; em geral não precisamos, pois queremos “forçar tudo no app”, não o contrário)
-- Ajustar rotas em `src/App.tsx`:
-  - Rota `/`:
-    - Se `isAppHost`: element = `<Navigate to="/app" replace />`
-    - Se root: element = `<Landing />`
-  - Rotas `/auth` e `/reset-password`:
-    - Se root: element = `<RedirectToApp />` (para `/auth` e `/reset-password`)
-    - Se app: element = páginas reais (`<AuthPage />`, `<ResetPasswordPage />`)
-  - Rotas de app (`/app`, `/feed`, `/mapa`, etc.):
-    - Se root: element = `<RedirectToApp />` para o mesmo path
-    - Se app: mantém como está hoje (com `RequireAuth`)
+2.3) Teste no app host
+- Acesse: https://app.invictusfraternidade.com.br/
+- Esperado:
+  - Vai para /app (e se deslogado, o RequireAuth manda para /auth).
 
-2.3) Ajustar a landing para não depender de sessão (evitar comportamento confuso)
-- Em `src/pages/Landing.tsx`:
-  - Remover o `useAuth()` e o `useEffect` que redireciona quando `session` existe.
-  - Motivo:
-    - A sessão não vai existir no root (porque o login estará no `app.` e o storage é por origem)
-    - E mesmo que exista, a regra de produto agora é: root sempre landing; app sempre app.
+3) Diagnóstico técnico (caso ainda falhe após tirar o Primary)
+Se depois de desmarcar o Primary ainda houver “pisca”/tela branca:
+3.1) Coletar evidências rápidas
+- Abrir o DevTools (F12) e me mandar:
+  - Console (erros)
+  - Network: qual URL fica alternando (root ↔ app)
+- Eu também vou:
+  - Ler logs do console e requisições (para identificar loop e origem exata)
+  - Confirmar se algum link/redirect está indo para http em vez de https (pode gerar comportamento estranho)
 
-2.4) Garantir que links e CTAs levem para o subdomínio app
-- Encontrar botões/links da landing que levam para “Entrar” e ajustar para apontar diretamente para:
-  - `https://app.invictusfraternidade.com.br/auth`
-- Isso evita qualquer navegação intermediária no root.
-- Onde ajustar:
-  - `src/components/landing/LandingTopbar.tsx` (provável botão “Entrar”)
-  - `src/components/landing/WaitlistHero.tsx` (se tiver CTA)
-  - Qualquer outro CTA de login
+3.2) Ajuste de código (apenas se necessário)
+- Hoje, o código já está desenhado para:
+  - não dividir por subdomínio em *.lovable.app (preview)
+  - dividir em domínio customizado (root vs app)
+- Mas se persistir, os ajustes típicos seriam:
+  - Garantir que todo “redirect cross-domain” use sempre https no domínio customizado (evita downgrade para http).
+  - Garantir que RedirectToApp preserve search/hash e não dispare repetidamente.
+  - Opcional: colocar um “guard” anti-loop (ex.: se já está tentando navegar para app.* e recebeu de volta root com o mesmo path em menos de X segundos, parar e exibir uma mensagem de diagnóstico).
 
-3) Ajustes de autenticação para links de e-mail (reset / convites)
-3.1) Atualizar URLs usadas no envio de e-mails (frontend)
-- Hoje, `src/auth/AuthProvider.tsx` usa `window.location.origin` para:
-  - `signUp`: `emailRedirectTo = origin + "/"` (pós-confirmação)
-  - `resetPassword`: `redirectTo = origin + "/reset-password"`
-- Com “tudo no app”, o correto é sempre gerar links para o `app.`:
-  - `emailRedirectTo = appOrigin + "/auth"` ou `appOrigin + "/app"` (definiremos o melhor UX)
-  - `redirectTo = appOrigin + "/reset-password"`
-- Implementação:
-  - Reusar `getAppOrigin()` (ou criar um helper em `src/lib/` para não duplicar)
-  - Trocar `window.location.origin` por `getAppOrigin()` nesses dois pontos.
+O que eu preciso de você (para concluir com 100% de certeza)
+- Faça o passo 1.1 (remover Primary domain) e me diga se o “pisca/tela branca” parou ao clicar em “Entrar”.
+- Se ainda falhar, me diga exatamente qual URL aparece na barra quando pisca (se alterna entre root e app), e eu preparo o plano de correção de código com base nesse comportamento.
 
-3.2) Conferir a função de envio de reset (backend function)
-- A função `send-password-reset` recebe `redirectTo` via body e deve continuar funcionando.
-- Vamos validar rapidamente se ela não “força” domínio por trás.
-- Se houver alguma validação de allowlist, ela será resolvida no passo 1.2 (Redirect URLs permitidas).
-
-4) Testes que vamos fazer (obrigatórios)
-4.1) Testes no domínio raiz (landing)
-- Acessar `https://invictusfraternidade.com.br/`:
-  - Deve mostrar landing
-- Acessar manualmente:
-  - `https://invictusfraternidade.com.br/auth` -> deve redirecionar para `https://app.invictusfraternidade.com.br/auth`
-  - `https://invictusfraternidade.com.br/app` -> deve redirecionar para `https://app.invictusfraternidade.com.br/app`
-  - `https://invictusfraternidade.com.br/reset-password` -> deve redirecionar para o app
-
-4.2) Testes no subdomínio app (autenticação)
-- Acessar `https://app.invictusfraternidade.com.br/`:
-  - Deve redirecionar para `/app` (e, se não logado, o `RequireAuth` manda para `/auth`)
-- Fluxo login:
-  - Abrir `/auth`, logar, validar que cai em `/app`
-- Fluxo reset:
-  - Em `/auth`, “Esqueceu a senha?”, enviar e-mail
-  - Link do e-mail deve abrir em `https://app.../reset-password`
-  - Definir nova senha e confirmar login
-
-4.3) Testes em mobile
-- Repetir login e reset no mobile para garantir que não há loop de redirecionamento.
-- Verificar que não surge nenhuma “tela carregando”/fallback (ainda estamos com `Suspense fallback={null}`).
-
-5) Impactos e cuidados (para você estar ciente)
-- Sessão não “atravessa” root ↔ app (isso é esperado e OK).
-- Landing não vai mais auto-redirecionar para /app quando você estiver logado, porque o root vira “site público” mesmo.
-- SEO/marketing: root fica limpo (bom). O app fica separado (bom para privacidade).
-- Garantir que `app.` esteja com SSL ativo e verificado (a própria conexão de domínio cuida disso).
-
-Arquivos que provavelmente serão alterados
-- `src/App.tsx` (roteamento por hostname + redirects cross-domain)
-- `src/pages/Landing.tsx` (remover redirect por sessão)
-- `src/auth/AuthProvider.tsx` (gerar links de e-mail sempre para `app.`)
-- `src/components/landing/LandingTopbar.tsx` (CTA “Entrar” para `app.../auth`)
-- (Possíveis) outros componentes da landing com CTA de login
-
-Checklist de pronto (definição de “feito”)
-- Landing só no domínio raiz
-- `/auth` e `/reset-password` só no subdomínio app
-- Qualquer rota de app/auth no root redireciona para o app automaticamente
-- Links de e-mail de recuperação abrem e funcionam no subdomínio app
-- Sem telas de “Carregando…” em navegação
-
-Dependências/ações necessárias do seu lado (rápidas)
-- Conectar o domínio `app.invictusfraternidade.com.br` no Settings → Domains
-- Ajustar allowlist de Redirect URLs na autenticação do Lovable Cloud para incluir o `app.`
-
-Se você aprovar este plano, eu implemento as mudanças no código e te guio nos 2 passos de configuração (domínios + redirects) para ficar 100% funcionando.
+Critério de “feito”
+- Clicar “Entrar” no root abre app.* /auth imediatamente.
+- Digitar /admin manualmente nunca exibe Admin para não-admin (e respeita: deslogado → /auth, logado não-admin → /perfil).
+- Sem loop, sem tela branca piscando.

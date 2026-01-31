@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
-import { isAppHost as isAppHostFn, buildAppUrlFromCurrentLocation } from "@/lib/appOrigin";
+import { isAppHost as isAppHostFn, isLovableHost, buildAppUrlFromCurrentLocation } from "@/lib/appOrigin";
 
 import Landing from "@/pages/Landing";
 import AuthPage from "@/pages/Auth";
@@ -36,6 +36,150 @@ function RedirectToApp() {
 export function HostRouter() {
   const hostname = window.location.hostname;
   const isAppHost = isAppHostFn(hostname);
+  const lovable = isLovableHost(hostname);
+
+  // In *.lovable.app (preview/staging/published default domains) we DO NOT split by subdomain,
+  // otherwise /auth and any non-root route would loop forever.
+  if (lovable) {
+    return (
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route
+          path="/aguardando-aprovacao"
+          element={
+            <RequireAuth>
+              <AguardandoAprovacao />
+            </RequireAuth>
+          }
+        />
+
+        <Route
+          path="/app"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Home />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/mapa"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Index />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/feed"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Feed />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/membro/:username"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Membro />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/buscar"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Buscar />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/mensagens"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Mensagens />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/mensagens/:conversationId"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Mensagens />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/comunidade"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Comunidade />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/comunidade/:threadId"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Comunidade />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/perfil"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Perfil />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/class"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <ClassPage />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Admin />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    );
+  }
 
   // Root domain: only Landing. Anything else -> app subdomain (preserving path).
   if (!isAppHost) {

@@ -7,7 +7,9 @@
  */
 
 export function isLovableHost(hostname: string) {
-  return hostname.endsWith(".lovable.app");
+  // Lovable environments can use different base domains (preview/staging/published).
+  // In those environments we MUST NOT split by subdomain.
+  return hostname.endsWith(".lovable.app") || hostname.endsWith(".lovableproject.com");
 }
 
 export function isCustomDomain(hostname: string) {

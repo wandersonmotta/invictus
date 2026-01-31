@@ -8,6 +8,8 @@ import { AppLayout } from "@/components/AppLayout";
 import { AuthProvider } from "@/auth/AuthProvider";
 import { RequireAuth } from "@/auth/RequireAuth";
 import Landing from "./pages/Landing";
+import AuthPage from "./pages/Auth";
+import ResetPasswordPage from "./pages/ResetPassword";
 
 const Home = React.lazy(() => import("./pages/Home"));
 const Index = React.lazy(() => import("./pages/Index"));
@@ -16,9 +18,7 @@ const Buscar = React.lazy(() => import("./pages/Buscar"));
 const Mensagens = React.lazy(() => import("./pages/Mensagens"));
 const Perfil = React.lazy(() => import("./pages/Perfil"));
 const Admin = React.lazy(() => import("./pages/Admin"));
-const AuthPage = React.lazy(() => import("./pages/Auth"));
 const ClassPage = React.lazy(() => import("./pages/Class"));
-const ResetPasswordPage = React.lazy(() => import("./pages/ResetPassword"));
 const AguardandoAprovacao = React.lazy(() => import("./pages/AguardandoAprovacao"));
 const Comunidade = React.lazy(() => import("./pages/Comunidade"));
 const Feed = React.lazy(() => import("./pages/Feed"));

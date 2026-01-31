@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { GoldHoverText } from "@/components/GoldHoverText";
+import { AuthBackground } from "@/components/auth/AuthBackground";
 import logo from "@/assets/invictus-logo.png";
 
 const schema = z
@@ -58,7 +59,8 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <main className="invictus-auth-page min-h-svh grid place-items-center p-4 sm:p-6">
+    <main className="invictus-auth-page-content min-h-svh grid place-items-center p-4 sm:p-6">
+      <AuthBackground />
       <Card className="invictus-auth-surface invictus-auth-frame w-full max-w-md border-0">
         <CardHeader className="space-y-3">
           <div className="flex items-center gap-3">

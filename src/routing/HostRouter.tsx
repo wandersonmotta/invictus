@@ -1,7 +1,9 @@
 import * as React from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 
-import { isAppHost as isAppHostFn, isLovableHost, buildAppUrlFromCurrentLocation } from "@/lib/appOrigin";
+import { isAppHost as isAppHostFn, isLovableHost } from "@/lib/appOrigin";
+
+import { RedirectToApp } from "@/routing/RedirectToApp";
 
 import Landing from "@/pages/Landing";
 import AuthPage from "@/pages/Auth";
@@ -22,17 +24,6 @@ const AguardandoAprovacao = React.lazy(() => import("@/pages/AguardandoAprovacao
 const Comunidade = React.lazy(() => import("@/pages/Comunidade"));
 const Feed = React.lazy(() => import("@/pages/Feed"));
 const Membro = React.lazy(() => import("@/pages/Membro"));
-
-function RedirectToApp() {
-  const location = useLocation();
-
-  React.useEffect(() => {
-    const url = buildAppUrlFromCurrentLocation(location.pathname);
-    window.location.assign(url);
-  }, [location.pathname]);
-
-  return null;
-}
 
 export function HostRouter() {
   const hostname = window.location.hostname;

@@ -1,144 +1,173 @@
 
 
-## Diagnóstico: Por que a imagem desaparece e recarrega no mobile
-
-### Problema Identificado
-O comportamento que você descreve (imagem sumindo ao rolar para cima e recarregando ao voltar) é causado por **comportamento agressivo de gerenciamento de memória** em navegadores móveis. O sistema atual tem alguns pontos que agravam isso:
-
-### Causas Técnicas
-
-1. **Imagens duplicadas no mesmo URL**
-   - O `LandingBackground.tsx` carrega a imagem via `<img>` fixo
-   - O `body.invictus-landing-body` no CSS também tenta carregar a **mesma imagem** como `background-image`
-   - O `.invictus-landing-page` também carrega a imagem como background
-   - Resultado: 3 tentativas de carregar a mesma imagem = confusão do browser
-
-2. **Camadas CSS pesadas**
-   - O overlay animado (`::after` com `invictus-grain-drift`) aplica múltiplos gradientes + blur + animação contínua
-   - O `mix-blend-mode: overlay` força recomposição constante
-   - Em mobile, o browser "descarrega" layers fixos para economizar memória
-
-3. **Falta de hints de preload**
-   - As imagens críticas não têm `<link rel="preload">` no HTML
-   - O browser não prioriza corretamente
-
-4. **Múltiplas camadas de gradientes**
-   - Até 9 gradients empilhados no `body.invictus-landing-body`
-   - Cada gradiente é uma camada de composição separada
+## Objetivo
+Criar um sistema para visualizar, gerenciar e exportar os leads da lista de espera, integrado ao painel Admin existente.
 
 ---
 
-## Solução: Otimização de Performance
+## Análise do Cenário Atual
 
-### A) Simplificar o sistema de background (eliminar duplicação)
+### O que já existe:
+- Tabela `waitlist_leads` no banco com campos: email, full_name, phone, source, ip_hash, created_at
+- Política RLS que permite apenas admins lerem os dados
+- Página Admin (`/admin`) com 4 abas: Aprovações, Convites, Categorias, Treinamentos
+- Edge function `waitlist-signup` que insere os leads
 
-**Estratégia**: Usar APENAS o componente `LandingBackground.tsx` e remover as regras duplicadas do CSS.
+### O que falta:
+- Aba no Admin para visualizar os leads
+- Funcionalidade de exportar para Excel/CSV
+- (Opcional) Acesso externo para compartilhar com terceiros
 
-Arquivos afetados:
-- `src/styles/invictus-auth.css`: Remover `background-image` de `.invictus-landing-page` e `body.invictus-landing-body`
-- `src/components/landing/LandingBackground.tsx`: Manter como fonte única da imagem
+---
 
-### B) Otimizar o overlay animado
+## Solução Proposta
 
-**Antes**: Animação contínua de 12s com blur + múltiplos gradientes + mix-blend-mode
-**Depois**: 
-- Overlay estático (sem animação contínua)
-- Remover `mix-blend-mode` (causa recomposição constante)
-- Reduzir número de gradientes de 5 para 3
+### Opção Recomendada: Aba no Painel Admin + Exportação
 
-### C) Adicionar preload da imagem crítica
+Esta é a opção mais **prática e segura**:
 
-No `index.html`, adicionar:
-```html
-<link rel="preload" as="image" href="/images/invictus-landing-bg-1536x1920-v2.jpg" media="(max-width: 767px)">
-<link rel="preload" as="image" href="/images/invictus-landing-bg-1920x1080-v2.jpg" media="(min-width: 768px)">
+1. **Nova aba "Leads"** no painel Admin existente
+2. **Tabela com os leads** mostrando: Nome, WhatsApp, E-mail, Origem, Data
+3. **Botão "Exportar CSV"** para baixar em formato Excel-compatível
+4. **Busca/filtro** por nome ou email
+5. **Ordenação** por data (mais recentes primeiro)
+
+### Sobre Acesso Externo
+
+Existem duas abordagens:
+
+| Opção | Prós | Contras |
+|-------|------|---------|
+| **A) Link público temporário** | Fácil compartilhar | Menos seguro, precisa de token/expiração |
+| **B) Criar mais admins** | Mais seguro, controle granular | Precisa criar conta para cada pessoa |
+
+**Recomendação**: Começar com a aba no Admin + exportação CSV. Se precisar compartilhar, você pode:
+- Exportar o CSV e enviar por email/WhatsApp
+- Ou adicionar mais pessoas como admin no sistema
+
+---
+
+## Implementação Técnica
+
+### 1) Modificar `src/pages/Admin.tsx`
+
+**Adicionar nova aba "Leads"** (será a 5ª aba):
+
+```text
+Tabs: Aprovações | Convites | Categorias | Treinamentos | Leads
 ```
 
-### D) Melhorar o LandingBackground
+**Query para buscar leads**:
+```typescript
+const { data: waitlistLeads } = useQuery({
+  queryKey: ["waitlist_leads"],
+  enabled: !!isAdmin,
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("waitlist_leads")
+      .select("id, email, full_name, phone, source, created_at")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data ?? [];
+  }
+});
+```
 
-- Adicionar `fetchPriority="high"` na imagem
-- Usar `will-change: transform` para promover a layer na GPU
-- Simplificar overlays (menos gradientes)
+**Tabela de exibição**:
+- Colunas: Nome | WhatsApp | E-mail | Origem | Data
+- Formatação do telefone: (11) 99999-9999
+- Formatação da data: dd/mm/yyyy HH:mm
 
-### E) Otimizar gradientes do body principal
+**Funcionalidade de exportação CSV**:
+```typescript
+const exportToCSV = () => {
+  const headers = ["Nome", "WhatsApp", "Email", "Origem", "Data"];
+  const rows = waitlistLeads.map(lead => [
+    lead.full_name || "",
+    formatPhone(lead.phone),
+    lead.email,
+    lead.source || "",
+    new Date(lead.created_at).toLocaleString("pt-BR")
+  ]);
+  
+  const csv = [headers, ...rows]
+    .map(row => row.map(cell => `"${cell}"`).join(","))
+    .join("\n");
+  
+  // Download automático
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `leads-waitlist-${new Date().toISOString().split("T")[0]}.csv`;
+  a.click();
+};
+```
 
-No `src/index.css`, simplificar os gradientes do body de 3 para 1 mais eficiente
+**Busca/filtro**:
+- Input de texto para filtrar por nome ou email
+- Filtro client-side (os dados já estão carregados)
 
 ---
 
 ## Arquivos a Modificar
 
-### 1) `index.html`
-- Adicionar `<link rel="preload">` para as imagens de background (responsivo)
-
-### 2) `src/components/landing/LandingBackground.tsx`
-- Adicionar `fetchPriority="high"`
-- Adicionar `will-change: transform` no container
-- Simplificar overlays
-
-### 3) `src/styles/invictus-auth.css`
-- Remover `background-image` duplicados de `.invictus-landing-page`
-- Remover `background-image` duplicados de `body.invictus-landing-body`
-- Simplificar/remover a animação `invictus-grain-drift`
-- Remover `mix-blend-mode: overlay` do `::after`
-
-### 4) `src/index.css`
-- Simplificar gradientes do body
+### `src/pages/Admin.tsx`
+- Adicionar tipo `WaitlistLead`
+- Adicionar query `waitlist_leads`
+- Adicionar estado para busca
+- Adicionar função `exportToCSV`
+- Adicionar função `formatPhone` (formatar número brasileiro)
+- Adicionar nova aba "Leads" no TabsList (5 colunas)
+- Adicionar conteúdo da aba com tabela e botões
 
 ---
 
-## Comportamento Esperado Após Otimização
+## Comportamento Esperado
 
-1. **Imagem não some mais**: A imagem fica "pinned" na GPU e não é descarregada
-2. **Scroll mais suave**: Menos camadas de composição = menos trabalho para o browser
-3. **Carregamento mais rápido**: Preload garante que a imagem está pronta antes do render
-4. **Memória reduzida**: Sem duplicação de imagens
+1. Você acessa `/admin` como admin
+2. Aparece a nova aba **"Leads"**
+3. Vê a lista de todos os interessados com nome, WhatsApp, email, origem e data
+4. Pode **buscar** por nome ou email
+5. Pode clicar em **"Exportar CSV"** para baixar o arquivo
+6. O arquivo CSV abre perfeitamente no Excel
 
 ---
 
-## Detalhes Técnicos da Otimização
+## Layout da Aba Leads
 
-### Antes (pesado):
-```css
-/* 9 gradientes + imagem + animação + blend mode */
-body.invictus-landing-body {
-  background-image: ... 9 layers ...;
-  animation: invictus-grain-drift 12s infinite;
-}
-.invictus-landing-page::after {
-  mix-blend-mode: overlay;
-  animation: invictus-grain-drift 12s infinite;
-}
-```
-
-### Depois (leve):
-```css
-/* Sem background no body/page (usa apenas <img>) */
-body.invictus-landing-body {
-  /* Só overlay sutil, sem imagem */
-}
-/* Overlay estático, sem animação */
-.invictus-landing-page::after {
-  /* Gradientes simplificados, sem animation, sem mix-blend-mode */
-}
+```text
+┌─────────────────────────────────────────────────────────┐
+│  Leads da Lista de Espera                               │
+│  Pessoas interessadas que preencheram o formulário      │
+├─────────────────────────────────────────────────────────┤
+│  [🔍 Buscar por nome ou email...    ]  [📥 Exportar CSV]│
+├─────────────────────────────────────────────────────────┤
+│  Nome          │ WhatsApp       │ Email         │ Data  │
+│  João Silva    │ (11) 99999-9999│ joao@email... │ 31/01 │
+│  Maria Santos  │ (21) 98888-8888│ maria@emai... │ 30/01 │
+│  ...           │ ...            │ ...           │ ...   │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Checklist de Validação
 
-- [ ] Imagem de fundo NÃO some ao rolar para cima no mobile
-- [ ] Imagem NÃO recarrega ao voltar (scroll down)
-- [ ] Scroll permanece suave
-- [ ] Animações dos cards e ícones continuam funcionando
-- [ ] Desktop mantém qualidade visual
+- [ ] Nova aba "Leads" aparece no painel Admin
+- [ ] Tabela mostra todos os leads ordenados por data (mais recentes primeiro)
+- [ ] Busca filtra corretamente por nome ou email
+- [ ] Botão "Exportar CSV" baixa arquivo válido
+- [ ] Arquivo CSV abre corretamente no Excel
+- [ ] Telefone formatado corretamente: (11) 99999-9999
+- [ ] Apenas admins conseguem ver os dados (RLS já configurado)
 
 ---
 
-## Próximos Passos
+## Próximos Passos (após implementação)
 
-1. Implementar as mudanças
-2. Testar no mobile (recarregar e rolar várias vezes)
-3. Testar no desktop (verificar que visual premium se mantém)
-4. Se necessário, ajustar intensidade dos overlays
+1. Testar preenchendo o formulário da landing
+2. Verificar se o lead aparece na aba
+3. Testar a exportação CSV
+4. Se precisar de acesso externo, posso implementar sistema de link compartilhável
 

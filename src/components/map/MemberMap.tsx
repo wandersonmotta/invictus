@@ -1,4 +1,5 @@
 import * as React from "react";
+import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { LocateFixed } from "lucide-react";
 

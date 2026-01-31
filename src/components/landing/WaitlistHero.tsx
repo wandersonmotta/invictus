@@ -2,7 +2,6 @@ import * as React from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,79 +10,64 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { GoldHoverText } from "@/components/GoldHoverText";
 import { EditorialMedia } from "@/components/landing/EditorialMedia";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import waitlistMediaPrimary from "@/assets/invictus-landing-waitlist-media-color-v3d.jpg";
 import waitlistMediaFallback from "@/assets/invictus-landing-waitlist-media-color.jpg";
 import invictusLogo from "@/assets/invictus-logo.png";
-
 const waitlistSchema = z.object({
-  fullName: z
-    .string()
-    .trim()
-    .min(3, "Informe seu nome completo")
-    .max(120, "Nome muito longo"),
-  phone: z
-    .string()
-    .trim()
-    .min(8, "Informe seu WhatsApp")
-    .max(32, "Número muito longo"),
-  email: z.string().trim().max(255, "E-mail muito longo").email("Informe um e-mail válido"),
+  fullName: z.string().trim().min(3, "Informe seu nome completo").max(120, "Nome muito longo"),
+  phone: z.string().trim().min(8, "Informe seu WhatsApp").max(32, "Número muito longo"),
+  email: z.string().trim().max(255, "E-mail muito longo").email("Informe um e-mail válido")
 });
-
 type WaitlistValues = z.infer<typeof waitlistSchema>;
-
 export function WaitlistHero() {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [loading, setLoading] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const [mediaSrc, setMediaSrc] = React.useState<string>(waitlistMediaPrimary);
-
   const form = useForm<WaitlistValues>({
     resolver: zodResolver(waitlistSchema),
-    defaultValues: { fullName: "", phone: "", email: "" },
+    defaultValues: {
+      fullName: "",
+      phone: "",
+      email: ""
+    }
   });
-
   const phoneDigits = (raw: string) => raw.replace(/\D+/g, "");
-
   const onSubmit = async (values: WaitlistValues) => {
     if (loading) return;
     setLoading(true);
     try {
       const digits = phoneDigits(values.phone);
       if (digits.length < 10 || digits.length > 13) {
-        form.setError("phone", { message: "Informe um WhatsApp válido (DDD + número)" });
+        form.setError("phone", {
+          message: "Informe um WhatsApp válido (DDD + número)"
+        });
         return;
       }
-
-      const { error } = await supabase.functions.invoke("waitlist-signup", {
+      const {
+        error
+      } = await supabase.functions.invoke("waitlist-signup", {
         body: {
           email: values.email,
           full_name: values.fullName,
           phone: digits,
-          source: "landing",
-        },
+          source: "landing"
+        }
       });
-
       if (error) {
         toast({
           title: "Não foi possível entrar na lista",
           description: "Tente novamente em instantes.",
-          variant: "destructive",
+          variant: "destructive"
         });
         return;
       }
-
       toast({
         title: "Você entrou na lista de espera",
-        description: "Quando abrirmos novas vagas, você será avisado.",
+        description: "Quando abrirmos novas vagas, você será avisado."
       });
       form.reset();
       setOpen(false);
@@ -91,9 +75,7 @@ export function WaitlistHero() {
       setLoading(false);
     }
   };
-
-  return (
-    <section className="px-4 pb-12 pt-6 sm:px-6 sm:pb-16" aria-labelledby="waitlist-title">
+  return <section className="px-4 pb-12 pt-6 sm:px-6 sm:pb-16" aria-labelledby="waitlist-title">
       <div className="mx-auto w-full max-w-6xl">
         <Card className="invictus-auth-surface invictus-auth-frame border-0">
           <CardHeader className="space-y-2">
@@ -101,38 +83,22 @@ export function WaitlistHero() {
             <CardTitle id="waitlist-title" className="text-balance text-2xl sm:text-3xl">
               Lista de espera
             </CardTitle>
-            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              Se você quer operar no modo sério, entre para ser avisado quando abrirmos novas entradas.
-            </p>
+            <p className="max-w-2xl leading-relaxed text-muted-foreground text-base font-sans font-extralight">Se você quer elevar o seu nível, é só preencher o formulário  para ser avisado quando liberarmos novas vagas.</p>
           </CardHeader>
 
           <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:items-center">
               {/* reduzido e escondido no mobile para não tomar tela */}
               <div className="relative sm:w-[240px] md:w-[260px]">
-                <EditorialMedia
-                  src={mediaSrc}
-                  className="w-full"
-                  loading="eager"
-                  onError={() => {
-                    // Se o asset novo falhar por algum motivo, usamos o fallback já estável (1x).
-                    setMediaSrc((prev) => (prev !== waitlistMediaFallback ? waitlistMediaFallback : prev));
-                  }}
-                />
+                <EditorialMedia src={mediaSrc} className="w-full" loading="eager" onError={() => {
+                // Se o asset novo falhar por algum motivo, usamos o fallback já estável (1x).
+                setMediaSrc(prev => prev !== waitlistMediaFallback ? waitlistMediaFallback : prev);
+              }} />
 
                 {/* Logo como overlay real (evita artefatos de texto na geração) */}
-                <div
-                  className="pointer-events-none absolute inset-0 flex items-center justify-center"
-                  aria-hidden="true"
-                >
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
                   <div className="rounded-full border border-border/40 bg-background/20 p-2 backdrop-blur-sm">
-                    <img
-                      src={invictusLogo}
-                      alt=""
-                      className="w-16 opacity-90"
-                      loading="eager"
-                      decoding="async"
-                    />
+                    <img src={invictusLogo} alt="" className="w-16 opacity-90" loading="eager" decoding="async" />
                   </div>
                 </div>
               </div>
@@ -160,43 +126,20 @@ export function WaitlistHero() {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="waitlist-fullname">Nome completo</Label>
-                    <Input
-                      id="waitlist-fullname"
-                      autoComplete="name"
-                      placeholder="Seu nome"
-                      {...form.register("fullName")}
-                    />
-                    {form.formState.errors.fullName && (
-                      <p className="text-xs text-destructive">{form.formState.errors.fullName.message}</p>
-                    )}
+                    <Input id="waitlist-fullname" autoComplete="name" placeholder="Seu nome" {...form.register("fullName")} />
+                    {form.formState.errors.fullName && <p className="text-xs text-destructive">{form.formState.errors.fullName.message}</p>}
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="waitlist-phone">WhatsApp</Label>
-                    <Input
-                      id="waitlist-phone"
-                      inputMode="tel"
-                      autoComplete="tel"
-                      placeholder="(11) 99999-9999"
-                      {...form.register("phone")}
-                    />
-                    {form.formState.errors.phone && (
-                      <p className="text-xs text-destructive">{form.formState.errors.phone.message}</p>
-                    )}
+                    <Input id="waitlist-phone" inputMode="tel" autoComplete="tel" placeholder="(11) 99999-9999" {...form.register("phone")} />
+                    {form.formState.errors.phone && <p className="text-xs text-destructive">{form.formState.errors.phone.message}</p>}
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="waitlist-email">E-mail</Label>
-                    <Input
-                      id="waitlist-email"
-                      type="email"
-                      autoComplete="email"
-                      placeholder="seuemail@exemplo.com"
-                      {...form.register("email")}
-                    />
-                    {form.formState.errors.email && (
-                      <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
-                    )}
+                    <Input id="waitlist-email" type="email" autoComplete="email" placeholder="seuemail@exemplo.com" {...form.register("email")} />
+                    {form.formState.errors.email && <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>}
                   </div>
 
                   <Button type="submit" className="invictus-cta h-11 w-full" disabled={loading}>
@@ -212,6 +155,5 @@ export function WaitlistHero() {
           </CardContent>
         </Card>
       </div>
-    </section>
-  );
+    </section>;
 }

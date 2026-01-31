@@ -1,182 +1,144 @@
 
 
-## Objetivo
-Tornar as animações **muito mais perceptíveis e premium**, especificamente:
-1. **Cards dos pilares**: entrando **da direita para esquerda** com sensação de "encaixe" no lugar
-2. **Ícones**: quando o card encaixa, o ícone **acende como LED amarelo** e permanece aceso
-3. **Outras animações**: simples, mas perceptíveis
+## Diagnóstico: Por que a imagem desaparece e recarrega no mobile
+
+### Problema Identificado
+O comportamento que você descreve (imagem sumindo ao rolar para cima e recarregando ao voltar) é causado por **comportamento agressivo de gerenciamento de memória** em navegadores móveis. O sistema atual tem alguns pontos que agravam isso:
+
+### Causas Técnicas
+
+1. **Imagens duplicadas no mesmo URL**
+   - O `LandingBackground.tsx` carrega a imagem via `<img>` fixo
+   - O `body.invictus-landing-body` no CSS também tenta carregar a **mesma imagem** como `background-image`
+   - O `.invictus-landing-page` também carrega a imagem como background
+   - Resultado: 3 tentativas de carregar a mesma imagem = confusão do browser
+
+2. **Camadas CSS pesadas**
+   - O overlay animado (`::after` com `invictus-grain-drift`) aplica múltiplos gradientes + blur + animação contínua
+   - O `mix-blend-mode: overlay` força recomposição constante
+   - Em mobile, o browser "descarrega" layers fixos para economizar memória
+
+3. **Falta de hints de preload**
+   - As imagens críticas não têm `<link rel="preload">` no HTML
+   - O browser não prioriza corretamente
+
+4. **Múltiplas camadas de gradientes**
+   - Até 9 gradients empilhados no `body.invictus-landing-body`
+   - Cada gradiente é uma camada de composição separada
 
 ---
 
-## Diagnóstico: Por que está "fraquinho"
+## Solução: Otimização de Performance
 
-### Problema 1: Movimento quase invisível
-- Hoje: `translateX(16-26px)` é muito sutil, quase não percebe
-- Cards usam transition suave que "some" visualmente
+### A) Simplificar o sistema de background (eliminar duplicação)
 
-### Problema 2: Ícones não "acendem"
-- O pop atual muda brightness de 0.98 → 1.03 (quase imperceptível)
-- Não há efeito de "LED dourado ligando"
+**Estratégia**: Usar APENAS o componente `LandingBackground.tsx` e remover as regras duplicadas do CSS.
 
-### Problema 3: Falta de "encaixe"
-- Não há easing que simule "chegar e parar" (hoje é glide contínuo)
+Arquivos afetados:
+- `src/styles/invictus-auth.css`: Remover `background-image` de `.invictus-landing-page` e `body.invictus-landing-body`
+- `src/components/landing/LandingBackground.tsx`: Manter como fonte única da imagem
 
----
+### B) Otimizar o overlay animado
 
-## Solução: Animações Premium Perceptíveis
+**Antes**: Animação contínua de 12s com blur + múltiplos gradientes + mix-blend-mode
+**Depois**: 
+- Overlay estático (sem animação contínua)
+- Remover `mix-blend-mode` (causa recomposição constante)
+- Reduzir número de gradientes de 5 para 3
 
-### A) Cards entrando da direita para esquerda com "encaixe"
+### C) Adicionar preload da imagem crítica
 
-**Estado inicial:**
-- `translateX(60px)` (movimento bem maior, vindo da direita)
-- `opacity: 0`
-- Leve blur (desktop)
-
-**Animação:**
-- Duração: 650ms
-- Easing: `cubic-bezier(0.34, 1.56, 0.64, 1)` — esse easing tem um "overshoot" sutil que cria a sensação de "encaixar" no lugar
-- Stagger: 120ms entre cada card (para entrar um por um, não todos juntos)
-
-**Resultado visual:**
-O card vem da direita, desacelera, "ultrapassa" levemente a posição final e volta (como se encaixasse)
-
----
-
-### B) Ícones "acendendo como LED amarelo"
-
-**Estado inicial:**
-- `opacity: 0`
-- `scale(0.85)`
-- Sem brilho
-
-**Quando o card encaixa (delay +180ms):**
-1. Ícone aparece com scale 0.85 → 1.0
-2. Ao mesmo tempo: **box-shadow dourado intenso acende** (efeito LED)
-3. Background do plate ganha **tonalidade dourada**
-4. O brilho **permanece** (não some depois)
-
-**CSS do "LED ligado" (estado final permanente):**
-```css
-box-shadow:
-  0 0 0 1px hsl(var(--gold-hot) / 0.45) inset,
-  0 0 18px -4px hsl(var(--gold-hot) / 0.65),
-  0 0 30px -8px hsl(var(--gold-hot) / 0.45);
-background:
-  linear-gradient(
-    135deg,
-    hsl(var(--gold-hot) / 0.22),
-    hsl(var(--gold-soft) / 0.14) 50%,
-    hsl(var(--gold-hot) / 0.18)
-  );
+No `index.html`, adicionar:
+```html
+<link rel="preload" as="image" href="/images/invictus-landing-bg-1536x1920-v2.jpg" media="(max-width: 767px)">
+<link rel="preload" as="image" href="/images/invictus-landing-bg-1920x1080-v2.jpg" media="(min-width: 768px)">
 ```
 
----
+### D) Melhorar o LandingBackground
 
-### C) Outras animações mais perceptíveis
+- Adicionar `fetchPriority="high"` na imagem
+- Usar `will-change: transform` para promover a layer na GPU
+- Simplificar overlays (menos gradientes)
 
-**Seções (SectionShell):**
-- Aumentar `translateY` de 12px → 22px
-- Duração: 700ms
-- Mais presença na entrada
+### E) Otimizar gradientes do body principal
 
-**Textos e bullets dentro das seções:**
-- Stagger com entrada de baixo (16px)
-- Delay um pouco maior entre itens (90ms)
+No `src/index.css`, simplificar os gradientes do body de 3 para 1 mais eficiente
 
 ---
 
-## Arquivos a modificar
+## Arquivos a Modificar
 
-### 1) `src/styles/invictus-auth.css`
-- Reescrever `.invictus-stagger--lr` com:
-  - `translateX(60px)` (direita → esquerda)
-  - Easing "encaixe" com overshoot sutil
-  - Keyframes novos para o movimento
-- Reescrever `.invictus-icon-plate` animação:
-  - Novo keyframe `invictus-icon-glow` com LED dourado
-  - Estado final com glow permanente
-- Ajustar `.invictus-reveal` com mais presença
-- Ajustar delays do stagger (mais espaçados)
+### 1) `index.html`
+- Adicionar `<link rel="preload">` para as imagens de background (responsivo)
 
-### 2) `src/components/landing/ManifestoSections.tsx`
-- Manter classes já aplicadas (já usam `invictus-stagger--lr`)
-- (opcional) Garantir que todos os pilares entrem da direita
+### 2) `src/components/landing/LandingBackground.tsx`
+- Adicionar `fetchPriority="high"`
+- Adicionar `will-change: transform` no container
+- Simplificar overlays
 
----
+### 3) `src/styles/invictus-auth.css`
+- Remover `background-image` duplicados de `.invictus-landing-page`
+- Remover `background-image` duplicados de `body.invictus-landing-body`
+- Simplificar/remover a animação `invictus-grain-drift`
+- Remover `mix-blend-mode: overlay` do `::after`
 
-## Comportamento esperado
-
-### Desktop e Mobile:
-1. Você rola até "Nossa mentalidade (pilares)"
-2. Os 4 cards entram **um por um da direita**, com movimento perceptível (60px)
-3. Cada card "encaixa" no lugar (efeito de desaceleração + micro bounce)
-4. O ícone de cada card **acende dourado** (LED) ~180ms após o card encaixar
-5. O ícone **permanece aceso** (não apaga)
-
-### Acessibilidade:
-- Respeita `prefers-reduced-motion: reduce` — tudo aparece sem animação
+### 4) `src/index.css`
+- Simplificar gradientes do body
 
 ---
 
-## Detalhes técnicos
+## Comportamento Esperado Após Otimização
 
-### Keyframes do card (entrada direita → esquerda com encaixe):
+1. **Imagem não some mais**: A imagem fica "pinned" na GPU e não é descarregada
+2. **Scroll mais suave**: Menos camadas de composição = menos trabalho para o browser
+3. **Carregamento mais rápido**: Preload garante que a imagem está pronta antes do render
+4. **Memória reduzida**: Sem duplicação de imagens
+
+---
+
+## Detalhes Técnicos da Otimização
+
+### Antes (pesado):
 ```css
-@keyframes invictus-card-slide-in {
-  0% {
-    opacity: 0;
-    transform: translateX(60px) translateY(8px);
-  }
-  70% {
-    opacity: 1;
-    transform: translateX(-4px) translateY(0); /* micro overshoot */
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0) translateY(0); /* encaixado */
-  }
+/* 9 gradientes + imagem + animação + blend mode */
+body.invictus-landing-body {
+  background-image: ... 9 layers ...;
+  animation: invictus-grain-drift 12s infinite;
+}
+.invictus-landing-page::after {
+  mix-blend-mode: overlay;
+  animation: invictus-grain-drift 12s infinite;
 }
 ```
 
-### Keyframes do ícone (acendendo LED):
+### Depois (leve):
 ```css
-@keyframes invictus-icon-glow {
-  0% {
-    opacity: 0;
-    transform: scale(0.85);
-    box-shadow: 0 0 0 0 transparent;
-    background: linear-gradient(135deg, hsl(var(--foreground) / 0.14), ...);
-  }
-  60% {
-    opacity: 1;
-    transform: scale(1.02);
-    box-shadow: 0 0 24px -2px hsl(var(--gold-hot) / 0.75); /* flash */
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-    box-shadow: 0 0 18px -4px hsl(var(--gold-hot) / 0.65); /* permanece */
-    background: linear-gradient(135deg, hsl(var(--gold-hot) / 0.22), ...);
-  }
+/* Sem background no body/page (usa apenas <img>) */
+body.invictus-landing-body {
+  /* Só overlay sutil, sem imagem */
+}
+/* Overlay estático, sem animação */
+.invictus-landing-page::after {
+  /* Gradientes simplificados, sem animation, sem mix-blend-mode */
 }
 ```
 
 ---
 
-## Checklist de validação
+## Checklist de Validação
 
-- [ ] Cards dos pilares entram da **direita para esquerda** (60px de movimento)
-- [ ] Cada card "encaixa" com micro bounce
-- [ ] Ícones **acendem amarelo/dourado** como LED
-- [ ] O brilho do ícone **permanece** depois de acender
-- [ ] Animações são **perceptíveis** no desktop e mobile
-- [ ] Tudo funciona com `prefers-reduced-motion: reduce`
+- [ ] Imagem de fundo NÃO some ao rolar para cima no mobile
+- [ ] Imagem NÃO recarrega ao voltar (scroll down)
+- [ ] Scroll permanece suave
+- [ ] Animações dos cards e ícones continuam funcionando
+- [ ] Desktop mantém qualidade visual
 
 ---
 
-## Próximos passos após implementação
+## Próximos Passos
 
-1. Testar no desktop (recarregar página e rolar até os pilares)
-2. Testar no mobile (mesmo fluxo)
-3. Se quiser mais ou menos intensidade, ajustamos os valores (translateX, duração, brilho)
+1. Implementar as mudanças
+2. Testar no mobile (recarregar e rolar várias vezes)
+3. Testar no desktop (verificar que visual premium se mantém)
+4. Se necessário, ajustar intensidade dos overlays
 

@@ -1,19 +1,7 @@
-/* Auth-only background image + subtle premium overlays.
-   Keeps the existing card styles intact (invictus-auth-surface/frame). */
-.invictus-auth-page {
-  background-image:
-    /* readability + premium vignette */
-    radial-gradient(900px 700px at 50% 0%, hsl(var(--foreground) / 0.10), transparent 55%),
-    radial-gradient(1200px 900px at 50% 120%, hsl(var(--background) / 0.92), transparent 60%),
-    /* keep the app's gold "aura" very subtle */
-    radial-gradient(900px 700px at 18% 6%, hsl(var(--primary) / 0.10), transparent 55%),
-    radial-gradient(800px 600px at 82% 8%, hsl(var(--primary) / 0.06), transparent 55%),
-    /* main photo */
-    url("/images/invictus-auth-bg.jpg");
-
-  background-size: auto, auto, auto, auto, cover;
-  background-position: center, center, center, center, center;
-  background-repeat: no-repeat;
+/* Auth pages - background vem do componente AuthBackground.tsx */
+.invictus-auth-page-content {
+  position: relative;
+  isolation: isolate;
 }
 
 /* ========================================================

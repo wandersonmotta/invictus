@@ -13,6 +13,10 @@ export function useDeviceLocation({ approxDecimals = 2 }: { approxDecimals?: num
   const [exact, setExact] = React.useState<LatLng | null>(null);
   const [approx, setApprox] = React.useState<LatLng | null>(null);
 
+  // Track last update time to throttle updates
+  const lastUpdateRef = React.useRef<number>(0);
+  const MIN_UPDATE_INTERVAL_MS = 5000; // Minimum 5 seconds between state updates
+
   const stop = React.useCallback(() => {
     if (watchIdRef.current != null && navigator.geolocation) {
       navigator.geolocation.clearWatch(watchIdRef.current);
@@ -21,6 +25,7 @@ export function useDeviceLocation({ approxDecimals = 2 }: { approxDecimals?: num
     setStatus("idle");
     setExact(null);
     setApprox(null);
+    lastUpdateRef.current = 0;
   }, []);
 
   const start = React.useCallback(() => {
@@ -40,10 +45,21 @@ export function useDeviceLocation({ approxDecimals = 2 }: { approxDecimals?: num
     setStatus("requesting");
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
+        const now = Date.now();
         const nextExact = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setExact(nextExact);
-        setApprox(roundLatLng(nextExact, approxDecimals));
-        setStatus("granted");
+        const nextApprox = roundLatLng(nextExact, approxDecimals);
+
+        // Throttle: only update state if enough time has passed
+        // or if this is the first position (lastUpdateRef.current === 0)
+        if (lastUpdateRef.current === 0 || now - lastUpdateRef.current >= MIN_UPDATE_INTERVAL_MS) {
+          lastUpdateRef.current = now;
+          setExact(nextExact);
+          setApprox(nextApprox);
+          setStatus("granted");
+        } else if (status !== "granted") {
+          // Always update status on first successful position
+          setStatus("granted");
+        }
       },
       (err) => {
         watchIdRef.current = null;
@@ -53,9 +69,13 @@ export function useDeviceLocation({ approxDecimals = 2 }: { approxDecimals?: num
         }
         setStatus("error");
       },
-      { enableHighAccuracy: true, maximumAge: 60_000, timeout: 10_000 },
+      { 
+        enableHighAccuracy: true, 
+        maximumAge: 60_000, 
+        timeout: 10_000 
+      },
     );
-  }, [approxDecimals, toast]);
+  }, [approxDecimals, toast, status]);
 
   React.useEffect(() => {
     return () => {

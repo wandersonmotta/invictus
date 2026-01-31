@@ -60,31 +60,51 @@ const Index = () => {
 
   // Auto-share an approximate live location while in "nearby" mode.
   // Privacy: only sends rounded coords (approx) and expires quickly.
+  // Stabilize approx coordinates to prevent excessive pushes
+  const stableApproxLat = React.useMemo(
+    () => deviceLocation.approx?.lat ?? null,
+    [deviceLocation.approx?.lat]
+  );
+  const stableApproxLng = React.useMemo(
+    () => deviceLocation.approx?.lng ?? null,
+    [deviceLocation.approx?.lng]
+  );
+
   React.useEffect(() => {
     if (mode !== "nearby") return;
     if (!canUseProximity) return;
     if (!gpsReady) return;
-    if (!deviceLocation.approx) return;
+    if (stableApproxLat === null || stableApproxLng === null) return;
+
     let stopped = false;
+    let hasPushed = false;
+
     const push = async () => {
-      const approx = deviceLocation.approx;
-      if (!approx || stopped) return;
+      if (stopped) return;
+      if (stableApproxLat === null || stableApproxLng === null) return;
+      
       await supabase.rpc("upsert_my_live_location", {
-        p_lat: approx.lat,
-        p_lng: approx.lng,
+        p_lat: stableApproxLat,
+        p_lng: stableApproxLng,
         p_approx_decimals: 2,
         p_expires_in_seconds: 300
       });
+      hasPushed = true;
     };
+
+    // Initial push
     void push();
+
+    // Update every 20 seconds
     const id = window.setInterval(() => {
       void push();
     }, 20_000);
+
     return () => {
       stopped = true;
       window.clearInterval(id);
     };
-  }, [mode, canUseProximity, gpsReady, deviceLocation.approx]);
+  }, [mode, canUseProximity, gpsReady, stableApproxLat, stableApproxLng]);
   const {
     loading: nearbyLoading,
     pins: nearbyPinsLive,

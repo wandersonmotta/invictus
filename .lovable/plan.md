@@ -1,173 +1,180 @@
 
-
-## Objetivo
-Criar um sistema para visualizar, gerenciar e exportar os leads da lista de espera, integrado ao painel Admin existente.
-
----
-
-## Análise do Cenário Atual
-
-### O que já existe:
-- Tabela `waitlist_leads` no banco com campos: email, full_name, phone, source, ip_hash, created_at
-- Política RLS que permite apenas admins lerem os dados
-- Página Admin (`/admin`) com 4 abas: Aprovações, Convites, Categorias, Treinamentos
-- Edge function `waitlist-signup` que insere os leads
-
-### O que falta:
-- Aba no Admin para visualizar os leads
-- Funcionalidade de exportar para Excel/CSV
-- (Opcional) Acesso externo para compartilhar com terceiros
+## Objetivo (sem mudar visual/funcionalidade)
+1) Remover o “travamento”/atraso no primeiro carregamento da landing (rota “/”), principalmente sensação de “carregando fontes”.
+2) Adicionar um hover desktop “puxando pra frente” (3D lift) **somente** nos cards de:
+   - “Nossa mentalidade (pilares)”
+   - “O que você encontra aqui”
+3) Fazer um checkup e aplicar otimizações de performance gerais (desktop/tablet/celular) sem sacrificar nada.
 
 ---
 
-## Solução Proposta
+## Diagnóstico (o que provavelmente está causando o “travamento” no primeiro load)
+Hoje a landing está “limpa”, mas o bundle inicial ainda pode estar pesado por dois motivos principais:
 
-### Opção Recomendada: Aba no Painel Admin + Exportação
+1) **Rotas importadas de forma eager (sem lazy loading)**
+   - Em `src/App.tsx`, todas as páginas (Mapa, Feed, Comunidade, etc.) são importadas no topo.
+   - Isso força o build a colocar muita coisa no JS inicial, mesmo quando o usuário só abriu “/”.
+   - “Travamento de fontes” normalmente é sintoma de:
+     - JS pesado bloqueando thread principal no início
+     - CSS grande sendo parseado no começo
+     - Reflow/paint atrasado (parece que “texto muda” ou “liga depois”)
 
-Esta é a opção mais **prática e segura**:
+2) **CSS do Leaflet está sendo carregado globalmente**
+   - `src/index.css` importa `leaflet/dist/leaflet.css` sempre, mesmo na landing.
+   - Leaflet CSS é relativamente grande e pode influenciar parse + carregamento de assets (ícones), impactando o primeiro paint.
 
-1. **Nova aba "Leads"** no painel Admin existente
-2. **Tabela com os leads** mostrando: Nome, WhatsApp, E-mail, Origem, Data
-3. **Botão "Exportar CSV"** para baixar em formato Excel-compatível
-4. **Busca/filtro** por nome ou email
-5. **Ordenação** por data (mais recentes primeiro)
-
-### Sobre Acesso Externo
-
-Existem duas abordagens:
-
-| Opção | Prós | Contras |
-|-------|------|---------|
-| **A) Link público temporário** | Fácil compartilhar | Menos seguro, precisa de token/expiração |
-| **B) Criar mais admins** | Mais seguro, controle granular | Precisa criar conta para cada pessoa |
-
-**Recomendação**: Começar com a aba no Admin + exportação CSV. Se precisar compartilhar, você pode:
-- Exportar o CSV e enviar por email/WhatsApp
-- Ou adicionar mais pessoas como admin no sistema
+Não há indícios de fontes externas (Google Fonts) sendo carregadas; então o “efeito fonte travando” é quase certamente “custo inicial” (JS/CSS) e não “font download”.
 
 ---
 
-## Implementação Técnica
+## Estratégia de otimização (prioridade alta, baixo risco)
+### A) Code-splitting por rota (reduz muito o JS inicial)
+**O que faremos**
+- Transformar páginas pesadas em `React.lazy()` com `Suspense`:
+  - Mapa (`Index`/`/mapa`) é prioridade (Leaflet).
+  - Feed, Comunidade, Mensagens, Class, Admin, Buscar, Membro também podem entrar.
+- Manter a landing como eager (carrega instantaneamente).
 
-### 1) Modificar `src/pages/Admin.tsx`
+**Por que melhora**
+- O usuário que entra em “/” vai baixar e executar bem menos JS.
+- Menos bloqueio da thread principal = menos “travada” na renderização do texto.
 
-**Adicionar nova aba "Leads"** (será a 5ª aba):
+**Arquivos**
+- `src/App.tsx` (trocar imports diretos por lazy imports e envolver com `<Suspense>` em cada route ou em um wrapper)
 
-```text
-Tabs: Aprovações | Convites | Categorias | Treinamentos | Leads
-```
-
-**Query para buscar leads**:
-```typescript
-const { data: waitlistLeads } = useQuery({
-  queryKey: ["waitlist_leads"],
-  enabled: !!isAdmin,
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from("waitlist_leads")
-      .select("id, email, full_name, phone, source, created_at")
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    return data ?? [];
-  }
-});
-```
-
-**Tabela de exibição**:
-- Colunas: Nome | WhatsApp | E-mail | Origem | Data
-- Formatação do telefone: (11) 99999-9999
-- Formatação da data: dd/mm/yyyy HH:mm
-
-**Funcionalidade de exportação CSV**:
-```typescript
-const exportToCSV = () => {
-  const headers = ["Nome", "WhatsApp", "Email", "Origem", "Data"];
-  const rows = waitlistLeads.map(lead => [
-    lead.full_name || "",
-    formatPhone(lead.phone),
-    lead.email,
-    lead.source || "",
-    new Date(lead.created_at).toLocaleString("pt-BR")
-  ]);
-  
-  const csv = [headers, ...rows]
-    .map(row => row.map(cell => `"${cell}"`).join(","))
-    .join("\n");
-  
-  // Download automático
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `leads-waitlist-${new Date().toISOString().split("T")[0]}.csv`;
-  a.click();
-};
-```
-
-**Busca/filtro**:
-- Input de texto para filtrar por nome ou email
-- Filtro client-side (os dados já estão carregados)
+**Fallback visual**
+- Usar um fallback discreto (ex.: “Carregando…”) com estilo Invictus (sem mudar layout da landing).
+- Importante: não mexer na estética; o fallback só aparece ao navegar para rotas lazy.
 
 ---
 
-## Arquivos a Modificar
+### B) Carregar CSS do Leaflet somente quando o mapa abrir
+**O que faremos**
+- Remover `@import "leaflet/dist/leaflet.css";` de `src/index.css`.
+- Importar Leaflet CSS dentro do módulo do mapa (ex.: `src/components/map/MemberMap.tsx` ou a página `src/pages/Index.tsx`), para que o CSS entre apenas no chunk do mapa.
 
-### `src/pages/Admin.tsx`
-- Adicionar tipo `WaitlistLead`
-- Adicionar query `waitlist_leads`
-- Adicionar estado para busca
-- Adicionar função `exportToCSV`
-- Adicionar função `formatPhone` (formatar número brasileiro)
-- Adicionar nova aba "Leads" no TabsList (5 colunas)
-- Adicionar conteúdo da aba com tabela e botões
+**Por que melhora**
+- Reduz CSS parse no primeiro load da landing.
+- Evita puxar assets (imagens do Leaflet) antes do usuário precisar.
 
----
-
-## Comportamento Esperado
-
-1. Você acessa `/admin` como admin
-2. Aparece a nova aba **"Leads"**
-3. Vê a lista de todos os interessados com nome, WhatsApp, email, origem e data
-4. Pode **buscar** por nome ou email
-5. Pode clicar em **"Exportar CSV"** para baixar o arquivo
-6. O arquivo CSV abre perfeitamente no Excel
+**Arquivos**
+- `src/index.css` (remover import do Leaflet)
+- `src/components/map/MemberMap.tsx` (adicionar `import "leaflet/dist/leaflet.css";`)
+  - Opcional: mover também `invictus-map.css` e `invictus-map-pins.css` para ficarem “map-only” (avaliar tamanho; se forem leves, não é obrigatório).
 
 ---
 
-## Layout da Aba Leads
+## Animação “puxar pra frente” no hover (somente desktop)
+### Requisito
+- Apenas desktop (mouse), sem afetar mobile/tablet touch.
+- Aplicar nos cards:
+  - “Nossa mentalidade (pilares)”
+  - “O que você encontra aqui”
+- Efeito: levantar, vir para frente (3D), com transição suave.
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│  Leads da Lista de Espera                               │
-│  Pessoas interessadas que preencheram o formulário      │
-├─────────────────────────────────────────────────────────┤
-│  [🔍 Buscar por nome ou email...    ]  [📥 Exportar CSV]│
-├─────────────────────────────────────────────────────────┤
-│  Nome          │ WhatsApp       │ Email         │ Data  │
-│  João Silva    │ (11) 99999-9999│ joao@email... │ 31/01 │
-│  Maria Santos  │ (21) 98888-8888│ maria@emai... │ 30/01 │
-│  ...           │ ...            │ ...           │ ...   │
-└─────────────────────────────────────────────────────────┘
-```
+### Implementação
+**O que faremos**
+1) Criar uma variante de card para hover, por exemplo:
+   - Classe: `invictus-landing-card--lift`
+2) Aplicar essa classe nos dois lugares:
+   - `Pillars()`: no `<div className="invictus-landing-card p-4">` acrescentar `invictus-landing-card--lift`
+   - `WhatYouFindHere()`: idem
+
+**CSS do efeito**
+- Só em dispositivos com hover real:
+  - `@media (hover: hover) and (pointer: fine) { ... }`
+- Animação:
+  - `transform: translateY(-6px) translateZ(0) scale(1.02);`
+  - `box-shadow` levemente reforçado
+  - `transition: transform 220ms cubic-bezier(...), box-shadow 220ms ...;`
+- Sem custo extra no mobile:
+  - Nada aplicado fora do media query.
+- Acessibilidade:
+  - Respeitar `prefers-reduced-motion: reduce` (sem lift ou com lift mínimo).
+
+**Arquivos**
+- `src/components/landing/ManifestoSections.tsx` (adicionar a classe nos cards)
+- `src/styles/invictus-auth.css` (onde já estão os estilos da landing/cards) para inserir o bloco do hover.
 
 ---
 
-## Checklist de Validação
+## Checkup completo de performance (sem “mudar nada” visualmente)
+Aqui o foco é “ganho de velocidade sem alterar aparência/fluxo”:
 
-- [ ] Nova aba "Leads" aparece no painel Admin
-- [ ] Tabela mostra todos os leads ordenados por data (mais recentes primeiro)
-- [ ] Busca filtra corretamente por nome ou email
-- [ ] Botão "Exportar CSV" baixa arquivo válido
-- [ ] Arquivo CSV abre corretamente no Excel
-- [ ] Telefone formatado corretamente: (11) 99999-9999
-- [ ] Apenas admins conseguem ver os dados (RLS já configurado)
+### 1) Verificar se há downloads redundantes ou assets não críticos no primeiro load
+- Confirmar se landing já está com:
+  - background via `<img fetchPriority="high" decoding="sync">` (já está)
+  - preload no `index.html` (já está para landing e auth)
+- Ajustar apenas se encontrarmos duplicação:
+  - garantir que não exista background-image duplicado via CSS (parece já resolvido)
+
+### 2) Reduzir custo inicial de JS (principal)
+- Lazy loading de rotas (A) é o maior ganho.
+
+### 3) Reduzir custo inicial de CSS (segundo maior ganho)
+- Leaflet CSS “map-only” (B).
+
+### 4) Revisão de “main thread blocks” (sintoma de travada)
+- Conferir no console/network (durante implementação) se há:
+  - warnings de “long task”
+  - muitos assets no first load
+- Ajustar:
+  - deferir imports pesados
+  - evitar inicializações desnecessárias na landing
 
 ---
 
-## Próximos Passos (após implementação)
+## Plano de validação (desktop/tablet/celular)
+### Landing “/”
+- Recarregar (hard refresh) e validar:
+  - texto aparece estável
+  - sensação de “travada” diminuiu
+  - background continua premium e imediato
 
-1. Testar preenchendo o formulário da landing
-2. Verificar se o lead aparece na aba
-3. Testar a exportação CSV
-4. Se precisar de acesso externo, posso implementar sistema de link compartilhável
+### Desktop hover
+- Em “Nossa mentalidade (pilares)”:
+  - passar mouse em cima: card levanta “pra frente”
+  - sair: volta suave
+- Em “O que você encontra aqui”:
+  - mesmo comportamento
+- Confirmar que não afeta scroll/performance.
 
+### Tablet/celular
+- Garantir que:
+  - não existe hover “preso”
+  - performance não piora
+  - animações continuam suaves
+
+### Mapa (/mapa)
+- Abrir e confirmar:
+  - Leaflet CSS carregou corretamente (pins, tiles, controles)
+  - nada quebrou visualmente
+
+---
+
+## Arquivos que serão alterados (estimativa)
+1) `src/App.tsx`
+   - Aplicar `React.lazy` + `Suspense` por rota (ou por grupo).
+2) `src/index.css`
+   - Remover `@import "leaflet/dist/leaflet.css";`
+   - (Opcional) manter invictus-map.css global ou mover para map-only dependendo do peso.
+3) `src/components/map/MemberMap.tsx` (ou `src/pages/Index.tsx`)
+   - Importar `leaflet/dist/leaflet.css` localmente.
+4) `src/components/landing/ManifestoSections.tsx`
+   - Adicionar classe `invictus-landing-card--lift` nos cards desejados.
+5) `src/styles/invictus-auth.css`
+   - Adicionar o CSS do hover lift com media query para desktop + reduced-motion.
+
+---
+
+## Riscos / cuidados
+- Lazy loading exige fallback; vamos manter bem discreto e consistente com o tema.
+- CSS do Leaflet precisa estar disponível quando o mapa montar; vamos importar no mesmo módulo que usa Leaflet para garantir.
+- Hover lift aumenta “camadas” no desktop; vamos limitar a transform (GPU-friendly) e evitar blur pesado no hover.
+
+---
+
+## Entregáveis
+- Primeiro carregamento da landing mais leve (menos JS/CSS inicial).
+- Hover “puxando pra frente” nos cards certos no desktop.
+- Checkup aplicado com ganhos reais sem alterar identidade visual.

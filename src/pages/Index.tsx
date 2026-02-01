@@ -52,10 +52,12 @@ const Index = () => {
   const appearsOnMap = me?.access_status === "approved" && !!me?.postal_code && typeof me?.location_lat === "number" && typeof me?.location_lng === "number";
   const canUseProximity = me?.access_status === "approved";
   React.useEffect(() => {
-    if (mode === "nearby" && canUseProximity) deviceLocation.start();
-    if (mode !== "nearby") deviceLocation.stop();
+    // Solicita a permissão de localização assim que o usuário aprovado entra no app.
+    // A visualização de “Perto de mim” continua sendo opt-in (apenas quando o viewer ativa o modo).
+    if (canUseProximity) deviceLocation.start();
+    if (!canUseProximity) deviceLocation.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, canUseProximity]);
+  }, [canUseProximity]);
   const gpsReady = deviceLocation.status === "granted" && !!deviceLocation.exact;
 
   // Auto-share an approximate live location while in "nearby" mode.
@@ -71,7 +73,6 @@ const Index = () => {
   );
 
   React.useEffect(() => {
-    if (mode !== "nearby") return;
     if (!canUseProximity) return;
     if (!gpsReady) return;
     if (stableApproxLat === null || stableApproxLng === null) return;
@@ -87,7 +88,9 @@ const Index = () => {
         p_lat: stableApproxLat,
         p_lng: stableApproxLng,
         p_approx_decimals: 2,
-        p_expires_in_seconds: 300
+        // Mantém ativo por muito tempo; ainda assim, o backend usa expires_at.
+        // Como estamos “batendo” a cada 20s, na prática não expira enquanto o app estiver aberto.
+        p_expires_in_seconds: 86_400
       });
       hasPushed = true;
     };
@@ -104,7 +107,7 @@ const Index = () => {
       stopped = true;
       window.clearInterval(id);
     };
-  }, [mode, canUseProximity, gpsReady, stableApproxLat, stableApproxLng]);
+  }, [canUseProximity, gpsReady, stableApproxLat, stableApproxLng]);
   const {
     loading: nearbyLoading,
     pins: nearbyPinsLive,

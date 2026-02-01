@@ -140,15 +140,26 @@ export default function Admin() {
     }
   });
   const {
-    data: pendingProfiles
+    data: pendingProfiles,
+    isLoading: pendingProfilesLoading,
+    isError: pendingProfilesIsError,
+    error: pendingProfilesError,
+    refetch: refetchPendingProfiles,
   } = useQuery({
     queryKey: ["pending_profiles"],
     enabled: !!isAdmin,
+    // Keep this list fresh so admins see new signups without hard refresh.
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+    retry: 1,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_list_pending_profiles_logged", { p_limit: 200 });
+      // Use a higher limit to avoid "missing" users when the queue grows.
+      const { data, error } = await supabase.rpc("admin_list_pending_profiles_logged", { p_limit: 1000 });
       if (error) throw error;
-      return (data ?? []) as PendingProfile[];
-    }
+      const list = (data ?? []) as PendingProfile[];
+      // Defensive: ensure newest first even if RPC ordering changes.
+      return list.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+    },
   });
 
   // --- Waitlist Leads ---
@@ -569,8 +580,27 @@ export default function Admin() {
                 <CardDescription>Usuários criados com convite ficam com acesso limitado até aprovação.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
-                {(pendingProfiles ?? []).length === 0 ? <p className="text-sm text-muted-foreground">Nenhum usuário pendente no momento.</p> : <div className="space-y-2">
-                    {pendingProfiles?.map(p => <div key={p.id} className="flex flex-col gap-2 rounded-lg border border-border/60 p-3 sm:flex-row sm:items-center sm:justify-between">
+                {pendingProfilesLoading ? (
+                  <p className="text-sm text-muted-foreground">Carregando fila…</p>
+                ) : pendingProfilesIsError ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-destructive">Não foi possível carregar a fila de aprovação.</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(pendingProfilesError as any)?.message ? String((pendingProfilesError as any).message) : "Tente novamente."}
+                    </p>
+                    <Button variant="outline" size="sm" onClick={() => void refetchPendingProfiles()}>
+                      Recarregar
+                    </Button>
+                  </div>
+                ) : (pendingProfiles ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum usuário pendente no momento.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {pendingProfiles?.map((p) => (
+                      <div
+                        key={p.id}
+                        className="flex flex-col gap-2 rounded-lg border border-border/60 p-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
                         <div className="min-w-0">
                           <p className="text-sm font-medium">{p.display_name || "Sem nome"}</p>
                           <p className="break-all text-xs text-muted-foreground">{p.user_id}</p>
@@ -578,8 +608,10 @@ export default function Admin() {
                         <Button className="h-9" onClick={() => void approveUser(p.id)}>
                           Aprovar
                         </Button>
-                      </div>)}
-                  </div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

@@ -26,6 +26,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Download, Search } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { rpcUntyped } from "@/lib/rpc";
+import { PendingProfileReviewDialog } from "@/components/admin/PendingProfileReviewDialog";
 type Category = {
   id: string;
   name: string;
@@ -60,6 +62,17 @@ type PendingProfile = {
   display_name: string | null;
   created_at: string;
   access_status: "pending" | "approved" | "rejected";
+};
+
+type MemberRow = {
+  profile_id: string;
+  user_id: string;
+  display_name: string;
+  username: string | null;
+  city: string | null;
+  state: string | null;
+  approved_at: string | null;
+  created_at: string;
 };
 
 type WaitlistLead = {
@@ -524,37 +537,72 @@ export default function Admin() {
   };
 
   // --- Approvals ---
-  const approveUser = async (profileId: string) => {
-    if (!user?.id) return;
-    const {
-      error
-    } = await supabase.from("profiles").update({
-      access_status: "approved",
-      approved_at: new Date().toISOString(),
-      approved_by: user.id
-    }).eq("id", profileId);
-    if (error) {
-      toast({
-        title: "Erro ao aprovar",
-        description: error.message,
-        variant: "destructive"
+  const [reviewProfileId, setReviewProfileId] = React.useState<string | null>(null);
+  const [settingStatus, setSettingStatus] = React.useState(false);
+
+  const setProfileStatus = async (profileId: string, next: "approved" | "rejected") => {
+    if (settingStatus) return;
+    setSettingStatus(true);
+    const previous = qc.getQueryData<PendingProfile[]>(["pending_profiles"]);
+
+    // Optimistic: remove from queue immediately.
+    qc.setQueryData<PendingProfile[]>(["pending_profiles"], (old) => (old ?? []).filter((p) => p.id !== profileId));
+
+    try {
+      const { data, error } = await rpcUntyped<any[]>("admin_set_profile_status", {
+        p_profile_id: profileId,
+        p_next: next,
       });
-      return;
+      if (error) throw error;
+
+      toast({ title: next === "approved" ? "Usuário aprovado" : "Usuário recusado" });
+      setReviewProfileId(null);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["pending_profiles"] }),
+        qc.invalidateQueries({ queryKey: ["admin_members"] }),
+      ]);
+    } catch (e: any) {
+      // Rollback
+      qc.setQueryData(["pending_profiles"], previous);
+      toast({
+        title: next === "approved" ? "Erro ao aprovar" : "Erro ao recusar",
+        description: e?.message ?? String(e),
+        variant: "destructive",
+      });
+    } finally {
+      setSettingStatus(false);
     }
-    toast({
-      title: "Usuário aprovado"
-    });
-    await qc.invalidateQueries({
-      queryKey: ["pending_profiles"]
-    });
   };
+
+  // --- Members ---
+  const [membersSearch, setMembersSearch] = React.useState("");
+  const deferredMembersSearch = React.useDeferredValue(membersSearch);
+
+  const {
+    data: members,
+    isLoading: membersLoading,
+    isError: membersIsError,
+    error: membersError,
+  } = useQuery({
+    queryKey: ["admin_members", deferredMembersSearch],
+    enabled: !!isAdmin,
+    queryFn: async () => {
+      const { data, error } = await rpcUntyped<MemberRow[]>("admin_search_members", {
+        p_search: deferredMembersSearch,
+        p_limit: 80,
+      });
+      if (error) throw error;
+      return (data ?? []) as MemberRow[];
+    },
+    staleTime: 10_000,
+  });
   return <main className="invictus-page">
       <header className="invictus-page-header">
         <h1 className="invictus-h1">Admin</h1>
         <p className="invictus-lead">Painel administrativo</p>
       </header>
 
-      {!isAdmin ? <Card className="invictus-surface invictus-frame border-border/70">
+        {!isAdmin ? <Card className="invictus-surface invictus-frame border-border/70">
           <CardHeader>
             <CardTitle>Sem permissão</CardTitle>
             <CardDescription>
@@ -565,8 +613,9 @@ export default function Admin() {
             <p>Se você deveria ser admin, peça para um administrador validar sua conta e permissões.</p>
           </CardContent>
         </Card> : <Tabs defaultValue="approvals" className="w-full">
-          <TabsList className="grid h-11 w-full grid-cols-5">
+          <TabsList className="grid h-11 w-full grid-cols-6">
             <TabsTrigger value="approvals">Aprovações</TabsTrigger>
+            <TabsTrigger value="members">Área de membros</TabsTrigger>
             <TabsTrigger value="invites">Convites</TabsTrigger>
             <TabsTrigger value="categories">Categorias</TabsTrigger>
             <TabsTrigger value="trainings">Treinamentos</TabsTrigger>
@@ -605,12 +654,102 @@ export default function Admin() {
                           <p className="text-sm font-medium">{p.display_name || "Sem nome"}</p>
                           <p className="break-all text-xs text-muted-foreground">{p.user_id}</p>
                         </div>
-                        <Button className="h-9" onClick={() => void approveUser(p.id)}>
-                          Aprovar
-                        </Button>
+                        <div className="flex flex-wrap gap-2 sm:justify-end">
+                          <Button
+                            variant="outline"
+                            className="h-9"
+                            onClick={() => setReviewProfileId(p.id)}
+                          >
+                            Ver perfil
+                          </Button>
+                          <Button
+                            className="h-9"
+                            onClick={() => void setProfileStatus(p.id, "approved")}
+                            disabled={settingStatus}
+                          >
+                            Aprovar
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <PendingProfileReviewDialog
+              open={!!reviewProfileId}
+              profileId={reviewProfileId}
+              busy={settingStatus}
+              onOpenChange={(open) => setReviewProfileId(open ? reviewProfileId : null)}
+              onApprove={(id) => setProfileStatus(id, "approved")}
+              onReject={(id) => setProfileStatus(id, "rejected")}
+            />
+          </TabsContent>
+
+          <TabsContent value="members" className="mt-4 space-y-4">
+            <Card className="invictus-surface invictus-frame border-border/70">
+              <CardHeader>
+                <CardTitle className="text-base">Área de membros</CardTitle>
+                <CardDescription>Pesquisar membros aprovados por nome, @username ou user_id.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={membersSearch}
+                    onChange={(e) => setMembersSearch(e.target.value)}
+                    placeholder="Buscar (ex: Joyce, @tiago, ou UUID)"
+                    className="pl-10"
+                  />
+                </div>
+
+                {membersLoading ? (
+                  <p className="text-sm text-muted-foreground">Carregando…</p>
+                ) : membersIsError ? (
+                  <div className="space-y-1">
+                    <div className="text-sm text-destructive">Não foi possível carregar os membros.</div>
+                    <div className="text-xs text-muted-foreground">{String((membersError as any)?.message ?? membersError)}</div>
+                  </div>
+                ) : (members ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum membro encontrado.</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Username</TableHead>
+                        <TableHead>Local</TableHead>
+                        <TableHead>Aprovado em</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(members ?? []).map((m) => {
+                        const usernameNoAt = (m.username ?? "").replace(/^@/, "");
+                        return (
+                          <TableRow key={m.profile_id}>
+                            <TableCell className="font-medium">{m.display_name}</TableCell>
+                            <TableCell className="text-muted-foreground">{m.username ?? "—"}</TableCell>
+                            <TableCell className="text-muted-foreground">{[m.city, m.state].filter(Boolean).join(" · ") || "—"}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {m.approved_at ? new Date(m.approved_at).toLocaleString("pt-BR") : "—"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                asChild
+                                size="sm"
+                                variant="outline"
+                                disabled={!usernameNoAt}
+                              >
+                                <a href={`/membro/${usernameNoAt}`}>Ver perfil</a>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
                 )}
               </CardContent>
             </Card>

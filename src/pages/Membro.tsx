@@ -25,7 +25,15 @@ type PublicProfile = {
 export default function Membro() {
   const params = useParams();
   const navigate = useNavigate();
-  const username = params.username ? `@${decodeURIComponent(params.username)}` : "";
+
+  // Normaliza o parâmetro da rota:
+  // - aceita /membro/joao e /membro/@joao (ou %40joao)
+  // - evita formar "@@joao" ao montar o handle
+  const username = React.useMemo(() => {
+    const raw = params.username ? decodeURIComponent(params.username) : "";
+    const handle = raw.trim().replace(/^@+/, "");
+    return handle ? `@${handle}` : "";
+  }, [params.username]);
   const [myUserId, setMyUserId] = React.useState<string | null>(null);
   const [viewerOpen, setViewerOpen] = React.useState(false);
   const [selectedPost, setSelectedPost] = React.useState<(FeedPost & {

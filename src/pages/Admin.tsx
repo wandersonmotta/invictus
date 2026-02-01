@@ -742,7 +742,7 @@ export default function Admin() {
                                 variant="outline"
                                 disabled={!usernameNoAt}
                               >
-                                <a href={`/membro/${usernameNoAt}`}>Ver perfil</a>
+                                <a href={`/membro/${encodeURIComponent(usernameNoAt)}`}>Ver perfil</a>
                               </Button>
                             </TableCell>
                           </TableRow>

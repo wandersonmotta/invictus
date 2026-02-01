@@ -11,6 +11,9 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   const profileQuery = useQuery({
     queryKey: ["profile_access", session?.user.id],
     enabled: !!session?.user.id,
+    // While the user is pending, we want the approval to "unlock" automatically.
+    // Keep polling only on the waiting screen to avoid unnecessary traffic elsewhere.
+    refetchInterval: location.pathname === "/aguardando-aprovacao" ? 8_000 : false,
     queryFn: async () => {
       if (!session?.user.id)
         return {
@@ -87,6 +90,12 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
   if (status !== "approved" && !allowedWhenPending.has(path)) {
     return <Navigate to="/aguardando-aprovacao" replace state={{ from: path }} />;
+  }
+
+  // If the user gets approved while on the waiting screen, redirect automatically.
+  if (status === "approved" && path === "/aguardando-aprovacao") {
+    const from = (location.state as any)?.from;
+    return <Navigate to={typeof from === "string" && from ? from : "/app"} replace />;
   }
 
   return <>{children}</>;

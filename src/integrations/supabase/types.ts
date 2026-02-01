@@ -926,6 +926,25 @@ export type Database = {
         Args: { p_body: string; p_post_id: string }
         Returns: string
       }
+      admin_get_pending_profile_for_review: {
+        Args: { p_profile_id: string }
+        Returns: {
+          access_status: Database["public"]["Enums"]["access_status"]
+          avatar_url: string
+          bio: string
+          city: string
+          created_at: string
+          display_name: string
+          expertises: string[]
+          first_name: string
+          last_name: string
+          profile_id: string
+          region: string
+          state: string
+          user_id: string
+          username: string
+        }[]
+      }
       admin_list_pending_profiles: {
         Args: { p_limit?: number }
         Returns: {
@@ -949,6 +968,32 @@ export type Database = {
       admin_log: {
         Args: { p_action: string; p_target_user_id?: string }
         Returns: undefined
+      }
+      admin_search_members: {
+        Args: { p_limit?: number; p_search?: string }
+        Returns: {
+          approved_at: string
+          city: string
+          created_at: string
+          display_name: string
+          profile_id: string
+          state: string
+          user_id: string
+          username: string
+        }[]
+      }
+      admin_set_profile_status: {
+        Args: {
+          p_next: Database["public"]["Enums"]["access_status"]
+          p_profile_id: string
+        }
+        Returns: {
+          access_status: Database["public"]["Enums"]["access_status"]
+          approved_at: string
+          approved_by: string
+          profile_id: string
+          user_id: string
+        }[]
       }
       can_view_author: { Args: { p_author_id: string }; Returns: boolean }
       can_view_feed_media: { Args: { p_object_name: string }; Returns: boolean }

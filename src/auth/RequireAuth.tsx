@@ -20,10 +20,14 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
           access_status: "pending" as const,
           first_name: null as string | null,
           last_name: null as string | null,
+          avatar_url: null as string | null,
+          bio: null as string | null,
+          expertises: [] as string[],
+          postal_code: null as string | null,
         };
       const { data, error } = await supabase
         .from("profiles")
-        .select("access_status, first_name, last_name")
+        .select("access_status, first_name, last_name, avatar_url, bio, expertises, postal_code")
         .eq("user_id", session.user.id)
         .maybeSingle();
       if (error) throw error;
@@ -31,10 +35,18 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
         access_status: "pending",
         first_name: null,
         last_name: null,
+        avatar_url: null,
+        bio: null,
+        expertises: [],
+        postal_code: null,
       }) as {
         access_status: "pending" | "approved" | "rejected";
         first_name: string | null;
         last_name: string | null;
+        avatar_url: string | null;
+        bio: string | null;
+        expertises: string[];
+        postal_code: string | null;
       };
     },
     staleTime: 10_000,
@@ -79,17 +91,44 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
   const firstName = (profileQuery.data?.first_name ?? "").trim();
   const lastName = (profileQuery.data?.last_name ?? "").trim();
-  const profileComplete = Boolean(firstName && lastName);
+  const avatarUrl = profileQuery.data?.avatar_url ?? null;
+  const bio = (profileQuery.data?.bio ?? "").trim();
+  const expertises = profileQuery.data?.expertises ?? [];
+  const postalCode = (profileQuery.data?.postal_code ?? "").replace(/\D/g, "");
 
-  // Obrigatório: sem Nome + Sobrenome, bloqueia navegação e força /perfil.
+  // For approved users, only name is mandatory
+  // For pending users, all fields are mandatory
+  const isApproved = status === "approved";
+  const basicProfileComplete = Boolean(firstName && lastName);
+  const fullProfileComplete =
+    basicProfileComplete &&
+    Boolean(avatarUrl) &&
+    Boolean(bio) &&
+    expertises.length > 0 &&
+    postalCode.length === 8;
+
+  const profileComplete = isApproved ? basicProfileComplete : fullProfileComplete;
+
+  // Obrigatório: sem campos obrigatórios, bloqueia navegação e força /perfil.
   if (!profileComplete && !allowedWhenIncomplete.has(path)) {
     return <Navigate to="/perfil" replace state={{ from: path }} />;
   }
 
   const allowedWhenPending = new Set(["/perfil", "/aguardando-aprovacao", "/reset-password", "/auth"]);
 
-  if (status !== "approved" && !allowedWhenPending.has(path)) {
+  // If pending and profile is complete, redirect to waiting screen
+  if (status !== "approved" && profileComplete && path !== "/aguardando-aprovacao" && !allowedWhenPending.has(path)) {
     return <Navigate to="/aguardando-aprovacao" replace state={{ from: path }} />;
+  }
+
+  // If pending but profile incomplete, allow staying on /perfil
+  if (status !== "approved" && !profileComplete && path !== "/perfil" && !allowedWhenIncomplete.has(path)) {
+    return <Navigate to="/perfil" replace state={{ from: path }} />;
+  }
+
+  // If pending with complete profile, only allow /aguardando-aprovacao (not /perfil for editing)
+  if (status !== "approved" && profileComplete && path === "/perfil") {
+    return <Navigate to="/aguardando-aprovacao" replace />;
   }
 
   // If the user gets approved while on the waiting screen, redirect automatically.

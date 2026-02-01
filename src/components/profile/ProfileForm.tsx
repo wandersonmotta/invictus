@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ProfilePrivacySelect, type ProfileVisibility } from "@/components/profile/ProfilePrivacySelect";
+import { Loader2 } from "lucide-react";
 
 const profileSchema = z.object({
   first_name: z.string().trim().min(1, "Nome obrigatório").max(30, "Máximo 30 caracteres"),
@@ -120,6 +121,14 @@ export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () 
   const [cropOpen, setCropOpen] = React.useState(false);
   const [pendingImageSrc, setPendingImageSrc] = React.useState<string | null>(null);
 
+  // Live CEP lookup state
+  const [liveCep, setLiveCep] = React.useState<{
+    city: string;
+    state: string;
+    loading: boolean;
+    error: string | null;
+  }>({ city: "", state: "", loading: false, error: null });
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -133,6 +142,36 @@ export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () 
     },
     mode: "onSubmit",
   });
+
+  const watchedCep = form.watch("postal_code");
+
+  // Live CEP lookup effect
+  React.useEffect(() => {
+    const digits = onlyDigits(watchedCep ?? "");
+    if (digits.length !== 8) {
+      setLiveCep({ city: "", state: "", loading: false, error: null });
+      return;
+    }
+
+    setLiveCep((prev) => ({ ...prev, loading: true, error: null }));
+
+    const controller = new AbortController();
+    fetch(`https://viacep.com.br/ws/${digits}/json/`, { signal: controller.signal })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.erro) {
+          setLiveCep({ city: "", state: "", loading: false, error: "CEP não encontrado" });
+        } else {
+          setLiveCep({ city: data.localidade ?? "", state: data.uf ?? "", loading: false, error: null });
+        }
+      })
+      .catch((err) => {
+        if (err.name === "AbortError") return;
+        setLiveCep({ city: "", state: "", loading: false, error: "Erro ao buscar CEP" });
+      });
+
+    return () => controller.abort();
+  }, [watchedCep]);
 
   const loadProfile = React.useCallback(async () => {
     setLoading(true);
@@ -172,11 +211,43 @@ export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () 
     void loadProfile();
   }, [loadProfile]);
 
+  // Determine if user is in onboarding (pending) mode
+  const accessStatus = profile?.access_status ?? null;
+  const isOnboarding = accessStatus !== null && accessStatus !== "approved";
+
+  // Check if all mandatory fields are filled for pending users
+  const hasAvatar = Boolean(profile?.avatar_url);
+  const hasFirstName = Boolean((profile?.first_name ?? "").trim());
+  const hasLastName = Boolean((profile?.last_name ?? "").trim());
+  const hasCep = Boolean((profile?.postal_code ?? "").replace(/\D/g, "").length === 8);
+  const hasBio = Boolean((profile?.bio ?? "").trim());
+  const hasExpertise = (profile?.expertises ?? []).length > 0;
+
+  const isProfileReadyForReview =
+    isOnboarding && hasAvatar && hasFirstName && hasLastName && hasCep && hasBio && hasExpertise;
+
   const onSubmit = form.handleSubmit(async (values) => {
+    // For pending users, validate mandatory fields before saving
+    if (isOnboarding) {
+      const errors: string[] = [];
+      if (!hasAvatar) errors.push("Foto de perfil é obrigatória");
+      if (!(values.bio ?? "").trim()) errors.push("Bio é obrigatória");
+      if (normalizeExpertises(values.expertisesCsv).length === 0) errors.push("Adicione pelo menos 1 expertise");
+
+      if (errors.length > 0) {
+        toast({
+          title: "Campos obrigatórios",
+          description: errors.join(". "),
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setSaving(true);
     const expertises = normalizeExpertises(values.expertisesCsv);
 
-     // CEP obrigatório: resolve cidade/UF + salva coordenadas (backend)
+    // CEP obrigatório: resolve cidade/UF + salva coordenadas (backend)
     const { data: locData, error: locError } = await supabase.functions.invoke("resolve-location-from-cep", {
       body: { postal_code: values.postal_code },
     });
@@ -268,18 +339,55 @@ export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () 
     onSaved?.();
   }
 
-  const accessStatus = profile?.access_status ?? null;
-  const isLimited = accessStatus && accessStatus !== "approved";
+  // Display city/state: prioritize live lookup, fallback to saved profile
+  const displayCity = liveCep.city || profile?.city || "";
+  const displayState = liveCep.state || profile?.state || "";
+
+  // If profile is ready for review (all fields filled, pending status), lock form
+  if (isProfileReadyForReview) {
+    return (
+      <section className="space-y-4">
+        <Card className="invictus-surface invictus-frame border-border/70">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Perfil enviado para análise</CardTitle>
+            <CardDescription>
+              Seu perfil foi salvo com sucesso e está aguardando aprovação. Você não pode fazer alterações até que um
+              administrador libere seu acesso.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={profile?.avatar_url ?? undefined} alt="Foto do perfil" />
+                <AvatarFallback>
+                  {(profile?.display_name?.[0] ?? profile?.first_name?.[0] ?? "U").toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-medium">{profile?.display_name ?? "—"}</p>
+                {profile?.username ? <p className="text-sm text-muted-foreground">{profile.username}</p> : null}
+                <p className="text-sm text-muted-foreground">
+                  {displayCity}
+                  {displayCity && displayState ? ", " : ""}
+                  {displayState}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-4">
-      {isLimited ? (
+      {isOnboarding ? (
         <Card className="invictus-surface invictus-frame border-border/70">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Acesso limitado</CardTitle>
+            <CardTitle className="text-base">Complete seu perfil</CardTitle>
             <CardDescription>
-              Seu acesso está pendente. Você já pode completar seu perfil (foto, bio, expertises e região), mas outras áreas
-              continuarão bloqueadas até aprovação.
+              Para ter seu acesso aprovado, preencha obrigatoriamente: <strong>foto</strong>, <strong>nome</strong>,{" "}
+              <strong>sobrenome</strong>, <strong>CEP</strong>, <strong>bio</strong> e pelo menos <strong>1 expertise</strong>.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -292,12 +400,17 @@ export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () 
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center gap-4">
-            <Avatar className={cn("h-32 w-32", uploading && "opacity-60")}>
-              <AvatarImage src={profile?.avatar_url ?? undefined} alt="Foto do perfil" />
-              <AvatarFallback>
-                {(profile?.display_name?.[0] ?? profile?.first_name?.[0] ?? "U").toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className={cn("h-32 w-32", uploading && "opacity-60")}>
+                <AvatarImage src={profile?.avatar_url ?? undefined} alt="Foto do perfil" />
+                <AvatarFallback>
+                  {(profile?.display_name?.[0] ?? profile?.first_name?.[0] ?? "U").toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {isOnboarding && !hasAvatar && (
+                <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive" title="Obrigatório" />
+              )}
+            </div>
 
             <div className="space-y-2">
               <input
@@ -341,6 +454,9 @@ export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () 
                 {uploading ? "Enviando..." : "Trocar foto"}
               </Button>
               <p className="text-xs text-muted-foreground">PNG/JPG/WebP • até 5MB • formato circular</p>
+              {isOnboarding && !hasAvatar && (
+                <p className="text-xs text-destructive">Foto obrigatória para aprovação</p>
+              )}
             </div>
           </div>
 
@@ -413,7 +529,17 @@ export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () 
                 {form.formState.errors.postal_code ? (
                   <p className="text-xs text-destructive">{form.formState.errors.postal_code.message}</p>
                 ) : null}
-                <p className="text-xs text-muted-foreground">Obrigatório. Ao salvar, vamos preencher automaticamente Cidade/UF.</p>
+                {liveCep.loading && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Buscando CEP...
+                  </p>
+                )}
+                {liveCep.error && <p className="text-xs text-destructive">{liveCep.error}</p>}
+                {!liveCep.loading && !liveCep.error && !displayCity && (
+                  <p className="text-xs text-muted-foreground">
+                    Insira o CEP para preencher automaticamente Cidade/UF.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -446,7 +572,7 @@ export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () 
                 <Input
                   id="city"
                   disabled
-                  value={profile?.city ?? ""}
+                  value={displayCity}
                   placeholder="—"
                   readOnly
                 />
@@ -456,7 +582,7 @@ export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () 
                 <Input
                   id="state"
                   disabled
-                  value={profile?.state ?? ""}
+                  value={displayState}
                   placeholder="—"
                   readOnly
                 />
@@ -464,7 +590,9 @@ export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="bio">Bio</Label>
+              <Label htmlFor="bio">
+                Bio {isOnboarding && <span className="text-destructive">*</span>}
+              </Label>
               <Textarea
                 id="bio"
                 disabled={loading || saving}
@@ -473,6 +601,8 @@ export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () 
               />
               {form.formState.errors.bio ? (
                 <p className="text-xs text-destructive">{form.formState.errors.bio.message}</p>
+              ) : isOnboarding ? (
+                <p className="text-xs text-muted-foreground">Obrigatória para aprovação.</p>
               ) : null}
             </div>
 
@@ -483,14 +613,18 @@ export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () 
             />
 
             <div className="space-y-2">
-              <Label htmlFor="expertisesCsv">Expertises</Label>
+              <Label htmlFor="expertisesCsv">
+                Expertises {isOnboarding && <span className="text-destructive">*</span>}
+              </Label>
               <Input
                 id="expertisesCsv"
                 disabled={loading || saving}
                 placeholder="Ex.: Vendas, Gestão, Marketing (separe por vírgula)"
                 {...form.register("expertisesCsv")}
               />
-              <p className="text-xs text-muted-foreground">Até 10 itens (máx. 40 caracteres cada).</p>
+              <p className="text-xs text-muted-foreground">
+                Até 10 itens (máx. 40 caracteres cada).{isOnboarding ? " Pelo menos 1 obrigatória." : ""}
+              </p>
               {form.formState.errors.expertisesCsv ? (
                 <p className="text-xs text-destructive">{form.formState.errors.expertisesCsv.message}</p>
               ) : null}

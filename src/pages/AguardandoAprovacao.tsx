@@ -1,63 +1,44 @@
 import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { AuthBackground } from "@/components/auth/AuthBackground";
+import invictusLogo from "@/assets/invictus-logo.png";
 
 export default function AguardandoAprovacao() {
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
-  const [showEmail, setShowEmail] = useState(false);
-
-  const maskedEmail = (() => {
-    const email = user?.email ?? "";
-    const [local, domain] = email.split("@");
-    if (!local || !domain) return "—";
-    const safeLocal = local.length <= 2 ? `${local[0] ?? ""}*` : `${local.slice(0, 2)}***`;
-    return `${safeLocal}@${domain}`;
-  })();
+  const { signOut } = useAuth();
 
   return (
-    <main className="invictus-page">
-      <header className="invictus-page-header">
-        <h1 className="invictus-h1">Aguardando aprovação</h1>
-        <p className="invictus-lead">Seu acesso foi criado com convite, mas ainda precisa ser liberado.</p>
-      </header>
+    <main className="relative min-h-svh grid place-items-center p-4 sm:p-6">
+      <AuthBackground />
 
-      <Card className="invictus-surface invictus-frame border-border/70">
-        <CardHeader>
-          <CardTitle className="text-base">Status</CardTitle>
-          <CardDescription>
-            Assim que um administrador aprovar, seu acesso total será liberado automaticamente.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground break-all">
-            <span className="font-medium text-foreground">E-mail:</span> {showEmail ? user?.email ?? "—" : maskedEmail}
-            {user?.email ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="ml-2 h-7 px-2"
-                onClick={() => setShowEmail((v) => !v)}
-              >
-                {showEmail ? "Ocultar" : "Mostrar"}
-              </Button>
-            ) : null}
+      <div className="invictus-auth-surface invictus-auth-frame relative z-10 w-full max-w-lg rounded-2xl p-8 text-center">
+        <img
+          src={invictusLogo}
+          alt="Invictus"
+          className="mx-auto h-16 w-auto mb-6 drop-shadow-lg"
+        />
+
+        <h1 className="text-2xl font-bold text-foreground mb-4">
+          Olá, futuro membro Invictus!
+        </h1>
+
+        <p className="text-lg text-foreground/90 mb-6 leading-relaxed">
+          Você, a partir desse momento, vai fazer parte de algo grandioso.
+        </p>
+
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 mb-8">
+          <p className="text-sm text-muted-foreground">
+            Aguarde enquanto validamos o seu convite e o seu usuário.
           </p>
-          <div className="rounded-md border border-border/70 bg-muted/40 p-3 text-sm text-muted-foreground">
-            Enquanto isso, você já pode completar seu perfil: <span className="text-foreground font-medium">foto</span>,{" "}
-            <span className="text-foreground font-medium">bio</span>,{" "}
-            <span className="text-foreground font-medium">expertises</span> e{" "}
-            <span className="text-foreground font-medium">região</span>.
-          </div>
-          <Button onClick={() => navigate("/perfil")}>Completar perfil</Button>
-          <Button variant="secondary" onClick={() => void signOut()}>
-            Sair
-          </Button>
-        </CardContent>
-      </Card>
+        </div>
+
+        <Button
+          variant="secondary"
+          onClick={() => void signOut()}
+          className="min-w-[120px]"
+        >
+          Sair
+        </Button>
+      </div>
     </main>
   );
 }

@@ -143,7 +143,10 @@ export function MemberQuickProfileDialog({
                   className="h-11"
                   onClick={() => {
                     onOpenChange(false);
-                    navigate(`/membro/${p.username}`);
+                    // Sempre navega usando o handle SEM "@" na URL.
+                    // A página /membro/:username é defensiva e aceita com/sem "@",
+                    // mas manter sem "@" evita casos de "@@usuario".
+                    navigate(`/membro/${encodeURIComponent(p.username.replace(/^@/, ""))}`);
                   }}
                 >
                   Ver perfil

@@ -1,216 +1,180 @@
 
-# Plano: Campos Obrigatórios no Onboarding + CEP em Tempo Real + Bloqueio Pós-Preenchimento
+# Plano: Restrição de Navegação para Onboarding + Redirect Imediato + "Fraternidade"
 
-## Objetivo
-Garantir que novos membros (status `pending`) preencham obrigatoriamente foto, nome, sobrenome, CEP, bio e pelo menos 1 expertise **antes** de salvar. Após salvar, o formulário fica bloqueado para edição até a aprovação do administrador. A tela de "Aguardando Aprovação" exibirá uma mensagem impactante e não mais oferecerá link para editar perfil.
+## Problema Identificado (baseado nas imagens)
+
+1. **Navegação completa visível durante onboarding**: O usuário pendente vê todas as seções (Início, Comunicação, Conta completa com Class) ao invés de apenas "Perfil"
+2. **Redirect não é imediato**: Após salvar o perfil, o usuário fica na página `/perfil` vendo "Perfil enviado para análise" ao invés de ir direto para `/aguardando-aprovacao`
+3. **Falta "Fraternidade"**: A tela de aguardando aprovação não tem o texto "FRATERNIDADE" abaixo do logo (padrão da identidade visual)
 
 ---
 
-## Escopo das Alterações
+## Alterações Necessárias
 
-### 1. CEP em Tempo Real (Live Lookup)
-**Arquivo:** `src/components/profile/ProfileForm.tsx`
-
-**Problema atual:** Cidade/Estado só aparecem após clicar "Salvar perfil".
+### 1. Restringir Sidebar para Onboarding
+**Arquivo:** `src/components/AppSidebar.tsx`
 
 **Solução:**
-- Adicionar um `useEffect` que observa o campo `postal_code` do formulário
-- Quando o CEP tiver 8 dígitos válidos, disparar uma chamada à API ViaCEP diretamente no front (apenas para exibição imediata)
-- Preencher os campos `city` e `state` localmente (estado local, não o profile do banco)
-- A chamada ao edge function `resolve-location-from-cep` continua sendo feita no submit para salvar no banco
+- Criar query para buscar `access_status` e `profileComplete` do perfil atual
+- Se `access_status !== "approved"` (pendente/onboarding):
+  - Exibir SOMENTE a seção "Conta" com apenas o item "Perfil"
+  - Esconder: "Início", "Comunicação", "Class", "Administração"
+- Se `access_status === "approved"`:
+  - Exibir navegação completa normalmente
 
-**Implementação:**
 ```text
-Estado local: liveCep = { city, state, loading, error }
-
-useEffect:
-  - watch("postal_code") → quando tiver 8 dígitos
-  - fetch("https://viacep.com.br/ws/{cep}/json/")
-  - se válido: setLiveCep({ city, state, ... })
-  - se erro: limpar city/state
+Lógica:
+- Buscar: supabase.from("profiles").select("access_status, first_name, ...")
+- isOnboarding = access_status !== "approved"
+- if (isOnboarding):
+    navSections = [{ label: "Conta", items: [{ title: "Perfil", url: "/perfil", icon: User }] }]
+- else:
+    navSections = completo
 ```
 
----
-
-### 2. Novos Campos Obrigatórios para Usuários Pendentes
+### 2. Redirect Imediato Após Salvar Perfil
 **Arquivo:** `src/components/profile/ProfileForm.tsx`
 
-**Campos que passam a ser obrigatórios apenas para `access_status !== "approved"`:**
-- `avatar_url` (foto)
-- `first_name` / `last_name` (já obrigatórios)
-- `postal_code` (já obrigatório)
-- `bio` (novo: mínimo 1 caractere)
-- `expertises` (novo: pelo menos 1 item)
+**Problema:** Atualmente, quando o perfil é salvo e está "ready for review", o componente mostra um card estático. O usuário precisa ser redirecionado imediatamente para `/aguardando-aprovacao`.
 
-**Implementação:**
-- Detectar `isOnboarding = accessStatus !== "approved"`
-- Se `isOnboarding`, aplicar validação extra no `onSubmit`:
-  - Verificar `avatar_url` não é null
-  - Verificar `bio` tem pelo menos 1 caractere
-  - Verificar `expertises` tem pelo menos 1 item
-- Exibir erros visuais próximos aos campos
+**Solução:**
+- Após salvar com sucesso (`onSaved?.()`), se todos os campos obrigatórios estiverem preenchidos e `access_status !== "approved"`:
+  - Chamar `window.location.href = "/aguardando-aprovacao"` ou usar `useNavigate()` do React Router
+- Remover o bloco que mostra "Perfil enviado para análise" (já que o usuário será redirecionado)
 
----
-
-### 3. Bloqueio de Edição Após Salvar (para Pendentes)
-**Arquivo:** `src/components/profile/ProfileForm.tsx`
-
-**Lógica:**
-- Nova flag: `isProfileReadyForReview`
-  - `true` se `access_status !== "approved"` **E** todos os campos obrigatórios estão preenchidos (avatar, nome, sobrenome, CEP, bio, expertise)
-- Se `isProfileReadyForReview`:
-  - Desabilitar todos os inputs
-  - Esconder botão "Salvar perfil"
-  - Exibir mensagem: "Seu perfil foi enviado para análise. Aguarde a aprovação."
-
-**Arquivo:** `src/pages/Perfil.tsx`
-- Ocultar tabs "Editar perfil" / "Ver como fica" quando `isProfileReadyForReview`
-- Exibir apenas a visualização do perfil com mensagem de aguardo
-
----
-
-### 4. Nova Tela de Aguardando Aprovação
-**Arquivo:** `src/pages/AguardandoAprovacao.tsx`
-
-**Alterações:**
-- **Remover** o botão "Completar perfil" e texto incentivando edição
-- **Nova mensagem** destacada:
-  ```
-  Olá, futuro membro Invictus!
-  
-  Você, a partir desse momento, vai fazer parte de algo grandioso.
-  Aguarde enquanto validamos o seu convite e o seu usuário.
-  ```
-- Usar estilo `invictus-auth-surface invictus-auth-frame` (moldura dourada premium)
-- Layout centralizado, com logo e tipografia impactante
-
----
-
-### 5. Ajuste no RequireAuth para Verificar Campos Completos
 **Arquivo:** `src/auth/RequireAuth.tsx`
 
-**Alteração:**
-- Expandir a query para incluir: `avatar_url`, `bio`, `expertises`, `postal_code`
-- Novo cálculo de `profileComplete`:
-  ```
-  profileComplete = firstName && lastName && avatar_url && bio && expertises.length > 0 && postal_code
-  ```
-- Se `profileComplete === false` e `access_status !== "approved"`:
-  - Redirecionar para `/perfil`
-- Se `profileComplete === true` e `access_status !== "approved"`:
-  - Redirecionar para `/aguardando-aprovacao`
+**Ajuste:**
+- Garantir que quando o usuário está em `/perfil` com perfil completo e `pending`, ele seja redirecionado para `/aguardando-aprovacao` imediatamente
+- A lógica já existe na linha 130-131, mas pode não estar funcionando se o perfil query não for invalidado após o save
 
----
+### 3. Adicionar "FRATERNIDADE" na Tela de Aguardando
+**Arquivo:** `src/pages/AguardandoAprovacao.tsx`
 
-## Fluxo do Usuário
+**Adição:**
+```tsx
+<img src={invictusLogo} ... />
 
-```text
-1. Usuário cria conta com convite → status = "pending"
-2. Sistema redireciona para /perfil (campos obrigatórios não preenchidos)
-3. Usuário preenche: foto, nome, sobrenome, CEP (cidade/estado aparecem em tempo real), bio, expertises
-4. Clica em "Salvar perfil"
-5. Formulário fica bloqueado (não pode mais editar)
-6. Sistema redireciona para /aguardando-aprovacao
-7. Tela exibe mensagem impactante sem opção de editar
-8. Administrador aprova → status = "approved"
-9. Polling detecta aprovação → redireciona para /app
-10. Usuário agora pode editar perfil normalmente em /perfil
+{/* NOVO: Adicionar abaixo do logo */}
+<p className="invictus-auth-fratname ...">
+  FRATERNIDADE
+</p>
+
+<h1>Olá, futuro membro Invictus!</h1>
 ```
 
+Usar o mesmo estilo metálico/dourado aplicado na tela de login.
+
 ---
 
-## Arquivos Envolvidos
+## Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/profile/ProfileForm.tsx` | CEP live lookup, validação extra, bloqueio de edição |
-| `src/pages/Perfil.tsx` | Ocultar tabs quando perfil bloqueado |
-| `src/pages/AguardandoAprovacao.tsx` | Nova mensagem premium, remover link de edição |
-| `src/auth/RequireAuth.tsx` | Expandir verificação de campos obrigatórios |
+| `src/components/AppSidebar.tsx` | Filtrar navegação para mostrar só "Perfil" quando pendente |
+| `src/components/profile/ProfileForm.tsx` | Adicionar redirect imediato após salvar perfil completo |
+| `src/pages/AguardandoAprovacao.tsx` | Adicionar "FRATERNIDADE" abaixo do logo |
 
 ---
 
 ## Detalhes Técnicos
 
-### CEP Live Lookup (novo hook/efeito)
+### AppSidebar - Navegação Restrita
+
 ```typescript
-const [liveCep, setLiveCep] = useState<{ city: string; state: string; loading: boolean; error: string | null }>({
-  city: "", state: "", loading: false, error: null,
+// Buscar status do perfil
+const profileQuery = useQuery({
+  queryKey: ["sidebar-access", user?.id],
+  enabled: !!user?.id,
+  queryFn: async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("access_status")
+      .eq("user_id", user!.id)
+      .maybeSingle();
+    return data?.access_status ?? "pending";
+  },
+  staleTime: 10_000,
 });
 
-const watchedCep = form.watch("postal_code");
+const accessStatus = profileQuery.data ?? "pending";
+const isOnboarding = accessStatus !== "approved";
 
-useEffect(() => {
-  const digits = (watchedCep ?? "").replace(/\D/g, "");
-  if (digits.length !== 8) {
-    setLiveCep({ city: "", state: "", loading: false, error: null });
-    return;
-  }
-  
-  setLiveCep(prev => ({ ...prev, loading: true, error: null }));
-  
-  fetch(`https://viacep.com.br/ws/${digits}/json/`)
-    .then(r => r.json())
-    .then(data => {
-      if (data.erro) {
-        setLiveCep({ city: "", state: "", loading: false, error: "CEP não encontrado" });
-      } else {
-        setLiveCep({ city: data.localidade, state: data.uf, loading: false, error: null });
-      }
-    })
-    .catch(() => {
-      setLiveCep({ city: "", state: "", loading: false, error: "Erro ao buscar CEP" });
-    });
-}, [watchedCep]);
+// Navegação condicional
+const visibleSections = isOnboarding
+  ? [{ label: "Conta", items: [{ title: "Perfil", url: "/perfil", icon: User }] }]
+  : [...navSections, ...(isAdmin ? adminSection : [])];
 ```
 
-### Validação de Campos Obrigatórios para Pendentes
-```typescript
-const isOnboarding = accessStatus !== "approved";
-const hasAvatar = Boolean(profile?.avatar_url);
-const hasBio = (values.bio ?? "").trim().length > 0;
-const hasExpertise = normalizeExpertises(values.expertisesCsv).length > 0;
+### ProfileForm - Redirect Imediato
 
-if (isOnboarding) {
-  const errors: string[] = [];
-  if (!hasAvatar) errors.push("Foto de perfil é obrigatória");
-  if (!hasBio) errors.push("Bio é obrigatória");
-  if (!hasExpertise) errors.push("Adicione pelo menos 1 expertise");
-  
-  if (errors.length > 0) {
-    toast({ title: "Campos obrigatórios", description: errors.join(". "), variant: "destructive" });
-    return;
-  }
+```typescript
+// Após salvar com sucesso
+setProfile((data ?? null) as LoadedProfile | null);
+toast({ title: "Perfil salvo" });
+onSaved?.();
+
+// NOVO: Verificar se perfil completo + pendente = redirect
+const savedProfile = data as LoadedProfile | null;
+if (
+  savedProfile?.access_status !== "approved" &&
+  savedProfile?.avatar_url &&
+  savedProfile?.first_name?.trim() &&
+  savedProfile?.last_name?.trim() &&
+  (savedProfile?.postal_code ?? "").replace(/\D/g, "").length === 8 &&
+  savedProfile?.bio?.trim() &&
+  (savedProfile?.expertises ?? []).length > 0
+) {
+  // Redirect imediato
+  window.location.href = "/aguardando-aprovacao";
+  return;
 }
 ```
 
-### Tela AguardandoAprovacao (nova estrutura)
+### AguardandoAprovacao - Adicionar "FRATERNIDADE"
+
 ```tsx
-<main className="min-h-svh grid place-items-center p-4 sm:p-6">
-  <AuthBackground />
-  <div className="invictus-auth-surface invictus-auth-frame w-full max-w-lg rounded-2xl p-8 text-center">
-    <img src={logo} alt="Invictus" className="mx-auto h-16 mb-4" />
-    <h1 className="text-2xl font-bold mb-4">Olá, futuro membro Invictus!</h1>
-    <p className="text-lg text-muted-foreground mb-6">
-      Você, a partir desse momento, vai fazer parte de algo grandioso.
-    </p>
-    <p className="text-sm text-muted-foreground">
-      Aguarde enquanto validamos o seu convite e o seu usuário.
-    </p>
-    <Button variant="secondary" onClick={signOut} className="mt-8">Sair</Button>
-  </div>
-</main>
+<img
+  src={invictusLogo}
+  alt="Invictus"
+  className="mx-auto h-16 w-auto mb-2 drop-shadow-lg"
+/>
+
+<p
+  className="text-[10px] sm:text-xs font-semibold tracking-[0.35em] text-transparent bg-clip-text mb-6"
+  style={{
+    backgroundImage: "linear-gradient(135deg, hsl(var(--gold-soft)), hsl(var(--gold-hot)), hsl(var(--gold-soft)))",
+  }}
+>
+  FRATERNIDADE
+</p>
+
+<h1 className="text-2xl font-bold text-foreground mb-4">
+  Olá, futuro membro Invictus!
+</h1>
 ```
 
 ---
 
-## Risco/Impacto
-- **Baixo risco**: alterações isoladas no fluxo de onboarding
-- **Impacto positivo**: garante que todos os membros tenham perfis completos antes da aprovação
+## Fluxo Esperado Após Correção
 
-## Critério de Aceite
-1. CEP preenchido → cidade/estado aparecem imediatamente (sem salvar)
-2. Usuário pendente não consegue salvar sem foto, bio e expertise
-3. Após salvar, perfil fica bloqueado para edição (status pending)
-4. Tela /aguardando-aprovacao exibe mensagem premium sem link para editar
-5. Após aprovação, usuário pode editar perfil normalmente (mas campos obrigatórios continuam obrigatórios)
+```text
+1. Usuário cria conta com convite → status = "pending"
+2. Sistema redireciona para /perfil
+3. Sidebar mostra APENAS "Perfil" (sem Home, Feed, Mapa, etc.)
+4. Usuário preenche foto, nome, bio, CEP, expertise
+5. Clica em "Salvar perfil"
+6. Sistema valida → sucesso → REDIRECT IMEDIATO para /aguardando-aprovacao
+7. Tela exibe logo + "FRATERNIDADE" + mensagem premium + botão "Sair"
+8. Administrador aprova → polling detecta → redirect automático para /app
+9. Sidebar agora mostra navegação completa
+```
+
+---
+
+## Critérios de Aceite
+
+1. Usuário pendente vê APENAS "Perfil" no menu lateral
+2. Após salvar perfil completo, redirect IMEDIATO para `/aguardando-aprovacao`
+3. Tela `/aguardando-aprovacao` exibe "FRATERNIDADE" abaixo do logo
+4. Após aprovação, navegação completa volta a aparecer

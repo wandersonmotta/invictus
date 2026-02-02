@@ -299,6 +299,21 @@ export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () 
     setProfile((data ?? null) as LoadedProfile | null);
     toast({ title: "Perfil salvo" });
     onSaved?.();
+
+    // Redirect immediately if pending user completed all mandatory fields
+    const savedProfile = data as LoadedProfile | null;
+    if (
+      savedProfile?.access_status !== "approved" &&
+      savedProfile?.avatar_url &&
+      savedProfile?.first_name?.trim() &&
+      savedProfile?.last_name?.trim() &&
+      (savedProfile?.postal_code ?? "").replace(/\D/g, "").length === 8 &&
+      savedProfile?.bio?.trim() &&
+      (savedProfile?.expertises ?? []).length > 0
+    ) {
+      window.location.href = "/aguardando-aprovacao";
+      return;
+    }
   });
 
   async function uploadAvatarBlob(blob: Blob) {

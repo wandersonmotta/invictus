@@ -1,10 +1,12 @@
 import { useLocation } from "react-router-dom";
 import { Home as HomeIcon, MapPin, Search, Send, User, Shield, Clapperboard, MessagesSquare, Newspaper } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/AuthProvider";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Sidebar,
   SidebarContent,
@@ -52,6 +54,23 @@ export function AppSidebar() {
   const currentPath = location.pathname;
   const { isMobile, setOpenMobile } = useSidebar();
 
+  // Fetch access_status to restrict navigation for pending users
+  const { data: accessStatus } = useQuery({
+    queryKey: ["sidebar-access", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("access_status")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      return data?.access_status ?? "pending";
+    },
+    staleTime: 10_000,
+  });
+
+  const isOnboarding = accessStatus !== "approved";
+
   const isActive = (path: string) => {
     if (path === "/") return currentPath === "/";
     return currentPath === path || currentPath.startsWith(`${path}/`);
@@ -70,17 +89,20 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            {[
-              ...navSections,
-              ...(isAdmin
-                ? ([
-                    {
-                      label: "Administração",
-                      items: [{ title: "Admin", url: "/admin", icon: Shield }],
-                    },
-                  ] as const)
-                : []),
-            ].map((section) => (
+            {(isOnboarding
+              ? [{ label: "Conta", items: [{ title: "Perfil", url: "/perfil", icon: User }] }]
+              : [
+                  ...navSections,
+                  ...(isAdmin
+                    ? ([
+                        {
+                          label: "Administração",
+                          items: [{ title: "Admin", url: "/admin", icon: Shield }],
+                        },
+                      ] as const)
+                    : []),
+                ]
+            ).map((section) => (
               <div key={section.label} className="invictus-sidebar-section">
                 <SidebarGroupLabel className="invictus-sidebar-sectionLabel">{section.label}</SidebarGroupLabel>
 

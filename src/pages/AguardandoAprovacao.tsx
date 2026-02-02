@@ -14,8 +14,17 @@ export default function AguardandoAprovacao() {
         <img
           src={invictusLogo}
           alt="Invictus"
-          className="mx-auto h-16 w-auto mb-6 drop-shadow-lg"
+          className="mx-auto h-16 w-auto mb-2 drop-shadow-lg"
         />
+
+        <p
+          className="text-[10px] sm:text-xs font-semibold tracking-[0.35em] text-transparent bg-clip-text mb-6"
+          style={{
+            backgroundImage: "linear-gradient(135deg, hsl(var(--gold-soft)), hsl(var(--gold-hot)), hsl(var(--gold-soft)))",
+          }}
+        >
+          FRATERNIDADE
+        </p>
 
         <h1 className="text-2xl font-bold text-foreground mb-4">
           Olá, futuro membro Invictus!

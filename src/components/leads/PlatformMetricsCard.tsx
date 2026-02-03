@@ -17,18 +17,21 @@ interface PlatformMetricsCardProps {
 const platformConfig = {
   meta: {
     icon: "📘",
+    legendColor: "#3B82F6",
     color: "hsl(214 100% 50%)",
     gradient: "from-blue-600/20 via-blue-500/10 to-transparent",
     borderAccent: "border-blue-500/20",
   },
   google_ads: {
     icon: "📗",
+    legendColor: "#22C55E",
     color: "hsl(142 76% 36%)",
     gradient: "from-green-600/20 via-green-500/10 to-transparent",
     borderAccent: "border-green-500/20",
   },
   analytics: {
     icon: "📊",
+    legendColor: "#F97316",
     color: "hsl(25 95% 53%)",
     gradient: "from-orange-600/20 via-orange-500/10 to-transparent",
     borderAccent: "border-orange-500/20",
@@ -100,8 +103,8 @@ export function PlatformMetricsCard({
         {/* Chart Label */}
         <div className="flex items-center gap-2">
           <div
-            className="w-3 h-3 rounded"
-            style={{ backgroundColor: config.color }}
+            className="w-2.5 h-2.5 rounded-full"
+            style={{ backgroundColor: config.legendColor }}
           />
           <span className="text-xs text-muted-foreground">{chartLabel}</span>
         </div>

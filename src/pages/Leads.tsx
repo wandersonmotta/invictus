@@ -161,7 +161,7 @@ export default function Leads() {
           onDateRangeChange={setDateRange}
           onRefresh={refetchAll}
           isLoading={isLoading}
-          companyName="Leads"
+          companyName="Invictus Fraternidade"
         />
         
         {/* Export button */}

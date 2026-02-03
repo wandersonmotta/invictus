@@ -49,9 +49,21 @@ export function LeadsImpressionsChart({
       )}
     >
       <CardHeader className="pb-2">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          Impressões Totais
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium text-muted-foreground">
+            Impressões Totais
+          </p>
+          <div className="flex items-center gap-4 text-xs">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-[hsl(214_100%_50%)]" />
+              <span className="text-muted-foreground">Meta Ads</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-[hsl(142_76%_36%)]" />
+              <span className="text-muted-foreground">Google Ads</span>
+            </div>
+          </div>
+        </div>
         <div className="flex items-baseline gap-2">
           <span className="text-2xl font-bold text-foreground">
             {totalValue.toLocaleString("pt-BR")}

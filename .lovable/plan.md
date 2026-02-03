@@ -1,7 +1,7 @@
 
 # Plano: Dashboard de Marketing/Tráfego Pago "Leads" para Membros Invictus
 
-## Status: 🟡 Fase 1 Completa - Estrutura Base
+## Status: ✅ Todas as Fases Implementadas
 
 ---
 
@@ -15,38 +15,45 @@
 5. ✅ Dashboard principal com dados mock
 6. ✅ Componentes: KPICard, PlatformCard, DateRangePicker, Charts
 
-### 🔲 Fase 2: Integração Meta Ads
-- [ ] Configurar secrets (META_APP_ID, META_APP_SECRET)
-- [ ] Criar Edge Function para OAuth do Meta
-- [ ] Criar Edge Function para buscar insights (Marketing API)
-- [ ] Conectar dashboard com dados reais
-- [ ] Implementar cache de métricas
+### ✅ Fase 2: Integração Meta Ads (COMPLETA)
+- ✅ Configurar secrets (META_APP_ID, META_APP_SECRET)
+- ✅ Criar Edge Function para OAuth do Meta (`leads-meta-oauth`)
+- ✅ Criar Edge Function para buscar insights (`leads-meta-insights`)
+- ✅ Conectar dashboard com dados reais
+- ✅ Implementar cache de métricas
 
-### 🔲 Fase 3: Integração Google
-- [ ] Configurar secrets (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
-- [ ] Criar OAuth para Google (Ads + Analytics)
-- [ ] Edge Function para Google Ads API
-- [ ] Edge Function para GA4 Data API
-- [ ] Integrar dashboards específicos
+### ✅ Fase 3: Integração Google (COMPLETA)
+- ✅ Configurar secrets (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
+- ✅ Criar OAuth para Google (Ads + Analytics) (`leads-google-oauth`)
+- ✅ Edge Function para Google Ads API (`leads-google-insights`)
+- ✅ Edge Function para GA4 Data API (`leads-google-insights`)
+- ✅ Integrar dashboards específicos
 
-### 🔲 Fase 4: Relatórios
-- [ ] Criar componente de geração de relatório
-- [ ] Implementar PDF com branding Invictus
-- [ ] Opção de compartilhar relatório (link público ou download)
+### ✅ Fase 4: Relatórios (COMPLETA)
+- ✅ Criar componente de geração de relatório (`ExportReportDialog`)
+- ✅ Implementar HTML/PDF com branding Invictus (`leads-generate-report`)
+- ✅ Opção de exportar relatório (abre em nova janela para impressão/download)
 
 ---
 
-## Arquivos Criados
+## Arquivos Criados/Modificados
 
 | Arquivo | Descrição |
 |---------|-----------|
-| `src/pages/Leads.tsx` | Dashboard principal de marketing |
+| `src/pages/Leads.tsx` | Dashboard principal com dados reais |
 | `src/pages/LeadsConexoes.tsx` | Gerenciar conexões de plataformas |
 | `src/components/leads/KPICard.tsx` | Card de métrica com variação % |
 | `src/components/leads/PlatformCard.tsx` | Card de status de conexão |
+| `src/components/leads/PlatformSummaryCard.tsx` | Resumo de métricas por plataforma |
 | `src/components/leads/DateRangePicker.tsx` | Seletor de período |
 | `src/components/leads/LeadsOverviewCharts.tsx` | Gráficos de impressões, analytics e região |
-| `src/components/leads/PlatformSummaryCard.tsx` | Resumo de métricas por plataforma |
+| `src/components/leads/ExportReportDialog.tsx` | Dialog de exportação de relatório |
+| `src/hooks/useLeadsMetrics.ts` | Hook para buscar métricas das APIs |
+| `supabase/functions/leads-meta-oauth/index.ts` | OAuth do Meta Ads |
+| `supabase/functions/leads-meta-insights/index.ts` | Buscar métricas do Meta Marketing API |
+| `supabase/functions/leads-google-oauth/index.ts` | OAuth do Google (Ads + Analytics) |
+| `supabase/functions/leads-google-insights/index.ts` | Buscar métricas do Google Ads e GA4 |
+| `supabase/functions/leads-generate-report/index.ts` | Gerar relatório HTML/PDF |
 
 ## Tabelas Criadas
 
@@ -58,28 +65,21 @@
 
 ---
 
-## Próximos Passos
+## Próximos Passos para Uso
 
-Para continuar a implementação da **Fase 2**, será necessário:
+1. **Configurar Redirect URIs** nas plataformas:
+   - Meta: `https://[seu-dominio]/leads/conexoes`
+   - Google: `https://[seu-dominio]/leads/conexoes`
 
-1. **Criar App no Meta for Developers**
-   - Acessar: https://developers.facebook.com/apps
-   - Criar app do tipo Business
-   - Habilitar Marketing API
-   - Obter App ID e App Secret
+2. **Testar conexões** navegando até `/leads/conexoes`
 
-2. **Configurar Secrets no Lovable Cloud**
-   - `META_APP_ID`
-   - `META_APP_SECRET`
-
-3. **Implementar Edge Functions**
-   - `leads-meta-oauth` - callback do OAuth
-   - `leads-meta-insights` - buscar métricas
+3. **Para Google Ads completo**: Obter Developer Token aprovado pelo Google
 
 ---
 
 ## Considerações
 
-- Dashboard atual exibe dados mock para demonstração
-- Membros podem acessar a seção "Leads" no menu lateral
-- Ao clicar em "Conectar", exibe toast informando que OAuth será implementado
+- Dashboard exibe dados reais quando plataformas estão conectadas
+- Fallback para mensagem de "conecte suas contas" quando não há conexões
+- Relatórios são gerados em HTML e abrem em nova janela para impressão/download como PDF
+- Google Ads pode exibir dados simulados se o Developer Token não estiver aprovado

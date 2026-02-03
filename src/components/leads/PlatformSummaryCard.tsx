@@ -1,6 +1,9 @@
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Link2Off } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 interface MetricRow {
   label: string;
@@ -12,6 +15,8 @@ interface PlatformSummaryCardProps {
   platform: "meta" | "google_ads";
   metrics: MetricRow[];
   className?: string;
+  isConnected?: boolean;
+  isLoading?: boolean;
 }
 
 const platformStyles = {
@@ -33,8 +38,56 @@ export function PlatformSummaryCard({
   platform,
   metrics,
   className,
+  isConnected = true,
+  isLoading = false,
 }: PlatformSummaryCardProps) {
   const style = platformStyles[platform];
+
+  if (isLoading) {
+    return (
+      <Card className={cn("bg-card/80 backdrop-blur-sm border-border/50", className)}>
+        <CardHeader className="pb-2">
+          <Skeleton className="h-5 w-24" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex items-center justify-between">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!isConnected) {
+    return (
+      <Card
+        className={cn(
+          "bg-card/80 backdrop-blur-sm border-border/50 overflow-hidden",
+          className
+        )}
+      >
+        <div className={cn("absolute inset-0 bg-gradient-to-br opacity-30", style.gradient)} />
+        <CardHeader className="relative pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <span>{style.icon}</span>
+            <span>{style.name}</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="relative flex flex-col items-center justify-center py-6 gap-3">
+          <Link2Off className="h-8 w-8 text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground text-center">
+            Plataforma não conectada
+          </p>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/leads/conexoes">Conectar</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card
@@ -56,7 +109,7 @@ export function PlatformSummaryCard({
             <span className="text-xs text-muted-foreground">{metric.label}</span>
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold">{metric.value}</span>
-              {metric.change !== undefined && (
+              {metric.change !== undefined && metric.change !== 0 && (
                 <div
                   className={cn(
                     "flex items-center text-[10px] font-medium",

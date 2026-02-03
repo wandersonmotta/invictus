@@ -69,8 +69,21 @@ export default function LeadsConexoes() {
   // Handle OAuth callback
   React.useEffect(() => {
     const code = searchParams.get("code");
+    const state = searchParams.get("state");
 
     if (code && session?.access_token) {
+      // Determine which platform based on state
+      if (state) {
+        try {
+          const parsedState = JSON.parse(state);
+          if (parsedState.platform === "google_ads" || parsedState.platform === "google_analytics") {
+            handleGoogleCallback(code, state);
+            return;
+          }
+        } catch {
+          // Not a Google callback, try Meta
+        }
+      }
       handleMetaCallback(code);
     }
   }, [searchParams, session?.access_token]);
@@ -123,6 +136,55 @@ export default function LeadsConexoes() {
     }
   };
 
+  const handleGoogleCallback = async (code: string, state: string) => {
+    try {
+      const redirectUri = `${getAppOrigin()}/leads/conexoes`;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/leads-google-oauth?action=callback&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || result.error) {
+        throw new Error(result.error || "Falha ao conectar Google");
+      }
+
+      const platform = result.platform as PlatformType;
+      setConnections((prev) => ({
+        ...prev,
+        [platform]: {
+          connected: true,
+          name: result.account_name,
+          lastSync: new Date().toLocaleString("pt-BR"),
+        },
+      }));
+
+      toast({
+        title: "Conectado!",
+        description: `${platform === "google_ads" ? "Google Ads" : "Google Analytics"} conectado com sucesso.`,
+      });
+
+      // Clean URL
+      window.history.replaceState({}, document.title, "/leads/conexoes");
+    } catch (error) {
+      console.error("Google callback error:", error);
+      toast({
+        title: "Erro na conexão",
+        description: error instanceof Error ? error.message : "Falha ao conectar Google",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, document.title, "/leads/conexoes");
+    }
+  };
+
   const handleConnect = async (platform: PlatformType) => {
     if (platform === "meta_ads") {
       try {
@@ -155,11 +217,37 @@ export default function LeadsConexoes() {
           variant: "destructive",
         });
       }
-    } else {
-      toast({
-        title: "Em breve",
-        description: `A integração com ${platform === "google_ads" ? "Google Ads" : "Google Analytics"} será implementada em breve.`,
-      });
+    } else if (platform === "google_ads" || platform === "google_analytics") {
+      try {
+        const redirectUri = `${getAppOrigin()}/leads/conexoes`;
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/leads-google-oauth?action=get_auth_url&redirect_uri=${encodeURIComponent(redirectUri)}&platform=${platform}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${session?.access_token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || result.error) {
+          throw new Error(result.error || "Falha ao iniciar OAuth");
+        }
+
+        // Redirect to Google OAuth
+        window.location.href = result.auth_url;
+      } catch (error) {
+        console.error("Google connect error:", error);
+        toast({
+          title: "Erro",
+          description: error instanceof Error ? error.message : "Falha ao conectar",
+          variant: "destructive",
+        });
+      }
     }
   };
 

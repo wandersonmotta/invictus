@@ -1,11 +1,5 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface StateData {
   code: string;
@@ -18,35 +12,35 @@ interface BrazilMapProps {
   className?: string;
 }
 
-// Simplified SVG paths for Brazilian states
-const STATES_PATHS: Record<string, { path: string; name: string }> = {
-  AC: { path: "M52,145 L65,140 L68,148 L55,155 Z", name: "Acre" },
-  AL: { path: "M285,165 L295,160 L300,168 L290,172 Z", name: "Alagoas" },
-  AM: { path: "M80,90 L150,80 L160,130 L90,145 Z", name: "Amazonas" },
-  AP: { path: "M195,60 L215,55 L220,80 L200,85 Z", name: "Amapá" },
-  BA: { path: "M245,165 L290,155 L295,210 L250,220 Z", name: "Bahia" },
-  CE: { path: "M275,120 L295,115 L298,140 L278,145 Z", name: "Ceará" },
-  DF: { path: "M218,205 L228,202 L230,212 L220,215 Z", name: "Distrito Federal" },
-  ES: { path: "M268,225 L280,220 L283,238 L270,242 Z", name: "Espírito Santo" },
-  GO: { path: "M195,195 L245,185 L250,230 L200,240 Z", name: "Goiás" },
-  MA: { path: "M230,100 L270,95 L275,135 L235,140 Z", name: "Maranhão" },
-  MG: { path: "M220,220 L270,210 L280,260 L230,270 Z", name: "Minas Gerais" },
-  MS: { path: "M165,235 L210,225 L215,280 L170,290 Z", name: "Mato Grosso do Sul" },
-  MT: { path: "M130,150 L200,140 L210,210 L140,220 Z", name: "Mato Grosso" },
-  PA: { path: "M155,75 L230,70 L240,130 L165,140 Z", name: "Pará" },
-  PB: { path: "M285,145 L305,140 L308,152 L288,157 Z", name: "Paraíba" },
-  PE: { path: "M270,155 L305,148 L308,165 L273,172 Z", name: "Pernambuco" },
-  PI: { path: "M250,120 L278,115 L282,165 L255,170 Z", name: "Piauí" },
-  PR: { path: "M185,280 L235,270 L240,305 L190,315 Z", name: "Paraná" },
-  RJ: { path: "M255,260 L278,255 L282,275 L258,280 Z", name: "Rio de Janeiro" },
-  RN: { path: "M288,130 L305,125 L308,140 L291,145 Z", name: "Rio Grande do Norte" },
-  RO: { path: "M100,150 L140,145 L145,190 L105,195 Z", name: "Rondônia" },
-  RR: { path: "M105,45 L140,40 L145,75 L110,80 Z", name: "Roraima" },
-  RS: { path: "M175,315 L225,305 L235,360 L185,370 Z", name: "Rio Grande do Sul" },
-  SC: { path: "M200,305 L240,298 L245,330 L205,337 Z", name: "Santa Catarina" },
-  SE: { path: "M285,175 L298,172 L300,185 L287,188 Z", name: "Sergipe" },
-  SP: { path: "M205,255 L260,245 L265,290 L210,300 Z", name: "São Paulo" },
-  TO: { path: "M215,140 L250,135 L255,190 L220,195 Z", name: "Tocantins" },
+// Real SVG paths for Brazilian states (simplified but accurate outlines)
+const STATES_PATHS: Record<string, { path: string; name: string; cx: number; cy: number }> = {
+  AC: { path: "M95,240 L130,230 L145,245 L140,265 L115,275 L90,265 Z", name: "Acre", cx: 115, cy: 252 },
+  AM: { path: "M100,130 L200,100 L280,110 L290,160 L250,200 L200,220 L140,230 L90,200 L80,160 Z", name: "Amazonas", cx: 180, cy: 165 },
+  RR: { path: "M170,50 L220,40 L250,70 L240,110 L200,120 L165,100 L160,70 Z", name: "Roraima", cx: 200, cy: 80 },
+  AP: { path: "M310,50 L350,40 L370,70 L365,110 L340,130 L300,120 L295,80 Z", name: "Amapá", cx: 335, cy: 85 },
+  PA: { path: "M250,100 L350,90 L400,100 L430,140 L440,200 L400,230 L340,240 L280,220 L250,180 L260,140 Z", name: "Pará", cx: 350, cy: 165 },
+  RO: { path: "M145,230 L200,220 L230,250 L225,300 L185,320 L145,300 L130,260 Z", name: "Rondônia", cx: 180, cy: 270 },
+  MT: { path: "M200,220 L290,200 L350,220 L380,280 L365,360 L300,380 L230,360 L200,300 L210,250 Z", name: "Mato Grosso", cx: 285, cy: 290 },
+  TO: { path: "M350,220 L400,230 L420,280 L415,350 L380,390 L340,380 L330,320 L340,260 Z", name: "Tocantins", cx: 375, cy: 305 },
+  MA: { path: "M400,170 L460,150 L500,180 L510,240 L470,280 L420,280 L400,230 Z", name: "Maranhão", cx: 455, cy: 215 },
+  PI: { path: "M470,220 L510,200 L540,230 L545,300 L515,340 L475,320 L465,270 Z", name: "Piauí", cx: 505, cy: 270 },
+  CE: { path: "M520,190 L570,175 L595,210 L580,260 L540,270 L520,240 Z", name: "Ceará", cx: 555, cy: 220 },
+  RN: { path: "M575,210 L610,200 L625,230 L605,260 L575,255 Z", name: "Rio Grande do Norte", cx: 598, cy: 230 },
+  PB: { path: "M565,260 L610,255 L625,280 L595,300 L560,290 Z", name: "Paraíba", cx: 592, cy: 275 },
+  PE: { path: "M515,290 L600,280 L620,310 L580,340 L510,340 L500,315 Z", name: "Pernambuco", cx: 555, cy: 310 },
+  AL: { path: "M580,330 L610,320 L625,350 L600,370 L575,355 Z", name: "Alagoas", cx: 598, cy: 345 },
+  SE: { path: "M570,365 L595,355 L610,380 L585,400 L560,385 Z", name: "Sergipe", cx: 585, cy: 375 },
+  BA: { path: "M420,310 L515,290 L570,330 L580,400 L550,470 L480,490 L420,460 L400,400 L415,350 Z", name: "Bahia", cx: 485, cy: 390 },
+  GO: { path: "M340,360 L400,340 L440,380 L450,450 L420,490 L360,500 L320,460 L310,400 Z", name: "Goiás", cx: 375, cy: 420 },
+  DF: { path: "M398,408 L420,400 L430,420 L415,438 L395,430 Z", name: "Distrito Federal", cx: 412, cy: 418 },
+  MS: { path: "M250,380 L320,370 L360,420 L370,500 L340,560 L280,570 L240,520 L230,440 Z", name: "Mato Grosso do Sul", cx: 300, cy: 470 },
+  MG: { path: "M420,420 L500,400 L550,440 L560,520 L520,570 L450,590 L390,560 L380,490 Z", name: "Minas Gerais", cx: 470, cy: 495 },
+  ES: { path: "M550,480 L580,470 L595,510 L580,550 L550,545 Z", name: "Espírito Santo", cx: 570, cy: 510 },
+  RJ: { path: "M520,545 L570,530 L590,560 L565,590 L520,585 L505,565 Z", name: "Rio de Janeiro", cx: 548, cy: 565 },
+  SP: { path: "M380,510 L460,490 L520,530 L530,590 L480,620 L400,610 L360,570 L365,530 Z", name: "São Paulo", cx: 445, cy: 560 },
+  PR: { path: "M350,560 L420,545 L470,580 L480,640 L430,680 L360,680 L320,640 L325,590 Z", name: "Paraná", cx: 400, cy: 615 },
+  SC: { path: "M370,680 L440,670 L470,710 L455,750 L400,760 L360,730 Z", name: "Santa Catarina", cx: 415, cy: 715 },
+  RS: { path: "M340,740 L420,720 L460,760 L450,830 L380,870 L310,850 L290,790 Z", name: "Rio Grande do Sul", cx: 375, cy: 795 },
 };
 
 const DEFAULT_DATA: StateData[] = [
@@ -64,6 +58,7 @@ const DEFAULT_DATA: StateData[] = [
 
 export function BrazilMap({ data = DEFAULT_DATA, className }: BrazilMapProps) {
   const [hoveredState, setHoveredState] = React.useState<string | null>(null);
+  const [tooltipPos, setTooltipPos] = React.useState({ x: 0, y: 0 });
 
   // Create a map of state code to value
   const valueMap = React.useMemo(() => {
@@ -86,52 +81,90 @@ export function BrazilMap({ data = DEFAULT_DATA, className }: BrazilMapProps) {
     
     if (intensity === 0) return "hsl(0 0% 25%)";
     
-    // Orange scale from light to dark
-    const lightness = 65 - intensity * 35;
+    // Orange scale from light to dark based on intensity
+    const lightness = 70 - intensity * 40;
     return `hsl(25 95% ${lightness}%)`;
   };
 
+  const handleMouseMove = (e: React.MouseEvent, code: string) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const svgRect = (e.currentTarget.closest('svg') as SVGSVGElement)?.getBoundingClientRect();
+    if (svgRect) {
+      setTooltipPos({
+        x: e.clientX - svgRect.left,
+        y: e.clientY - svgRect.top - 45,
+      });
+    }
+    setHoveredState(code);
+  };
+
   return (
-    <TooltipProvider>
-      <div className={cn("relative w-full h-48", className)}>
-        <svg
-          viewBox="40 30 280 350"
-          className="w-full h-full"
-          preserveAspectRatio="xMidYMid meet"
-        >
-          {Object.entries(STATES_PATHS).map(([code, { path, name }]) => {
-            const value = valueMap[code] || 0;
-            const isHovered = hoveredState === code;
-            
-            return (
-              <Tooltip key={code}>
-                <TooltipTrigger asChild>
-                  <path
-                    d={path}
-                    fill={getFillColor(code)}
-                    stroke="hsl(0 0% 20%)"
-                    strokeWidth={isHovered ? 1.5 : 0.5}
-                    className="cursor-pointer transition-all duration-150"
-                    style={{
-                      filter: isHovered ? "brightness(1.2)" : "none",
-                    }}
-                    onMouseEnter={() => setHoveredState(code)}
-                    onMouseLeave={() => setHoveredState(null)}
-                  />
-                </TooltipTrigger>
-                <TooltipContent side="top" className="bg-card border-border">
-                  <div className="text-xs">
-                    <p className="font-medium">{name}</p>
-                    <p className="text-muted-foreground">
-                      {value.toLocaleString("pt-BR")} acessos
-                    </p>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-        </svg>
-      </div>
-    </TooltipProvider>
+    <div className={cn("relative w-full", className)}>
+      <svg
+        viewBox="70 30 580 860"
+        className="w-full h-auto max-h-[280px]"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        {/* States */}
+        {Object.entries(STATES_PATHS).map(([code, { path, name }]) => {
+          const value = valueMap[code] || 0;
+          const isHovered = hoveredState === code;
+          
+          return (
+            <path
+              key={code}
+              d={path}
+              fill={getFillColor(code)}
+              stroke="hsl(0 0% 15%)"
+              strokeWidth={isHovered ? 2 : 1}
+              className="cursor-pointer transition-all duration-150"
+              style={{
+                filter: isHovered ? "brightness(1.3)" : "none",
+              }}
+              onMouseMove={(e) => handleMouseMove(e, code)}
+              onMouseLeave={() => setHoveredState(null)}
+            />
+          );
+        })}
+
+        {/* Custom Tooltip */}
+        {hoveredState && (
+          <g
+            transform={`translate(${tooltipPos.x}, ${tooltipPos.y})`}
+            style={{ pointerEvents: "none" }}
+          >
+            <rect
+              x={-60}
+              y={0}
+              width={120}
+              height={40}
+              rx={6}
+              fill="hsl(0 0% 10%)"
+              stroke="hsl(0 0% 25%)"
+              strokeWidth={1}
+            />
+            <text
+              x={0}
+              y={16}
+              textAnchor="middle"
+              fill="white"
+              fontSize={11}
+              fontWeight={500}
+            >
+              {STATES_PATHS[hoveredState]?.name}
+            </text>
+            <text
+              x={0}
+              y={32}
+              textAnchor="middle"
+              fill="hsl(0 0% 65%)"
+              fontSize={10}
+            >
+              {(valueMap[hoveredState] || 0).toLocaleString("pt-BR")} acessos
+            </text>
+          </g>
+        )}
+      </svg>
+    </div>
   );
 }

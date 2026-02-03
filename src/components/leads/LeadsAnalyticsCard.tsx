@@ -12,6 +12,7 @@ interface LeadsAnalyticsCardProps {
 }
 
 const ANALYTICS_COLOR = "hsl(25 95% 53%)";
+const ANALYTICS_LEGEND_COLOR = "#F97316";
 
 export function LeadsAnalyticsCard({
   chartData,
@@ -65,8 +66,8 @@ export function LeadsAnalyticsCard({
         {/* Chart Label */}
         <div className="flex items-center gap-2">
           <div
-            className="w-3 h-3 rounded"
-            style={{ backgroundColor: ANALYTICS_COLOR }}
+            className="w-2.5 h-2.5 rounded-full"
+            style={{ backgroundColor: ANALYTICS_LEGEND_COLOR }}
           />
           <span className="text-xs text-muted-foreground">
             Acessos na Semana

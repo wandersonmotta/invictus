@@ -207,8 +207,9 @@ export function LeadsMetaView({ meta, isLoading }: LeadsMetaViewProps) {
           </h3>
           <DonutWithLegend
             data={mockBestAds}
-            height={180}
+            height={120}
             showPercentage
+            layout="vertical"
           />
         </Card>
       </div>

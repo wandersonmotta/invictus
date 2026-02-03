@@ -1,36 +1,191 @@
 import * as React from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, HelpCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { PlatformCard, PlatformType } from "@/components/leads/PlatformCard";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/auth/AuthProvider";
+import { getAppOrigin } from "@/lib/appOrigin";
 
-// Mock connections state (will be replaced with real data)
-const initialConnections: Record<PlatformType, { connected: boolean; name?: string; lastSync?: string }> = {
-  meta_ads: { connected: false },
-  google_ads: { connected: false },
-  google_analytics: { connected: false },
+type ConnectionState = {
+  connected: boolean;
+  name?: string;
+  lastSync?: string;
 };
 
 export default function LeadsConexoes() {
   const { toast } = useToast();
-  const [connections, setConnections] = React.useState(initialConnections);
+  const { session } = useAuth();
+  const [searchParams] = useSearchParams();
+  const [connections, setConnections] = React.useState<Record<PlatformType, ConnectionState>>({
+    meta_ads: { connected: false },
+    google_ads: { connected: false },
+    google_analytics: { connected: false },
+  });
   const [syncing, setSyncing] = React.useState<PlatformType | null>(null);
+  const [loading, setLoading] = React.useState(true);
 
-  const handleConnect = (platform: PlatformType) => {
-    // TODO: Implement OAuth flow
-    toast({
-      title: "Em breve",
-      description: `A integração com ${platform === "meta_ads" ? "Meta Ads" : platform === "google_ads" ? "Google Ads" : "Google Analytics"} será implementada em breve.`,
-    });
+  // Fetch existing connections on mount
+  React.useEffect(() => {
+    async function fetchConnections() {
+      if (!session?.user?.id) return;
+
+      const { data, error } = await supabase
+        .from("ad_platform_connections")
+        .select("platform, account_name, last_sync_at, is_active")
+        .eq("user_id", session.user.id)
+        .eq("is_active", true);
+
+      if (!error && data) {
+        const newConnections: Record<PlatformType, ConnectionState> = {
+          meta_ads: { connected: false },
+          google_ads: { connected: false },
+          google_analytics: { connected: false },
+        };
+
+        data.forEach((conn) => {
+          const platform = conn.platform as PlatformType;
+          if (newConnections[platform]) {
+            newConnections[platform] = {
+              connected: true,
+              name: conn.account_name || undefined,
+              lastSync: conn.last_sync_at
+                ? new Date(conn.last_sync_at).toLocaleString("pt-BR")
+                : undefined,
+            };
+          }
+        });
+
+        setConnections(newConnections);
+      }
+      setLoading(false);
+    }
+
+    fetchConnections();
+  }, [session?.user?.id]);
+
+  // Handle OAuth callback
+  React.useEffect(() => {
+    const code = searchParams.get("code");
+
+    if (code && session?.access_token) {
+      handleMetaCallback(code);
+    }
+  }, [searchParams, session?.access_token]);
+
+  const handleMetaCallback = async (code: string) => {
+    try {
+      const redirectUri = `${getAppOrigin()}/leads/conexoes`;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/leads-meta-oauth?action=callback&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(redirectUri)}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || result.error) {
+        throw new Error(result.error || "Falha ao conectar Meta Ads");
+      }
+
+      setConnections((prev) => ({
+        ...prev,
+        meta_ads: {
+          connected: true,
+          name: result.account_name,
+          lastSync: new Date().toLocaleString("pt-BR"),
+        },
+      }));
+
+      toast({
+        title: "Conectado!",
+        description: `Meta Ads (${result.account_name}) conectado com sucesso.`,
+      });
+
+      // Clean URL
+      window.history.replaceState({}, document.title, "/leads/conexoes");
+    } catch (error) {
+      console.error("Meta callback error:", error);
+      toast({
+        title: "Erro na conexão",
+        description: error instanceof Error ? error.message : "Falha ao conectar Meta Ads",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, document.title, "/leads/conexoes");
+    }
   };
 
-  const handleDisconnect = (platform: PlatformType) => {
+  const handleConnect = async (platform: PlatformType) => {
+    if (platform === "meta_ads") {
+      try {
+        const redirectUri = `${getAppOrigin()}/leads/conexoes`;
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/leads-meta-oauth?action=get_auth_url&redirect_uri=${encodeURIComponent(redirectUri)}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${session?.access_token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || result.error) {
+          throw new Error(result.error || "Falha ao iniciar OAuth");
+        }
+
+        // Redirect to Meta OAuth
+        window.location.href = result.auth_url;
+      } catch (error) {
+        console.error("Meta connect error:", error);
+        toast({
+          title: "Erro",
+          description: error instanceof Error ? error.message : "Falha ao conectar",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "Em breve",
+        description: `A integração com ${platform === "google_ads" ? "Google Ads" : "Google Analytics"} será implementada em breve.`,
+      });
+    }
+  };
+
+  const handleDisconnect = async (platform: PlatformType) => {
+    if (!session?.user?.id) return;
+
+    const { error } = await supabase
+      .from("ad_platform_connections")
+      .update({ is_active: false })
+      .eq("user_id", session.user.id)
+      .eq("platform", platform);
+
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao desconectar plataforma.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setConnections((prev) => ({
       ...prev,
       [platform]: { connected: false },
     }));
+
     toast({
       title: "Desconectado",
       description: "A plataforma foi desconectada com sucesso.",
@@ -39,7 +194,7 @@ export default function LeadsConexoes() {
 
   const handleSync = async (platform: PlatformType) => {
     setSyncing(platform);
-    // Simulate sync
+    // TODO: Implement real sync
     await new Promise((r) => setTimeout(r, 2000));
     setSyncing(null);
     toast({
@@ -47,6 +202,14 @@ export default function LeadsConexoes() {
       description: "Os dados foram atualizados com sucesso.",
     });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen p-4 md:p-6 flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Carregando...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-4 md:p-6 space-y-6 max-w-4xl mx-auto">

@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.waitlist-signup]
 verify_jwt = false
+
+[functions.leads-meta-oauth]
+verify_jwt = false

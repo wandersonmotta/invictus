@@ -24,6 +24,8 @@ const AguardandoAprovacao = React.lazy(() => import("@/pages/AguardandoAprovacao
 const Comunidade = React.lazy(() => import("@/pages/Comunidade"));
 const Feed = React.lazy(() => import("@/pages/Feed"));
 const Membro = React.lazy(() => import("@/pages/Membro"));
+const Leads = React.lazy(() => import("@/pages/Leads"));
+const LeadsConexoes = React.lazy(() => import("@/pages/LeadsConexoes"));
 
 export function HostRouter() {
   const hostname = window.location.hostname;
@@ -153,6 +155,26 @@ export function HostRouter() {
             <RequireAuth>
               <AppLayout>
                 <ClassPage />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/leads"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Leads />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/leads/conexoes"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <LeadsConexoes />
               </AppLayout>
             </RequireAuth>
           }
@@ -308,6 +330,26 @@ export function HostRouter() {
           <RequireAuth>
             <AppLayout>
               <ClassPage />
+            </AppLayout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/leads"
+        element={
+          <RequireAuth>
+            <AppLayout>
+              <Leads />
+            </AppLayout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/leads/conexoes"
+        element={
+          <RequireAuth>
+            <AppLayout>
+              <LeadsConexoes />
             </AppLayout>
           </RequireAuth>
         }

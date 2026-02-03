@@ -92,6 +92,10 @@ export default function Mensagens() {
                   // após aceitar, volta pro inbox
                   setTab("inbox");
                 }}
+                onConversationHidden={() => {
+                  // após excluir conversa, volta pra lista
+                  navigate("/mensagens");
+                }}
               />
             ) : (
               <div className="p-5 sm:p-6">

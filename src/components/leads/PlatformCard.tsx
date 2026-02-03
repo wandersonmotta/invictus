@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, Link2, Unlink, RefreshCw } from "lucide-react";
+import { CheckCircle2, XCircle, Link2, Unlink, RefreshCw, Loader2 } from "lucide-react";
 
 export type PlatformType = "meta_ads" | "google_ads" | "google_analytics";
 
@@ -14,6 +14,7 @@ interface PlatformCardProps {
   onDisconnect: () => void;
   onSync?: () => void;
   isSyncing?: boolean;
+  isConnecting?: boolean;
   className?: string;
 }
 
@@ -50,6 +51,7 @@ export function PlatformCard({
   onDisconnect,
   onSync,
   isSyncing,
+  isConnecting,
   className,
 }: PlatformCardProps) {
   const info = platformInfo[platform];
@@ -80,7 +82,7 @@ export function PlatformCard({
             className={cn(
               "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
               isConnected
-                ? "text-green-600 bg-green-500/10"
+                ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
                 : "text-muted-foreground bg-muted"
             )}
           >
@@ -135,9 +137,13 @@ export function PlatformCard({
               </Button>
             </>
           ) : (
-            <Button onClick={onConnect} className="w-full">
-              <Link2 className="h-4 w-4 mr-2" />
-              Conectar {info.name}
+            <Button onClick={onConnect} className="w-full" disabled={isConnecting}>
+              {isConnecting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Link2 className="h-4 w-4 mr-2" />
+              )}
+              {isConnecting ? "Conectando..." : `Conectar ${info.name}`}
             </Button>
           )}
         </div>

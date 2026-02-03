@@ -25,6 +25,7 @@ export default function LeadsConexoes() {
     google_analytics: { connected: false },
   });
   const [syncing, setSyncing] = React.useState<PlatformType | null>(null);
+  const [connecting, setConnecting] = React.useState<PlatformType | null>(null);
   const [loading, setLoading] = React.useState(true);
 
   // Fetch existing connections on mount
@@ -70,6 +71,20 @@ export default function LeadsConexoes() {
   React.useEffect(() => {
     const code = searchParams.get("code");
     const state = searchParams.get("state");
+    const oauthError = searchParams.get("error");
+    const oauthErrorDesc = searchParams.get("error_description") || searchParams.get("error_reason");
+
+    // Handle OAuth errors from providers
+    if (oauthError) {
+      console.error("OAuth error:", oauthError, oauthErrorDesc);
+      toast({
+        title: "Erro na autenticação",
+        description: oauthErrorDesc || `O provedor retornou um erro: ${oauthError}`,
+        variant: "destructive",
+      });
+      window.history.replaceState({}, document.title, "/leads/conexoes");
+      return;
+    }
 
     if (code && session?.access_token) {
       // Determine which platform based on state
@@ -195,6 +210,8 @@ export default function LeadsConexoes() {
       return;
     }
 
+    setConnecting(platform);
+
     if (platform === "meta_ads") {
       try {
         const redirectUri = `${getAppOrigin()}/leads/conexoes`;
@@ -224,6 +241,7 @@ export default function LeadsConexoes() {
         window.location.href = result.auth_url;
       } catch (error) {
         console.error("Meta connect error:", error);
+        setConnecting(null);
         toast({
           title: "Erro",
           description: error instanceof Error ? error.message : "Falha ao conectar",
@@ -259,6 +277,7 @@ export default function LeadsConexoes() {
         window.location.href = result.auth_url;
       } catch (error) {
         console.error("Google connect error:", error);
+        setConnecting(null);
         toast({
           title: "Erro",
           description: error instanceof Error ? error.message : "Falha ao conectar",
@@ -356,6 +375,7 @@ export default function LeadsConexoes() {
           onDisconnect={() => handleDisconnect("meta_ads")}
           onSync={() => handleSync("meta_ads")}
           isSyncing={syncing === "meta_ads"}
+          isConnecting={connecting === "meta_ads"}
         />
 
         <PlatformCard
@@ -367,6 +387,7 @@ export default function LeadsConexoes() {
           onDisconnect={() => handleDisconnect("google_ads")}
           onSync={() => handleSync("google_ads")}
           isSyncing={syncing === "google_ads"}
+          isConnecting={connecting === "google_ads"}
         />
 
         <PlatformCard
@@ -378,6 +399,7 @@ export default function LeadsConexoes() {
           onDisconnect={() => handleDisconnect("google_analytics")}
           onSync={() => handleSync("google_analytics")}
           isSyncing={syncing === "google_analytics"}
+          isConnecting={connecting === "google_analytics"}
         />
       </div>
 

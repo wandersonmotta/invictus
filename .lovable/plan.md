@@ -1,199 +1,220 @@
 
+# Plano: Corrigir Status + Adicionar Editar/Excluir Mensagens e Chat
 
-# Plano: Refatoração Completa do Dashboard de Leads para Fidelidade 100%
+## Resumo dos Problemas
 
-## Análise das Referências
-
-Após analisar detalhadamente as 4 imagens de referência (DashCortex), identifiquei as seguintes diferenças entre a implementação atual e o design desejado:
-
----
-
-## Visão Geral (IMG_8349) - Diferenças Identificadas
-
-| Elemento | Referência | Atual | Ação |
-|----------|------------|-------|------|
-| **KPI Cards** | 5 cards horizontais com barra de progresso colorida na base | Implementado mas layout pode diferir | Verificar espaçamento e cores |
-| **Impressões Totais** | Card com gráfico de linha dual (azul + verde) + valor grande à esquerda | Está OK | Mínimos ajustes |
-| **Meta Ads Card** | Gráfico de barras azuis + métricas lado a lado (Investimento, Compras, CPC) | Usa emojis ao invés de ícones oficiais | Substituir emojis por ícones SVG oficiais |
-| **Google Ads Card** | Gráfico de barras verdes + métricas lado a lado | Usa emojis | Substituir emojis por ícones SVG oficiais |
-| **Google Analytics Card** | Gráfico de barras laranja + métricas (Total Acessos, Usuários, Únicos) | Usa emoji | Substituir emoji por ícone SVG oficial |
-| **Origem dos Acessos** | Donut chart com tabela de regiões à direita | Existe mas layout diferente | Reorganizar layout para match |
+1. **Status não exibe após salvar** - o código salva na base, mas não há exibição dos status de conexões mútuas
+2. **Status deve ser visível apenas para seguidores mútuos** - precisa filtrar pela tabela `follows`
+3. **Falta editar/excluir mensagem** - opções: editar mensagem própria, excluir para todos, excluir só para mim
+4. **Falta excluir chat** - exclui apenas para quem está excluindo (soft-delete por membro)
 
 ---
 
-## Meta Ads (IMG_8350) - Diferenças Identificadas
+## Mudanças no Banco de Dados
 
-| Elemento | Referência | Atual | Ação |
-|----------|------------|-------|------|
-| **Header** | Logo Meta (∞ azul) + "Relatório Meta Ads \| Nome da Empresa" | Parcialmente correto | Ajustar texto do header |
-| **Filtros** | Botões "Campanhas" e "Anúncios" no header | Não existe | Adicionar filtros de segmentação |
-| **Funil de Tráfego** | Funil 3D com gradiente azul degradê, labels nas laterais | Existe mas visual diferente | Refatorar completamente o FunnelChart |
-| **Métricas do Funil** | Add to Cart, Frequência, CPM abaixo do funil | Parcialmente implementado | Verificar valores e layout |
-| **Card Checkouts** | Checkouts Iniciados + Custo por Checkout + gráfico linha verde | Existe mas precisa ajustar | Refinar layout e cores |
-| **Melhores Anúncios** | Donut chart com legenda vertical à direita | Implementado | OK |
-| **Tabela Campanhas** | Colunas: Preview \| Nome \| Conjuntos \| Anúncios \| Investimento \| Custo por Compra \| Compras | Recém implementado | Verificar se preview está funcionando |
+### 1. Alterar tabela `messages` para suportar edição e exclusão
 
----
+```sql
+-- Adicionar colunas para edição e soft-delete
+ALTER TABLE messages 
+ADD COLUMN edited_at timestamptz DEFAULT NULL,
+ADD COLUMN deleted_at timestamptz DEFAULT NULL,
+ADD COLUMN deleted_for uuid[] DEFAULT '{}';
 
-## Google Ads (IMG_8351) - Diferenças Identificadas
-
-| Elemento | Referência | Atual | Ação |
-|----------|------------|-------|------|
-| **Header** | Logo Google Ads + "Relatório Google Ads \| Nome da Empresa" + filtros (Campanhas, Grupo, Tipo) | Não tem filtros | Adicionar filtros dropdown |
-| **KPIs** | 5 KPIs (Investimento, Conversões, Custo por Conversão, Cliques, CPC Médio) | Implementado | OK |
-| **Palavras-chave** | Tabela com scroll e pagination (1-100/793) | Não tem pagination | Adicionar pagination |
-| **CTR e Taxa Conversão** | Cards separados abaixo da tabela keywords | Implementado | OK |
-| **Gráfico Multi-linha** | 3 linhas (Investimento azul, Conversões verde, Custo laranja) | Implementado | OK |
-| **Conversões por Gênero** | Donut verde/azul/cinza | Implementado | OK |
-| **Tabela Campanhas** | Com barra de progresso verde na linha destacada | Parcialmente | Ajustar highlight verde |
-
----
-
-## Analytics (IMG_8352) - Diferenças Identificadas
-
-| Elemento | Referência | Atual | Ação |
-|----------|------------|-------|------|
-| **Header** | Logo Analytics + filtros "Cidade", "Região" | Não tem filtros | Adicionar dropdowns |
-| **KPIs** | 5 KPIs laranja (Acessos, Usuários, Novos Usuários, Visualizações, Taxa Engajamento) | Implementado | OK |
-| **Mapa do Brasil** | Mapa interativo com estados coloridos | Placeholder emoji 🇧🇷 | Implementar mapa real SVG |
-| **Tabela Regiões** | Região, Cidade, Acessos com barras de progresso laranja | Implementado | OK |
-| **Gráfico Período** | Linha laranja suave | Implementado mas usando DualLineChart | Usar gráfico de linha única |
-| **Gráfico Semanal** | Barras laranja por dia da semana | Implementado | OK |
-| **Origem Acessos** | Donut laranja com legend | Implementado | OK |
-| **Sistema Operacional** | Donut vermelho/laranja | Implementado | OK |
-| **Dispositivo** | Donut vermelho/laranja | Implementado | OK |
-| **Acessos por URL** | Tabela com barras | Implementado | OK |
-
----
-
-## Mudanças Prioritárias a Implementar
-
-### 1. Ícones Oficiais nas Plataformas
-Substituir todos os emojis (📘, 📗, 📊) pelos ícones SVG oficiais:
-- **Meta**: Símbolo ∞ em azul #1877F2
-- **Google Ads**: Logo multicolorido oficial
-- **Analytics**: Logo laranja/amarelo oficial
-
-### 2. Refatorar FunnelChart (Meta Ads)
-Criar funil 3D com visual degradê azul idêntico à referência:
-```text
-    ┌─────────────────────────┐
-    │      Cliques            │  Taxa de Cliques: 0.93%
-    │        8K               │
-    └───────────────────────┐ │
-        │    Page Views     │    Connect Rate: 93.31%
-        │      8K           │
-        └─────────────────┐ │
-            │ Checkouts   │    Taxa de Checkout: 31.30%
-            │   2.474     │
-            └───────────┐ │
-               │Compras │    Taxa de Compras: 29.10%
-               │  720   │
-               └────────┘
+-- deleted_at = exclusão para TODOS (só remetente pode)
+-- deleted_for = array de user_ids que "excluíram para mim"
 ```
 
-### 3. Mapa do Brasil (Analytics)
-Implementar SVG do mapa do Brasil com estados clicáveis e coloridos por densidade de acessos
+### 2. Alterar tabela `conversation_members` para excluir chat
 
-### 4. Filtros nos Headers
-Adicionar dropdowns de filtros em cada view:
-- **Meta Ads**: Campanhas, Anúncios
-- **Google Ads**: Campanhas, Grupo, Tipo
-- **Analytics**: Cidade, Região
+```sql
+-- Adicionar coluna para "chat excluído" por membro
+ALTER TABLE conversation_members
+ADD COLUMN hidden_at timestamptz DEFAULT NULL;
+```
 
-### 5. Layout dos Cards de Plataforma (Overview)
-Reorganizar para match exato:
-- Título com ícone SVG oficial
-- Gráfico de barras semanal
-- Métricas em grid 2x2 abaixo
+### 3. Atualizar RLS de `messages`
+
+```sql
+-- Permitir UPDATE (editar body e edited_at) apenas para remetente
+DROP POLICY "No update messages" ON messages;
+CREATE POLICY "Sender can edit own messages" ON messages
+FOR UPDATE USING (auth.uid() = sender_id)
+WITH CHECK (auth.uid() = sender_id);
+
+-- Permitir soft-delete
+DROP POLICY "No delete messages" ON messages;
+CREATE POLICY "Sender can delete for all" ON messages
+FOR UPDATE USING (auth.uid() = sender_id);
+```
+
+### 4. Atualizar RLS de `member_status` para filtrar por mútuo
+
+```sql
+-- Substituir policy de SELECT
+DROP POLICY "Authenticated can view statuses" ON member_status;
+CREATE POLICY "View own or mutual follows statuses" ON member_status
+FOR SELECT USING (
+  auth.uid() = user_id 
+  OR (
+    -- mútuo: eu sigo ele E ele me segue
+    EXISTS (
+      SELECT 1 FROM follows f1
+      WHERE f1.follower_id = auth.uid() 
+        AND f1.following_id = member_status.user_id
+    )
+    AND EXISTS (
+      SELECT 1 FROM follows f2
+      WHERE f2.follower_id = member_status.user_id 
+        AND f2.following_id = auth.uid()
+    )
+  )
+);
+```
+
+### 5. Criar função RPC para buscar status de conexões mútuas
+
+```sql
+CREATE OR REPLACE FUNCTION get_mutual_statuses()
+RETURNS TABLE(
+  user_id uuid,
+  status_text text,
+  expires_at timestamptz,
+  display_name text,
+  avatar_url text
+)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+  SELECT 
+    ms.user_id,
+    ms.status_text,
+    ms.expires_at,
+    COALESCE(p.display_name, 'Membro') AS display_name,
+    p.avatar_url
+  FROM member_status ms
+  JOIN profiles p ON p.user_id = ms.user_id
+  WHERE ms.expires_at > now()
+    AND (
+      -- meu próprio status
+      ms.user_id = auth.uid()
+      OR (
+        -- sigo E sou seguido
+        EXISTS (SELECT 1 FROM follows WHERE follower_id = auth.uid() AND following_id = ms.user_id)
+        AND EXISTS (SELECT 1 FROM follows WHERE follower_id = ms.user_id AND following_id = auth.uid())
+      )
+    )
+  ORDER BY ms.created_at DESC
+  LIMIT 30;
+$$;
+```
 
 ---
 
-## Arquivos a Modificar
+## Mudanças no Frontend
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/components/leads/PlatformMetricsCard.tsx` | Trocar emojis por ícones SVG oficiais |
-| `src/components/leads/LeadsAnalyticsCard.tsx` | Trocar emoji por ícone SVG oficial |
-| `src/components/leads/charts/FunnelChart.tsx` | Refatorar completamente para visual 3D degradê |
-| `src/components/leads/views/LeadsMetaView.tsx` | Adicionar filtros no header, ajustar layout |
-| `src/components/leads/views/LeadsGoogleAdsView.tsx` | Adicionar filtros, ajustar tabela keywords com pagination |
-| `src/components/leads/views/LeadsAnalyticsView.tsx` | Adicionar filtros, implementar mapa SVG do Brasil |
-| `src/components/leads/views/LeadsOverviewView.tsx` | Ajustar layout cards para match exato |
+### 1. `StatusRow.tsx` - Exibir status de conexões mútuas
+
+- Buscar status via `get_mutual_statuses()` RPC
+- Exibir bolhas horizontais (avatar + texto curto)
+- Meu status fica destacado com borda dourada
+- Ao clicar no status de alguém, abre visualização completa
+
+### 2. Novo componente `MessageBubble.tsx`
+
+- Ao clicar e segurar (ou menu de 3 pontos) na mensagem própria:
+  - **Editar** - abre input inline para editar texto
+  - **Excluir para todos** - marca `deleted_at`
+  - **Excluir para mim** - adiciona meu id em `deleted_for[]`
+- Mensagens com `deleted_at` ou onde meu id está em `deleted_for` não são exibidas
+- Mensagens editadas mostram "(editada)" ao lado do horário
+
+### 3. `ChatView.tsx` - Menu de opções da conversa
+
+- Adicionar botão de menu (3 pontos) no header
+- Opção "Excluir conversa" que:
+  - Atualiza `conversation_members.hidden_at = now()` para o membro atual
+  - Remove da lista de threads
+  - NÃO apaga mensagens nem afeta os outros participantes
+
+### 4. `ThreadList.tsx` - Filtrar conversas ocultas
+
+- A query `get_my_threads` precisa filtrar `WHERE hidden_at IS NULL`
 
 ---
 
-## Arquivos Novos a Criar
+## Fluxo Visual
 
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/components/leads/icons/PlatformIcons.tsx` | Componentes SVG dos ícones oficiais (Meta, Google Ads, Analytics) |
-| `src/components/leads/charts/BrazilMap.tsx` | Mapa SVG do Brasil com estados interativos |
-| `src/components/leads/ViewFilters.tsx` | Componente de filtros dropdown reutilizável |
+```text
+[StatusRow]
+  +-------------+  +---------+  +---------+
+  | + Seu status|  | João 🔵 |  | Maria 🔵|  <-- bolhas de status mútuos
+  +-------------+  +---------+  +---------+
+
+[ChatView - Mensagem própria]
+  +---------------------------+
+  |  Minha mensagem aqui   ⋮ | <-- 3 pontos abre menu
+  +---------------------------+
+        ┌──────────────────┐
+        │ Editar           │
+        │ Excluir p/ todos │
+        │ Excluir p/ mim   │
+        └──────────────────┘
+
+[ChatView Header]
+  ← Conversa                 ⋮
+                    ┌──────────────────┐
+                    │ Excluir conversa │
+                    └──────────────────┘
+```
+
+---
+
+## Arquivos a Criar/Modificar
+
+| Arquivo | Ação |
+|---------|------|
+| Migration SQL | Criar |
+| `src/components/messages/StatusRow.tsx` | Modificar (adicionar feed de status) |
+| `src/components/messages/MessageBubble.tsx` | Criar (componente de mensagem com menu) |
+| `src/components/messages/MessageActions.tsx` | Criar (dropdown menu de ações) |
+| `src/components/messages/ChatView.tsx` | Modificar (usar MessageBubble, adicionar menu header) |
+| `src/components/messages/ThreadList.tsx` | Modificar (filtrar hidden_at) |
+| `src/components/messages/types.ts` | Modificar (adicionar tipos) |
 
 ---
 
 ## Detalhes Técnicos
 
-### Ícones SVG Oficiais
-
-```tsx
-// Meta Icon
-const MetaIcon = () => (
-  <span className="text-lg font-bold" style={{ color: "#1877F2" }}>∞</span>
-);
-
-// Google Ads Icon (já existe no LeadsSidebar)
-const GoogleAdsIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-5 w-5">
-    <path fill="#FBBC04" d="M3.5 18.49l5.5-9.53..."/>
-    <path fill="#4285F4" d="M14.5 18.49l5.5-9.53..."/>
-    <path fill="#34A853" d="M9 8.96l5.5-9.53..."/>
-    <circle fill="#EA4335" cx="6" cy="18" r="3"/>
-  </svg>
-);
-
-// Analytics Icon
-const AnalyticsIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-5 w-5">
-    <path fill="#F9AB00" d="M22 12c0 5.52-4.48 10-10 10S2 17.52 2 12h4..."/>
-    <path fill="#E37400" d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12h4..."/>
-    <circle fill="#F9AB00" cx="12" cy="12" r="4"/>
-  </svg>
-);
+### Editar mensagem
+```typescript
+await supabase
+  .from('messages')
+  .update({ body: newText, edited_at: new Date().toISOString() })
+  .eq('id', messageId)
+  .eq('sender_id', meId);
 ```
 
-### Novo FunnelChart com Visual 3D
+### Excluir para todos
+```typescript
+await supabase
+  .from('messages')
+  .update({ deleted_at: new Date().toISOString() })
+  .eq('id', messageId)
+  .eq('sender_id', meId);
+```
 
-O funil terá:
-- Gradiente azul degradando de claro para escuro (top to bottom)
-- Formato trapezoidal diminuindo em cada etapa
-- Labels com valores centralizados
-- Taxas de conversão na lateral direita
-- Bordas arredondadas na base
+### Excluir para mim
+```typescript
+await supabase.rpc('delete_message_for_me', { p_message_id: messageId });
+-- RPC que faz: UPDATE messages SET deleted_for = array_append(deleted_for, auth.uid()) WHERE id = p_message_id
+```
 
-### Mapa do Brasil
-
-Usar SVG paths dos estados brasileiros com:
-- Fill baseado na densidade de acessos (escala laranja)
-- Hover interativo mostrando nome do estado
-- Legenda de cores
-
----
-
-## Ordem de Implementação
-
-1. Criar componente `PlatformIcons.tsx` com todos os ícones SVG
-2. Atualizar `PlatformMetricsCard.tsx` e `LeadsAnalyticsCard.tsx` para usar ícones
-3. Refatorar `FunnelChart.tsx` completamente
-4. Criar `BrazilMap.tsx` para Analytics
-5. Criar `ViewFilters.tsx` para dropdowns
-6. Atualizar cada View com filtros e ajustes de layout
-7. Revisar cores, espaçamentos e tipografia para match exato
-
----
-
-## Resultado Esperado
-
-Dashboard 100% fiel às referências DashCortex, mantendo a identidade visual Invictus (glassmorphism, tons dourados sutis nos elementos interativos) apenas nos elementos de navegação e UI, enquanto o conteúdo do dashboard segue exatamente o estilo das referências.
-
+### Excluir conversa (para mim)
+```typescript
+await supabase
+  .from('conversation_members')
+  .update({ hidden_at: new Date().toISOString() })
+  .eq('conversation_id', conversationId)
+  .eq('user_id', meId);
+```

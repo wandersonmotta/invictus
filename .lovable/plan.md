@@ -1,180 +1,270 @@
 
-# Plano: Restrição de Navegação para Onboarding + Redirect Imediato + "Fraternidade"
+# Plano: Dashboard de Marketing/Tráfego Pago "Leads" para Membros Invictus
 
-## Problema Identificado (baseado nas imagens)
+## Visão Geral
 
-1. **Navegação completa visível durante onboarding**: O usuário pendente vê todas as seções (Início, Comunicação, Conta completa com Class) ao invés de apenas "Perfil"
-2. **Redirect não é imediato**: Após salvar o perfil, o usuário fica na página `/perfil` vendo "Perfil enviado para análise" ao invés de ir direto para `/aguardando-aprovacao`
-3. **Falta "Fraternidade"**: A tela de aguardando aprovação não tem o texto "FRATERNIDADE" abaixo do logo (padrão da identidade visual)
+Criar uma seção **"Leads"** exclusiva para membros aprovados da Invictus, onde eles podem conectar suas contas de **Meta Ads**, **Google Ads** e **Google Analytics (GA4)** para visualizar métricas de campanhas em um dashboard premium no padrão visual Invictus, com capacidade de gerar relatórios compartilháveis.
 
 ---
 
-## Alterações Necessárias
+## Escopo da Feature
 
-### 1. Restringir Sidebar para Onboarding
-**Arquivo:** `src/components/AppSidebar.tsx`
+### O que será implementado:
 
-**Solução:**
-- Criar query para buscar `access_status` e `profileComplete` do perfil atual
-- Se `access_status !== "approved"` (pendente/onboarding):
-  - Exibir SOMENTE a seção "Conta" com apenas o item "Perfil"
-  - Esconder: "Início", "Comunicação", "Class", "Administração"
-- Se `access_status === "approved"`:
-  - Exibir navegação completa normalmente
+1. **Nova seção "Leads"** no menu lateral (somente para membros aprovados)
+2. **Página de conexões** para vincular APIs das plataformas
+3. **Dashboard unificado** com métricas de todas as plataformas
+4. **Dashboards individuais** para Meta Ads, Google Ads e Analytics
+5. **Sistema de relatórios** exportáveis com branding Invictus
+6. **Backend (Edge Functions)** para proxy das APIs
+
+---
+
+## Arquitetura Técnica
+
+### Integrações de APIs
+
+| Plataforma | API | Autenticação | Dados Principais |
+|------------|-----|--------------|------------------|
+| **Meta Ads** | Marketing API v24.0 | OAuth 2.0 + Access Token | Investimento, Conversões, Impressões, Cliques, CPC, ROAS |
+| **Google Ads** | Google Ads API | OAuth 2.0 + Customer ID | Custo, Conversões, CTR, CPC, Campanhas |
+| **Google Analytics** | GA4 Data API | OAuth 2.0 + Property ID | Acessos, Usuários, Sessões, Origem, Dispositivo |
+
+### Fluxo de Autenticação OAuth
 
 ```text
-Lógica:
-- Buscar: supabase.from("profiles").select("access_status, first_name, ...")
-- isOnboarding = access_status !== "approved"
-- if (isOnboarding):
-    navSections = [{ label: "Conta", items: [{ title: "Perfil", url: "/perfil", icon: User }] }]
-- else:
-    navSections = completo
+1. Usuário clica "Conectar Meta Ads"
+2. Redirect para OAuth do Meta/Google
+3. Callback retorna access_token
+4. Token é criptografado e salvo no banco
+5. Edge Function usa token para buscar dados
+6. Dados são processados e exibidos no dashboard
 ```
-
-### 2. Redirect Imediato Após Salvar Perfil
-**Arquivo:** `src/components/profile/ProfileForm.tsx`
-
-**Problema:** Atualmente, quando o perfil é salvo e está "ready for review", o componente mostra um card estático. O usuário precisa ser redirecionado imediatamente para `/aguardando-aprovacao`.
-
-**Solução:**
-- Após salvar com sucesso (`onSaved?.()`), se todos os campos obrigatórios estiverem preenchidos e `access_status !== "approved"`:
-  - Chamar `window.location.href = "/aguardando-aprovacao"` ou usar `useNavigate()` do React Router
-- Remover o bloco que mostra "Perfil enviado para análise" (já que o usuário será redirecionado)
-
-**Arquivo:** `src/auth/RequireAuth.tsx`
-
-**Ajuste:**
-- Garantir que quando o usuário está em `/perfil` com perfil completo e `pending`, ele seja redirecionado para `/aguardando-aprovacao` imediatamente
-- A lógica já existe na linha 130-131, mas pode não estar funcionando se o perfil query não for invalidado após o save
-
-### 3. Adicionar "FRATERNIDADE" na Tela de Aguardando
-**Arquivo:** `src/pages/AguardandoAprovacao.tsx`
-
-**Adição:**
-```tsx
-<img src={invictusLogo} ... />
-
-{/* NOVO: Adicionar abaixo do logo */}
-<p className="invictus-auth-fratname ...">
-  FRATERNIDADE
-</p>
-
-<h1>Olá, futuro membro Invictus!</h1>
-```
-
-Usar o mesmo estilo metálico/dourado aplicado na tela de login.
 
 ---
 
-## Arquivos a Modificar
+## Estrutura de Arquivos
 
-| Arquivo | Alteração |
+### Novas Páginas
+
+| Arquivo | Descrição |
 |---------|-----------|
-| `src/components/AppSidebar.tsx` | Filtrar navegação para mostrar só "Perfil" quando pendente |
-| `src/components/profile/ProfileForm.tsx` | Adicionar redirect imediato após salvar perfil completo |
-| `src/pages/AguardandoAprovacao.tsx` | Adicionar "FRATERNIDADE" abaixo do logo |
+| `src/pages/Leads.tsx` | Dashboard principal de marketing |
+| `src/pages/LeadsConexoes.tsx` | Gerenciar conexões de plataformas |
+| `src/pages/LeadsMetaAds.tsx` | Dashboard detalhado Meta Ads |
+| `src/pages/LeadsGoogleAds.tsx` | Dashboard detalhado Google Ads |
+| `src/pages/LeadsAnalytics.tsx` | Dashboard detalhado Analytics |
+| `src/pages/LeadsRelatorio.tsx` | Gerador de relatórios |
+
+### Componentes
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `src/components/leads/KPICard.tsx` | Card de métrica com variação % |
+| `src/components/leads/SpendChart.tsx` | Gráfico de investimento |
+| `src/components/leads/ConversionsChart.tsx` | Gráfico de conversões |
+| `src/components/leads/FunnelChart.tsx` | Funil de tráfego |
+| `src/components/leads/CampaignsTable.tsx` | Tabela de campanhas |
+| `src/components/leads/RegionMap.tsx` | Mapa de origem dos acessos |
+| `src/components/leads/PlatformCard.tsx` | Card de status de conexão |
+| `src/components/leads/DateRangePicker.tsx` | Seletor de período |
+| `src/components/leads/ReportGenerator.tsx` | Gerador de relatório PDF |
+
+### Edge Functions (Backend)
+
+| Função | Descrição |
+|--------|-----------|
+| `supabase/functions/leads-meta-oauth/` | OAuth callback do Meta |
+| `supabase/functions/leads-google-oauth/` | OAuth callback do Google |
+| `supabase/functions/leads-meta-insights/` | Buscar dados do Meta Ads |
+| `supabase/functions/leads-google-ads/` | Buscar dados do Google Ads |
+| `supabase/functions/leads-ga4-analytics/` | Buscar dados do GA4 |
+| `supabase/functions/leads-generate-report/` | Gerar PDF do relatório |
 
 ---
 
-## Detalhes Técnicos
+## Modelo de Dados
 
-### AppSidebar - Navegação Restrita
+### Novas Tabelas
 
-```typescript
-// Buscar status do perfil
-const profileQuery = useQuery({
-  queryKey: ["sidebar-access", user?.id],
-  enabled: !!user?.id,
-  queryFn: async () => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("access_status")
-      .eq("user_id", user!.id)
-      .maybeSingle();
-    return data?.access_status ?? "pending";
-  },
-  staleTime: 10_000,
-});
+```sql
+-- Conexões de plataformas do usuário
+CREATE TABLE ad_platform_connections (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL CHECK (platform IN ('meta_ads', 'google_ads', 'google_analytics')),
+  
+  -- Tokens criptografados
+  access_token_encrypted TEXT,
+  refresh_token_encrypted TEXT,
+  token_expires_at TIMESTAMPTZ,
+  
+  -- IDs específicos da plataforma
+  account_id TEXT, -- act_xxx para Meta, customer_id para Google Ads
+  property_id TEXT, -- GA4 property ID
+  account_name TEXT,
+  
+  is_active BOOLEAN DEFAULT true,
+  last_sync_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  
+  UNIQUE(user_id, platform)
+);
 
-const accessStatus = profileQuery.data ?? "pending";
-const isOnboarding = accessStatus !== "approved";
+-- Cache de métricas (evitar requisições excessivas às APIs)
+CREATE TABLE ad_metrics_cache (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  connection_id UUID NOT NULL REFERENCES ad_platform_connections(id) ON DELETE CASCADE,
+  
+  date_range_start DATE NOT NULL,
+  date_range_end DATE NOT NULL,
+  metric_type TEXT NOT NULL, -- 'overview', 'campaigns', 'daily'
+  
+  data JSONB NOT NULL,
+  fetched_at TIMESTAMPTZ DEFAULT now(),
+  
+  UNIQUE(connection_id, date_range_start, date_range_end, metric_type)
+);
 
-// Navegação condicional
-const visibleSections = isOnboarding
-  ? [{ label: "Conta", items: [{ title: "Perfil", url: "/perfil", icon: User }] }]
-  : [...navSections, ...(isAdmin ? adminSection : [])];
-```
-
-### ProfileForm - Redirect Imediato
-
-```typescript
-// Após salvar com sucesso
-setProfile((data ?? null) as LoadedProfile | null);
-toast({ title: "Perfil salvo" });
-onSaved?.();
-
-// NOVO: Verificar se perfil completo + pendente = redirect
-const savedProfile = data as LoadedProfile | null;
-if (
-  savedProfile?.access_status !== "approved" &&
-  savedProfile?.avatar_url &&
-  savedProfile?.first_name?.trim() &&
-  savedProfile?.last_name?.trim() &&
-  (savedProfile?.postal_code ?? "").replace(/\D/g, "").length === 8 &&
-  savedProfile?.bio?.trim() &&
-  (savedProfile?.expertises ?? []).length > 0
-) {
-  // Redirect imediato
-  window.location.href = "/aguardando-aprovacao";
-  return;
-}
-```
-
-### AguardandoAprovacao - Adicionar "FRATERNIDADE"
-
-```tsx
-<img
-  src={invictusLogo}
-  alt="Invictus"
-  className="mx-auto h-16 w-auto mb-2 drop-shadow-lg"
-/>
-
-<p
-  className="text-[10px] sm:text-xs font-semibold tracking-[0.35em] text-transparent bg-clip-text mb-6"
-  style={{
-    backgroundImage: "linear-gradient(135deg, hsl(var(--gold-soft)), hsl(var(--gold-hot)), hsl(var(--gold-soft)))",
-  }}
->
-  FRATERNIDADE
-</p>
-
-<h1 className="text-2xl font-bold text-foreground mb-4">
-  Olá, futuro membro Invictus!
-</h1>
+-- Relatórios gerados
+CREATE TABLE ad_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  
+  title TEXT NOT NULL,
+  date_range_start DATE NOT NULL,
+  date_range_end DATE NOT NULL,
+  platforms TEXT[] NOT NULL, -- ['meta_ads', 'google_ads']
+  
+  report_data JSONB NOT NULL,
+  pdf_storage_path TEXT,
+  
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 ```
 
 ---
 
-## Fluxo Esperado Após Correção
+## Interface do Dashboard (Baseado nas Imagens de Referência)
+
+### Visão Geral (Dashboard Principal)
 
 ```text
-1. Usuário cria conta com convite → status = "pending"
-2. Sistema redireciona para /perfil
-3. Sidebar mostra APENAS "Perfil" (sem Home, Feed, Mapa, etc.)
-4. Usuário preenche foto, nome, bio, CEP, expertise
-5. Clica em "Salvar perfil"
-6. Sistema valida → sucesso → REDIRECT IMEDIATO para /aguardando-aprovacao
-7. Tela exibe logo + "FRATERNIDADE" + mensagem premium + botão "Sair"
-8. Administrador aprova → polling detecta → redirect automático para /app
-9. Sidebar agora mostra navegação completa
+┌──────────────────────────────────────────────────────────────────┐
+│  🔷 Leads    [📥 Exportar] [📅 Aug 1 - Aug 11, 2025 ▼]          │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌─────────┐│
+│  │Investim. │ │Conversões│ │Taxa Conv.│ │Faturamento│ │ROI Geral││
+│  │R$10.453  │ │ 1.058,08 │ │ 24,89%   │ │R$28.178  │ │   2.7   ││
+│  │ ▲ 115%   │ │ ▲ 101%   │ │ ▲ 85%    │ │ ▲ 134%   │ │ ▲ 116%  ││
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └─────────┘│
+│                                                                  │
+│  ┌─────────────────────┐  ┌─────────────────────────────────────┐│
+│  │   Impressões Totais │  │                                     ││
+│  │      380,580        │  │   Meta Ads          │  Google Ads   ││
+│  │   ▲ 111%            │  │  ┌──────────────┐   │  ┌──────────┐ ││
+│  │   [📊 Gráfico linha]│  │  │Invest: R$9.5k│   │  │Invest:R$854││
+│  │                     │  │  │Compras: 315  │   │  │Conv: 743   ││
+│  └─────────────────────┘  │  │CPC: R$30.47  │   │  │CPC: R$1.15 ││
+│                           │  └──────────────┘   │  └──────────┘ ││
+│  ┌─────────────────────┐  ├─────────────────────┴───────────────┤│
+│  │  Google Analytics   │  │         Origem dos Acessos          ││
+│  │  [📊 Barras]        │  │  [🥧 Gráfico Pizza] + Tabela Região ││
+│  │  Total: 4,621       │  │  SP: 1.908  │  RJ: 277  │  MG: 246  ││
+│  └─────────────────────┘  └─────────────────────────────────────┘│
+└──────────────────────────────────────────────────────────────────┘
 ```
+
+### Dashboard Meta Ads (Detalhado)
+
+- Funil de Tráfego (Cliques → Page Views → Checkouts → Compras)
+- Gráfico de Faturamento vs Conversões por período
+- Tabela de Campanhas com Investimento/Custo por Compra/Conversões
+- Melhores Anúncios por Conversão
+
+### Dashboard Google Analytics
+
+- Mapa do Brasil com heatmap de acessos
+- Acessos por período (linha)
+- Acessos por dia da semana (barras)
+- Sistema Operacional e Dispositivo (donuts)
+- Tabela de URLs mais acessadas
 
 ---
 
-## Critérios de Aceite
+## Fluxo de Implementação
 
-1. Usuário pendente vê APENAS "Perfil" no menu lateral
-2. Após salvar perfil completo, redirect IMEDIATO para `/aguardando-aprovacao`
-3. Tela `/aguardando-aprovacao` exibe "FRATERNIDADE" abaixo do logo
-4. Após aprovação, navegação completa volta a aparecer
+### Fase 1: Estrutura Base
+1. Criar tabelas no banco de dados
+2. Adicionar rota "Leads" no sidebar (somente aprovados)
+3. Criar página de conexões com cards das 3 plataformas
+4. Implementar UI base do dashboard com dados mock
+
+### Fase 2: Integração Meta Ads
+5. Criar Edge Function para OAuth do Meta
+6. Criar Edge Function para buscar insights (Marketing API)
+7. Conectar dashboard com dados reais
+8. Implementar cache de métricas
+
+### Fase 3: Integração Google
+9. Criar OAuth para Google (Ads + Analytics)
+10. Edge Function para Google Ads API
+11. Edge Function para GA4 Data API
+12. Integrar dashboards específicos
+
+### Fase 4: Relatórios
+13. Criar componente de geração de relatório
+14. Implementar PDF com branding Invictus
+15. Opção de compartilhar relatório (link público ou download)
+
+---
+
+## Considerações Importantes
+
+### APIs Externas - Requisitos
+
+| Plataforma | Requisito | Como Obter |
+|------------|-----------|------------|
+| **Meta Ads** | App ID + App Secret | developers.facebook.com/apps |
+| **Google Ads** | Developer Token + OAuth Credentials | console.cloud.google.com |
+| **Google Analytics** | OAuth Credentials | console.cloud.google.com |
+
+O usuário (membro Invictus) precisará:
+1. Ter uma conta de anúncios ativa na plataforma
+2. Autorizar o app Invictus via OAuth
+3. Selecionar qual conta/propriedade conectar
+
+### Segurança
+- Tokens de acesso serão criptografados no banco
+- Edge Functions fazem proxy das requisições (tokens nunca expostos no frontend)
+- RLS garante que cada usuário vê apenas suas conexões
+- Refresh tokens são renovados automaticamente
+
+### Estilo Visual Invictus
+- Cards com gradiente dourado premium
+- Gráficos em tons de azul (Meta), verde (Google Ads), laranja (Analytics)
+- Fundo escuro executivo
+- Relatórios com logo + "FRATERNIDADE" + assinatura visual
+
+---
+
+## Resumo de Alterações
+
+| Tipo | Quantidade |
+|------|------------|
+| Novas páginas | 6 |
+| Novos componentes | ~12 |
+| Novas Edge Functions | 6 |
+| Novas tabelas | 3 |
+| Alterações em arquivos existentes | 2 (App.tsx, AppSidebar.tsx) |
+
+---
+
+## Próximos Passos Recomendados
+
+1. **Aprovar este plano** para iniciar a implementação
+2. **Criar credenciais** nos portais de desenvolvedores (Meta, Google)
+3. **Configurar secrets** no Lovable Cloud para as chaves de API
+4. Implementar em fases, começando pela UI com dados mock

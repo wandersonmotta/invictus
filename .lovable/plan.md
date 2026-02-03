@@ -1,211 +1,157 @@
 
-# Redesign do Dashboard de Leads - Estilo DashCortex com Identidade Invictus
+# Plano: Campanhas Meta Ads com Preview Real + Revisão de Fidelidade
 
-## Objetivo
-Recriar o dashboard de Leads seguindo o layout das referências enviadas (DashCortex), mantendo o padrão visual premium da Invictus (glassmorphism, tons dourados, superfícies de grafite).
+## Resumo
 
----
-
-## Análise das Referências
-
-### Visão Geral (IMG_8349)
-- **Header**: Logos das plataformas (Meta, Google Ads, Analytics) + Nome da Empresa + Date Picker
-- **KPIs principais**: 5 cards horizontais (Investimento Total, Conversões Totais, Taxa de Conversão, Faturamento Total, ROI Geral) com variação percentual colorida
-- **Gráfico de Impressões**: Linha com duas séries (Meta Ads vs Google Ads)
-- **Cards de Plataforma**: Meta Ads e Google Ads lado a lado, cada um com gráfico de barras semanal e métricas específicas
-- **Google Analytics**: Card com gráfico de barras diário e métricas de acessos
-- **Origem dos Acessos**: Donut chart + tabela de regiões com barra de progresso
-
-### Analytics Detalhado (IMG_8352)
-- **KPIs**: Acessos Totais, Usuários Totais, Novos Usuários, Visualizações de Páginas, Taxa de Engajamento
-- **Mapa do Brasil** com distribuição por estado
-- **Gráficos**: Linha de acessos no período + Barras de acessos na semana
-- **Donut charts**: Sistema Operacional e Dispositivo
-- **Tabelas**: Região/Cidade e Acessos por URL
-
-### Google Ads (IMG_8351)
-- **KPIs**: Investimento, Conversões, Custo por Conversão, Cliques, CPC Médio
-- **Tabela de Palavras-chave** com métricas
-- **Gráfico de múltiplas linhas** (Investimento, Conversões, Custo por Conversão)
-- **Pie chart**: Conversões por Gênero
-- **Tabela de Campanhas** com colunas detalhadas
-
-### Meta Ads (IMG_8350)
-- **KPIs**: Investimento, Faturamento, Compras, ROAS Médio, Custo por Compra (CPA)
-- **Funil de Tráfego** visual com etapas (Cliques → Page Views → Checkouts → Compras)
-- **Métricas de funil**: Checkouts Iniciados, Custo por Checkout
-- **Gráfico de linhas**: Faturamento vs Compras ao longo do tempo
-- **Pie chart**: Melhores Anúncios
-- **Tabela de Campanhas** com breakdown por Conjuntos e Anúncios
+Este plano aborda duas necessidades:
+1. **Revisar e ajustar** o dashboard de Leads para garantir fidelidade máxima às referências visuais
+2. **Implementar previews reais de campanhas** no Meta Ads, buscando thumbnails dos criativos diretamente da API do Facebook/Meta
 
 ---
 
-## Arquitetura de Componentes
+## Parte 1: Previews de Campanhas com Dados Reais
 
-### Novos Componentes a Criar:
+### O que será implementado
 
-```text
-src/components/leads/
-├── LeadsDashboardHeader.tsx      # Header com logos + date picker
-├── LeadsKPIRow.tsx               # Row de 5 KPIs com estilo atualizado
-├── LeadsImpressionsChart.tsx     # Gráfico de linha dual (Meta vs Google)
-├── PlatformMetricsCard.tsx       # Card de plataforma com gráfico + métricas
-├── LeadsAnalyticsCard.tsx        # Card específico do GA4
-├── LeadsRegionDonutChart.tsx     # Donut + tabela de regiões
-├── LeadsFunnelChart.tsx          # Visualização de funil (Meta Ads)
-├── LeadsCampaignsTable.tsx       # Tabela de campanhas
-├── LeadsKeywordsTable.tsx        # Tabela de palavras-chave (Google Ads)
-└── charts/
-    ├── MultiLineChart.tsx        # Gráfico de múltiplas linhas
-    ├── WeeklyBarChart.tsx        # Barras por dia da semana
-    └── DonutWithLegend.tsx       # Donut com legenda lateral
+Na tabela de campanhas do Meta Ads, cada linha mostrará:
+- **Thumbnail do criativo** (imagem ou frame do vídeo do anúncio)
+- **Nome da campanha**
+- Métricas existentes (conjuntos, anúncios, investimento, custo por compra, compras)
+
+### Arquitetura Técnica
+
+**1. Nova Edge Function: `leads-meta-campaigns`**
+
+Criará uma nova função para buscar campanhas com seus criativos da API Meta Marketing:
+
+```
+Endpoint: GET /leads-meta-campaigns
+Query params: start_date, end_date
+
+Retorno:
+{
+  campaigns: [
+    {
+      id: "123",
+      name: "CAM - Sales - Remarketing 2025",
+      status: "ACTIVE",
+      thumbnail_url: "https://...",
+      ad_sets_count: 3,
+      ads_count: 12,
+      insights: {
+        spend: 5276.77,
+        purchases: 212,
+        cost_per_purchase: 25.13
+      }
+    }
+  ]
+}
 ```
 
-### Componentes a Atualizar:
-- `src/pages/Leads.tsx` - Layout completamente novo
-- `src/components/leads/KPICard.tsx` - Novo visual seguindo referência
-- `src/components/leads/LeadsOverviewCharts.tsx` - Substituir por novos charts
+**Chamadas à API Meta:**
+1. `GET /act_{account_id}/campaigns` - Lista campanhas
+2. `GET /act_{account_id}/ads` - Lista anúncios com `creative{thumbnail_url}`
+3. `GET /{campaign_id}/insights` - Métricas por campanha
+
+**2. Hook: `useMetaCampaigns`**
+
+Novo hook React Query para buscar e cachear dados de campanhas com previews.
+
+**3. Componente: `CampaignPreviewCell`**
+
+Célula de tabela que exibe:
+- Thumbnail arredondado (40x40px)
+- Nome da campanha
+- Badge de status (Ativo/Pausado)
 
 ---
 
-## Especificações de Design
+## Parte 2: Revisão de Fidelidade Visual
 
-### Paleta de Cores (mantendo Invictus)
-| Elemento | Cor |
-|----------|-----|
-| Background | `hsl(0 0% 7%)` (grafite escuro) |
-| Cards | `hsl(0 0% 11%)` com glassmorphism |
-| Bordas | `hsl(0 0% 18%)` com accent dourado |
-| Primário (gold) | `hsl(42 85% 50%)` |
-| Meta Ads | `hsl(214 100% 50%)` (azul) |
-| Google Ads | `hsl(142 76% 36%)` (verde) |
-| Analytics | `hsl(25 95% 53%)` (laranja) |
-| Positivo | `hsl(142 76% 45%)` (verde) |
-| Negativo | `hsl(0 84% 60%)` (vermelho) |
+### Ajustes identificados
 
-### KPI Cards (novo estilo)
-```text
-┌─────────────────────────────┐
-│ Investimento Total          │  ← Label pequeno (muted)
-│ R$ 10.453,14                │  ← Valor grande (branco)
-│ ▲ 115,3%                    │  ← Badge de variação (verde/vermelho)
-│ ═══════════════════════════ │  ← Progress bar accent (opcional)
-└─────────────────────────────┘
-```
-
-### Cards de Plataforma
-- Header com emoji/ícone + nome
-- Legenda colorida (ex: "Compras na Semana")
-- Gráfico de barras (7 dias)
-- Grid de métricas à direita (Investimento, Compras, Custo por Compra)
-- Cada métrica com valor + variação %
-
-### Gráfico de Impressões
-- Dual line chart
-- Legenda: Meta Ads (azul) vs Google Ads (verde)
-- Eixo Y formatado em "k"
-- Tooltip com ambas as séries
+| Componente | Ajuste Necessário |
+|------------|-------------------|
+| **CampaignsTable** | Adicionar coluna de preview/thumbnail na primeira posição |
+| **CampaignsTable** | Incluir badge de status (Ativo/Pausado) |
+| **FunnelChart** | Ajustar proporções e gradientes para match exato |
+| **LeadsMetaView** | Reorganizar grid para match com referência |
+| **LeadsSidebar** | Já corrigido (ícones oficiais + nome "Leads") |
 
 ---
 
-## Plano de Implementação
+## Arquivos a Criar/Modificar
 
-### Fase 1: Componentes Base
-1. **LeadsKPIRow.tsx** - 5 KPIs em grid responsivo
-   - Valor grande + variação percentual colorida
-   - Barra de progresso opcional no fundo
-   - Glassmorphism + borda dourada sutil
+### Novos Arquivos:
+1. `supabase/functions/leads-meta-campaigns/index.ts` - Edge function para campanhas
+2. `src/hooks/useMetaCampaigns.ts` - Hook de dados
+3. `src/components/leads/charts/CampaignPreviewCell.tsx` - Célula com thumbnail
 
-2. **DonutWithLegend.tsx** - Donut chart reutilizável
-   - Aceita dados dinâmicos
-   - Legenda lateral com valores e cores
-
-3. **WeeklyBarChart.tsx** - Barras para dias da semana
-   - Labels: Seg, Ter, Qua, Qui, Sex, Sáb, Dom
-   - Cor customizável por plataforma
-
-### Fase 2: Cards de Plataforma
-4. **PlatformMetricsCard.tsx** - Card completo por plataforma
-   - Props: platform, chartData, metrics[]
-   - Layout: gráfico à esquerda, métricas à direita
-   - Cores específicas por plataforma
-
-5. **LeadsAnalyticsCard.tsx** - Card do GA4
-   - Gráfico de barras de acessos
-   - Métricas: Total de Acessos, Total de Usuários, Usuários Únicos
-
-### Fase 3: Gráficos Principais
-6. **LeadsImpressionsChart.tsx** - Linha dual
-   - Duas linhas (Meta + Google)
-   - Total agregado no header
-   - Variação percentual
-
-7. **LeadsRegionDonutChart.tsx** - Origem dos acessos
-   - Donut com % por região
-   - Tabela lateral: Região | Acessos | Barra de progresso
-
-### Fase 4: Página Principal
-8. **Leads.tsx** - Novo layout
-   - Header simplificado com logos e date picker
-   - Grid de KPIs (5 colunas desktop, 2 mobile)
-   - Seção de gráficos (Impressões + Cards de plataforma)
-   - Seção Analytics + Origem
+### Arquivos a Modificar:
+1. `src/components/leads/charts/CampaignsTable.tsx` - Adicionar coluna de preview
+2. `src/components/leads/views/LeadsMetaView.tsx` - Integrar dados reais de campanhas
 
 ---
 
 ## Detalhes Técnicos
 
-### Estrutura de Dados (mock inicial)
+### Edge Function - leads-meta-campaigns
+
 ```typescript
-interface PlatformChartData {
-  day: string;
-  value: number;
-}
+// Buscar campanhas da conta
+const campaignsUrl = 
+  `https://graph.facebook.com/v21.0/act_${accountId}/campaigns?` +
+  `fields=id,name,status,effective_status,adsets{id},ads{id,creative{thumbnail_url}}` +
+  `&access_token=${accessToken}`;
 
-interface PlatformMetric {
-  label: string;
-  value: string;
-  change: number; // percentual
-}
-
-interface RegionData {
-  name: string;
-  value: number;
-  percentage: number;
-  color: string;
-}
+// Buscar insights por campanha
+const insightsUrl =
+  `https://graph.facebook.com/v21.0/act_${accountId}/insights?` +
+  `level=campaign` +
+  `&fields=campaign_id,campaign_name,spend,actions` +
+  `&time_range={"since":"${startDate}","until":"${endDate}"}` +
+  `&access_token=${accessToken}`;
 ```
 
-### Responsividade
-| Breakpoint | KPIs | Charts | Platform Cards |
-|------------|------|--------|----------------|
-| Mobile (<640px) | 2 cols, scroll | 1 col | 1 col |
-| Tablet (640-1024px) | 3 cols | 2 cols | 2 cols |
-| Desktop (>1024px) | 5 cols | 3 cols | 2 cols |
+### Estrutura do CampaignPreviewCell
 
-### Animações
-- Cards: fade-in + slide-up sequencial
-- Charts: desenho progressivo (recharts default)
-- Hover: elevação sutil + brilho dourado
+```tsx
+// Thumbnail + Nome + Status
+<div className="flex items-center gap-3">
+  <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted/30">
+    {thumbnail_url ? (
+      <img src={thumbnail_url} className="w-full h-full object-cover" />
+    ) : (
+      <div className="flex items-center justify-center h-full">
+        <ImageIcon className="w-4 h-4 text-muted-foreground" />
+      </div>
+    )}
+  </div>
+  <div>
+    <p className="font-medium text-sm">{name}</p>
+    <Badge variant={status === "ACTIVE" ? "success" : "secondary"}>
+      {status === "ACTIVE" ? "Ativo" : "Pausado"}
+    </Badge>
+  </div>
+</div>
+```
 
 ---
 
-## Arquivos a Modificar
+## Fluxo de Implementação
 
-| Arquivo | Ação |
-|---------|------|
-| `src/pages/Leads.tsx` | Reescrever com novo layout |
-| `src/components/leads/KPICard.tsx` | Atualizar visual |
-| `src/components/leads/LeadsOverviewCharts.tsx` | Substituir por novos componentes |
-| `src/components/leads/PlatformSummaryCard.tsx` | Substituir por PlatformMetricsCard |
+1. Criar edge function `leads-meta-campaigns`
+2. Criar hook `useMetaCampaigns` 
+3. Criar componente `CampaignPreviewCell`
+4. Atualizar `CampaignsTable` com nova estrutura
+5. Atualizar `LeadsMetaView` para usar dados reais
+6. Testar integração end-to-end
 
 ---
 
-## Resultado Esperado
+## Considerações
 
-O dashboard final terá:
-- Visual idêntico às referências DashCortex
-- Identidade Invictus preservada (glassmorphism, dourado, grafite)
-- Dados mockados inicialmente (integração real já existe)
-- Layout responsivo para mobile e desktop
-- Transição suave entre estados de loading
+- **Fallback**: Se não houver conexão Meta ativa, exibir dados mockados sem thumbnails
+- **Cache**: Thumbnails serão cacheados via React Query (5 min stale time)
+- **Placeholder**: Ícone genérico quando thumbnail não disponível
+- **Status da campanha**: Badge visual indicando se está ativo ou pausado

@@ -186,6 +186,15 @@ export default function LeadsConexoes() {
   };
 
   const handleConnect = async (platform: PlatformType) => {
+    if (!session?.access_token) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar logado para conectar plataformas.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (platform === "meta_ads") {
       try {
         const redirectUri = `${getAppOrigin()}/leads/conexoes`;
@@ -195,7 +204,7 @@ export default function LeadsConexoes() {
           {
             method: "GET",
             headers: {
-              Authorization: `Bearer ${session?.access_token}`,
+              Authorization: `Bearer ${session.access_token}`,
               "Content-Type": "application/json",
             },
           }
@@ -205,6 +214,10 @@ export default function LeadsConexoes() {
 
         if (!response.ok || result.error) {
           throw new Error(result.error || "Falha ao iniciar OAuth");
+        }
+
+        if (!result.auth_url) {
+          throw new Error("URL de autenticação não retornada");
         }
 
         // Redirect to Meta OAuth
@@ -226,7 +239,7 @@ export default function LeadsConexoes() {
           {
             method: "GET",
             headers: {
-              Authorization: `Bearer ${session?.access_token}`,
+              Authorization: `Bearer ${session.access_token}`,
               "Content-Type": "application/json",
             },
           }
@@ -236,6 +249,10 @@ export default function LeadsConexoes() {
 
         if (!response.ok || result.error) {
           throw new Error(result.error || "Falha ao iniciar OAuth");
+        }
+
+        if (!result.auth_url) {
+          throw new Error("URL de autenticação não retornada");
         }
 
         // Redirect to Google OAuth

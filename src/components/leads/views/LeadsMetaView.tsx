@@ -7,6 +7,8 @@ import { FunnelChart } from "@/components/leads/charts/FunnelChart";
 import { MultiLineChart } from "@/components/leads/charts/MultiLineChart";
 import { CampaignsTable, type Campaign } from "@/components/leads/charts/CampaignsTable";
 import { DonutWithLegend } from "@/components/leads/charts/DonutWithLegend";
+import { ViewFilters, META_FILTERS } from "@/components/leads/ViewFilters";
+import { MetaIcon } from "@/components/leads/icons/PlatformIcons";
 import { formatCurrency, formatNumber } from "@/hooks/useLeadsMetrics";
 import { useMetaCampaigns } from "@/hooks/useMetaCampaigns";
 
@@ -79,6 +81,15 @@ export function LeadsMetaView({ meta, isLoading }: LeadsMetaViewProps) {
 
   return (
     <div className="space-y-6">
+      {/* Header with filters */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-3">
+          <MetaIcon className="text-xl" />
+          <h2 className="text-lg font-semibold text-foreground">Relatório Meta Ads</h2>
+        </div>
+        <ViewFilters filters={META_FILTERS} />
+      </div>
+
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <KPICard

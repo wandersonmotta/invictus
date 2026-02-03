@@ -1,12 +1,15 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { KPICard } from "@/components/leads/KPICard";
 import { KeywordsTable } from "@/components/leads/charts/KeywordsTable";
 import { MultiLineChart } from "@/components/leads/charts/MultiLineChart";
 import { CampaignsTable } from "@/components/leads/charts/CampaignsTable";
 import { DonutWithLegend } from "@/components/leads/charts/DonutWithLegend";
+import { ViewFilters, GOOGLE_ADS_FILTERS } from "@/components/leads/ViewFilters";
+import { GoogleAdsIcon } from "@/components/leads/icons/PlatformIcons";
 import { formatCurrency, formatNumber, formatPercent } from "@/hooks/useLeadsMetrics";
 
 interface LeadsGoogleAdsViewProps {
@@ -64,9 +67,24 @@ const mockCampaigns = [
 export function LeadsGoogleAdsView({ googleAds, isLoading }: LeadsGoogleAdsViewProps) {
   const hasData = googleAds.connected && googleAds.data?.metrics;
   const metrics = googleAds.data?.metrics;
+  
+  // Pagination state for keywords
+  const [keywordsPage, setKeywordsPage] = React.useState(1);
+  const keywordsPerPage = 10;
+  const totalKeywords = 793; // Mock total
+  const displayedKeywords = mockKeywords.slice(0, keywordsPerPage);
 
   return (
     <div className="space-y-6">
+      {/* Header with filters */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-3">
+          <GoogleAdsIcon className="h-6 w-6" />
+          <h2 className="text-lg font-semibold text-foreground">Relatório Google Ads</h2>
+        </div>
+        <ViewFilters filters={GOOGLE_ADS_FILTERS} />
+      </div>
+
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <KPICard
@@ -112,9 +130,35 @@ export function LeadsGoogleAdsView({ googleAds, isLoading }: LeadsGoogleAdsViewP
 
       {/* Main Content Grid */}
       <div className="grid lg:grid-cols-3 gap-4">
-        {/* Keywords Table */}
+        {/* Keywords Table with Pagination */}
         <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 lg:row-span-2">
-          <KeywordsTable keywords={mockKeywords} />
+          <KeywordsTable keywords={displayedKeywords} />
+          
+          {/* Pagination */}
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
+            <span className="text-[10px] text-muted-foreground">
+              1-{keywordsPerPage} de {totalKeywords}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                disabled={keywordsPage === 1}
+                onClick={() => setKeywordsPage((p) => Math.max(1, p - 1))}
+              >
+                <ChevronLeft className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => setKeywordsPage((p) => p + 1)}
+              >
+                <ChevronRight className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
           
           {/* Bottom KPIs */}
           <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-border/30">

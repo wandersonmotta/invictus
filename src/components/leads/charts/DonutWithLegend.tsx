@@ -13,6 +13,8 @@ interface DonutWithLegendProps {
   title?: string;
   className?: string;
   showProgress?: boolean;
+  showPercentage?: boolean;
+  height?: number;
 }
 
 export function DonutWithLegend({
@@ -20,13 +22,15 @@ export function DonutWithLegend({
   title,
   className,
   showProgress = true,
+  showPercentage = false,
+  height = 112,
 }: DonutWithLegendProps) {
   const total = data.reduce((acc, item) => acc + item.value, 0);
 
   return (
     <div className={cn("flex items-center gap-6", className)}>
       {/* Donut Chart */}
-      <div className="w-28 h-28 flex-shrink-0">
+      <div className="flex-shrink-0" style={{ width: height, height }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -69,7 +73,9 @@ export function DonutWithLegend({
                   </span>
                 </div>
                 <span className="font-medium tabular-nums">
-                  {item.value.toLocaleString("pt-BR")}
+                  {showPercentage 
+                    ? `${percentage.toFixed(0)}%` 
+                    : item.value.toLocaleString("pt-BR")}
                 </span>
               </div>
               {showProgress && (

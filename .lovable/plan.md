@@ -1,157 +1,199 @@
 
-# Plano: Campanhas Meta Ads com Preview Real + Revisão de Fidelidade
 
-## Resumo
+# Plano: Refatoração Completa do Dashboard de Leads para Fidelidade 100%
 
-Este plano aborda duas necessidades:
-1. **Revisar e ajustar** o dashboard de Leads para garantir fidelidade máxima às referências visuais
-2. **Implementar previews reais de campanhas** no Meta Ads, buscando thumbnails dos criativos diretamente da API do Facebook/Meta
+## Análise das Referências
+
+Após analisar detalhadamente as 4 imagens de referência (DashCortex), identifiquei as seguintes diferenças entre a implementação atual e o design desejado:
 
 ---
 
-## Parte 1: Previews de Campanhas com Dados Reais
+## Visão Geral (IMG_8349) - Diferenças Identificadas
 
-### O que será implementado
+| Elemento | Referência | Atual | Ação |
+|----------|------------|-------|------|
+| **KPI Cards** | 5 cards horizontais com barra de progresso colorida na base | Implementado mas layout pode diferir | Verificar espaçamento e cores |
+| **Impressões Totais** | Card com gráfico de linha dual (azul + verde) + valor grande à esquerda | Está OK | Mínimos ajustes |
+| **Meta Ads Card** | Gráfico de barras azuis + métricas lado a lado (Investimento, Compras, CPC) | Usa emojis ao invés de ícones oficiais | Substituir emojis por ícones SVG oficiais |
+| **Google Ads Card** | Gráfico de barras verdes + métricas lado a lado | Usa emojis | Substituir emojis por ícones SVG oficiais |
+| **Google Analytics Card** | Gráfico de barras laranja + métricas (Total Acessos, Usuários, Únicos) | Usa emoji | Substituir emoji por ícone SVG oficial |
+| **Origem dos Acessos** | Donut chart com tabela de regiões à direita | Existe mas layout diferente | Reorganizar layout para match |
 
-Na tabela de campanhas do Meta Ads, cada linha mostrará:
-- **Thumbnail do criativo** (imagem ou frame do vídeo do anúncio)
-- **Nome da campanha**
-- Métricas existentes (conjuntos, anúncios, investimento, custo por compra, compras)
+---
 
-### Arquitetura Técnica
+## Meta Ads (IMG_8350) - Diferenças Identificadas
 
-**1. Nova Edge Function: `leads-meta-campaigns`**
+| Elemento | Referência | Atual | Ação |
+|----------|------------|-------|------|
+| **Header** | Logo Meta (∞ azul) + "Relatório Meta Ads \| Nome da Empresa" | Parcialmente correto | Ajustar texto do header |
+| **Filtros** | Botões "Campanhas" e "Anúncios" no header | Não existe | Adicionar filtros de segmentação |
+| **Funil de Tráfego** | Funil 3D com gradiente azul degradê, labels nas laterais | Existe mas visual diferente | Refatorar completamente o FunnelChart |
+| **Métricas do Funil** | Add to Cart, Frequência, CPM abaixo do funil | Parcialmente implementado | Verificar valores e layout |
+| **Card Checkouts** | Checkouts Iniciados + Custo por Checkout + gráfico linha verde | Existe mas precisa ajustar | Refinar layout e cores |
+| **Melhores Anúncios** | Donut chart com legenda vertical à direita | Implementado | OK |
+| **Tabela Campanhas** | Colunas: Preview \| Nome \| Conjuntos \| Anúncios \| Investimento \| Custo por Compra \| Compras | Recém implementado | Verificar se preview está funcionando |
 
-Criará uma nova função para buscar campanhas com seus criativos da API Meta Marketing:
+---
 
+## Google Ads (IMG_8351) - Diferenças Identificadas
+
+| Elemento | Referência | Atual | Ação |
+|----------|------------|-------|------|
+| **Header** | Logo Google Ads + "Relatório Google Ads \| Nome da Empresa" + filtros (Campanhas, Grupo, Tipo) | Não tem filtros | Adicionar filtros dropdown |
+| **KPIs** | 5 KPIs (Investimento, Conversões, Custo por Conversão, Cliques, CPC Médio) | Implementado | OK |
+| **Palavras-chave** | Tabela com scroll e pagination (1-100/793) | Não tem pagination | Adicionar pagination |
+| **CTR e Taxa Conversão** | Cards separados abaixo da tabela keywords | Implementado | OK |
+| **Gráfico Multi-linha** | 3 linhas (Investimento azul, Conversões verde, Custo laranja) | Implementado | OK |
+| **Conversões por Gênero** | Donut verde/azul/cinza | Implementado | OK |
+| **Tabela Campanhas** | Com barra de progresso verde na linha destacada | Parcialmente | Ajustar highlight verde |
+
+---
+
+## Analytics (IMG_8352) - Diferenças Identificadas
+
+| Elemento | Referência | Atual | Ação |
+|----------|------------|-------|------|
+| **Header** | Logo Analytics + filtros "Cidade", "Região" | Não tem filtros | Adicionar dropdowns |
+| **KPIs** | 5 KPIs laranja (Acessos, Usuários, Novos Usuários, Visualizações, Taxa Engajamento) | Implementado | OK |
+| **Mapa do Brasil** | Mapa interativo com estados coloridos | Placeholder emoji 🇧🇷 | Implementar mapa real SVG |
+| **Tabela Regiões** | Região, Cidade, Acessos com barras de progresso laranja | Implementado | OK |
+| **Gráfico Período** | Linha laranja suave | Implementado mas usando DualLineChart | Usar gráfico de linha única |
+| **Gráfico Semanal** | Barras laranja por dia da semana | Implementado | OK |
+| **Origem Acessos** | Donut laranja com legend | Implementado | OK |
+| **Sistema Operacional** | Donut vermelho/laranja | Implementado | OK |
+| **Dispositivo** | Donut vermelho/laranja | Implementado | OK |
+| **Acessos por URL** | Tabela com barras | Implementado | OK |
+
+---
+
+## Mudanças Prioritárias a Implementar
+
+### 1. Ícones Oficiais nas Plataformas
+Substituir todos os emojis (📘, 📗, 📊) pelos ícones SVG oficiais:
+- **Meta**: Símbolo ∞ em azul #1877F2
+- **Google Ads**: Logo multicolorido oficial
+- **Analytics**: Logo laranja/amarelo oficial
+
+### 2. Refatorar FunnelChart (Meta Ads)
+Criar funil 3D com visual degradê azul idêntico à referência:
+```text
+    ┌─────────────────────────┐
+    │      Cliques            │  Taxa de Cliques: 0.93%
+    │        8K               │
+    └───────────────────────┐ │
+        │    Page Views     │    Connect Rate: 93.31%
+        │      8K           │
+        └─────────────────┐ │
+            │ Checkouts   │    Taxa de Checkout: 31.30%
+            │   2.474     │
+            └───────────┐ │
+               │Compras │    Taxa de Compras: 29.10%
+               │  720   │
+               └────────┘
 ```
-Endpoint: GET /leads-meta-campaigns
-Query params: start_date, end_date
 
-Retorno:
-{
-  campaigns: [
-    {
-      id: "123",
-      name: "CAM - Sales - Remarketing 2025",
-      status: "ACTIVE",
-      thumbnail_url: "https://...",
-      ad_sets_count: 3,
-      ads_count: 12,
-      insights: {
-        spend: 5276.77,
-        purchases: 212,
-        cost_per_purchase: 25.13
-      }
-    }
-  ]
-}
-```
+### 3. Mapa do Brasil (Analytics)
+Implementar SVG do mapa do Brasil com estados clicáveis e coloridos por densidade de acessos
 
-**Chamadas à API Meta:**
-1. `GET /act_{account_id}/campaigns` - Lista campanhas
-2. `GET /act_{account_id}/ads` - Lista anúncios com `creative{thumbnail_url}`
-3. `GET /{campaign_id}/insights` - Métricas por campanha
+### 4. Filtros nos Headers
+Adicionar dropdowns de filtros em cada view:
+- **Meta Ads**: Campanhas, Anúncios
+- **Google Ads**: Campanhas, Grupo, Tipo
+- **Analytics**: Cidade, Região
 
-**2. Hook: `useMetaCampaigns`**
-
-Novo hook React Query para buscar e cachear dados de campanhas com previews.
-
-**3. Componente: `CampaignPreviewCell`**
-
-Célula de tabela que exibe:
-- Thumbnail arredondado (40x40px)
-- Nome da campanha
-- Badge de status (Ativo/Pausado)
+### 5. Layout dos Cards de Plataforma (Overview)
+Reorganizar para match exato:
+- Título com ícone SVG oficial
+- Gráfico de barras semanal
+- Métricas em grid 2x2 abaixo
 
 ---
 
-## Parte 2: Revisão de Fidelidade Visual
+## Arquivos a Modificar
 
-### Ajustes identificados
-
-| Componente | Ajuste Necessário |
-|------------|-------------------|
-| **CampaignsTable** | Adicionar coluna de preview/thumbnail na primeira posição |
-| **CampaignsTable** | Incluir badge de status (Ativo/Pausado) |
-| **FunnelChart** | Ajustar proporções e gradientes para match exato |
-| **LeadsMetaView** | Reorganizar grid para match com referência |
-| **LeadsSidebar** | Já corrigido (ícones oficiais + nome "Leads") |
+| Arquivo | Mudança |
+|---------|---------|
+| `src/components/leads/PlatformMetricsCard.tsx` | Trocar emojis por ícones SVG oficiais |
+| `src/components/leads/LeadsAnalyticsCard.tsx` | Trocar emoji por ícone SVG oficial |
+| `src/components/leads/charts/FunnelChart.tsx` | Refatorar completamente para visual 3D degradê |
+| `src/components/leads/views/LeadsMetaView.tsx` | Adicionar filtros no header, ajustar layout |
+| `src/components/leads/views/LeadsGoogleAdsView.tsx` | Adicionar filtros, ajustar tabela keywords com pagination |
+| `src/components/leads/views/LeadsAnalyticsView.tsx` | Adicionar filtros, implementar mapa SVG do Brasil |
+| `src/components/leads/views/LeadsOverviewView.tsx` | Ajustar layout cards para match exato |
 
 ---
 
-## Arquivos a Criar/Modificar
+## Arquivos Novos a Criar
 
-### Novos Arquivos:
-1. `supabase/functions/leads-meta-campaigns/index.ts` - Edge function para campanhas
-2. `src/hooks/useMetaCampaigns.ts` - Hook de dados
-3. `src/components/leads/charts/CampaignPreviewCell.tsx` - Célula com thumbnail
-
-### Arquivos a Modificar:
-1. `src/components/leads/charts/CampaignsTable.tsx` - Adicionar coluna de preview
-2. `src/components/leads/views/LeadsMetaView.tsx` - Integrar dados reais de campanhas
+| Arquivo | Descrição |
+|---------|-----------|
+| `src/components/leads/icons/PlatformIcons.tsx` | Componentes SVG dos ícones oficiais (Meta, Google Ads, Analytics) |
+| `src/components/leads/charts/BrazilMap.tsx` | Mapa SVG do Brasil com estados interativos |
+| `src/components/leads/ViewFilters.tsx` | Componente de filtros dropdown reutilizável |
 
 ---
 
 ## Detalhes Técnicos
 
-### Edge Function - leads-meta-campaigns
-
-```typescript
-// Buscar campanhas da conta
-const campaignsUrl = 
-  `https://graph.facebook.com/v21.0/act_${accountId}/campaigns?` +
-  `fields=id,name,status,effective_status,adsets{id},ads{id,creative{thumbnail_url}}` +
-  `&access_token=${accessToken}`;
-
-// Buscar insights por campanha
-const insightsUrl =
-  `https://graph.facebook.com/v21.0/act_${accountId}/insights?` +
-  `level=campaign` +
-  `&fields=campaign_id,campaign_name,spend,actions` +
-  `&time_range={"since":"${startDate}","until":"${endDate}"}` +
-  `&access_token=${accessToken}`;
-```
-
-### Estrutura do CampaignPreviewCell
+### Ícones SVG Oficiais
 
 ```tsx
-// Thumbnail + Nome + Status
-<div className="flex items-center gap-3">
-  <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted/30">
-    {thumbnail_url ? (
-      <img src={thumbnail_url} className="w-full h-full object-cover" />
-    ) : (
-      <div className="flex items-center justify-center h-full">
-        <ImageIcon className="w-4 h-4 text-muted-foreground" />
-      </div>
-    )}
-  </div>
-  <div>
-    <p className="font-medium text-sm">{name}</p>
-    <Badge variant={status === "ACTIVE" ? "success" : "secondary"}>
-      {status === "ACTIVE" ? "Ativo" : "Pausado"}
-    </Badge>
-  </div>
-</div>
+// Meta Icon
+const MetaIcon = () => (
+  <span className="text-lg font-bold" style={{ color: "#1877F2" }}>∞</span>
+);
+
+// Google Ads Icon (já existe no LeadsSidebar)
+const GoogleAdsIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5">
+    <path fill="#FBBC04" d="M3.5 18.49l5.5-9.53..."/>
+    <path fill="#4285F4" d="M14.5 18.49l5.5-9.53..."/>
+    <path fill="#34A853" d="M9 8.96l5.5-9.53..."/>
+    <circle fill="#EA4335" cx="6" cy="18" r="3"/>
+  </svg>
+);
+
+// Analytics Icon
+const AnalyticsIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5">
+    <path fill="#F9AB00" d="M22 12c0 5.52-4.48 10-10 10S2 17.52 2 12h4..."/>
+    <path fill="#E37400" d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12h4..."/>
+    <circle fill="#F9AB00" cx="12" cy="12" r="4"/>
+  </svg>
+);
 ```
 
+### Novo FunnelChart com Visual 3D
+
+O funil terá:
+- Gradiente azul degradando de claro para escuro (top to bottom)
+- Formato trapezoidal diminuindo em cada etapa
+- Labels com valores centralizados
+- Taxas de conversão na lateral direita
+- Bordas arredondadas na base
+
+### Mapa do Brasil
+
+Usar SVG paths dos estados brasileiros com:
+- Fill baseado na densidade de acessos (escala laranja)
+- Hover interativo mostrando nome do estado
+- Legenda de cores
+
 ---
 
-## Fluxo de Implementação
+## Ordem de Implementação
 
-1. Criar edge function `leads-meta-campaigns`
-2. Criar hook `useMetaCampaigns` 
-3. Criar componente `CampaignPreviewCell`
-4. Atualizar `CampaignsTable` com nova estrutura
-5. Atualizar `LeadsMetaView` para usar dados reais
-6. Testar integração end-to-end
+1. Criar componente `PlatformIcons.tsx` com todos os ícones SVG
+2. Atualizar `PlatformMetricsCard.tsx` e `LeadsAnalyticsCard.tsx` para usar ícones
+3. Refatorar `FunnelChart.tsx` completamente
+4. Criar `BrazilMap.tsx` para Analytics
+5. Criar `ViewFilters.tsx` para dropdowns
+6. Atualizar cada View com filtros e ajustes de layout
+7. Revisar cores, espaçamentos e tipografia para match exato
 
 ---
 
-## Considerações
+## Resultado Esperado
 
-- **Fallback**: Se não houver conexão Meta ativa, exibir dados mockados sem thumbnails
-- **Cache**: Thumbnails serão cacheados via React Query (5 min stale time)
-- **Placeholder**: Ícone genérico quando thumbnail não disponível
-- **Status da campanha**: Badge visual indicando se está ativo ou pausado
+Dashboard 100% fiel às referências DashCortex, mantendo a identidade visual Invictus (glassmorphism, tons dourados sutis nos elementos interativos) apenas nos elementos de navegação e UI, enquanto o conteúdo do dashboard segue exatamente o estilo das referências.
+

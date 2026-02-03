@@ -31,7 +31,7 @@ export default function Leads() {
   const getViewTitle = () => {
     switch (activeView) {
       case "overview":
-        return "Invictus Fraternidade";
+        return "Visão geral das plataformas";
       case "meta":
         return "Relatório Meta Ads";
       case "google_ads":

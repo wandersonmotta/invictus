@@ -9,7 +9,7 @@ interface KPICardProps {
   change?: number;
   changeLabel?: string;
   icon?: React.ReactNode;
-  variant?: "default" | "primary" | "success" | "warning" | "meta" | "google";
+  variant?: "default" | "primary" | "success" | "warning" | "meta" | "google" | "analytics";
   showProgress?: boolean;
   progressValue?: number;
   className?: string;
@@ -51,6 +51,12 @@ const variantStyles = {
     gradient: "from-green-600/15 to-transparent",
     progressColor: "hsl(142 76% 36%)",
     decorative: "bg-green-600",
+  },
+  analytics: {
+    border: "border-orange-500/30",
+    gradient: "from-orange-500/15 to-transparent",
+    progressColor: "hsl(25 95% 53%)",
+    decorative: "bg-orange-500",
   },
 };
 

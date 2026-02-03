@@ -1,13 +1,14 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { KPICard } from "@/components/leads/KPICard";
 import { FunnelChart } from "@/components/leads/charts/FunnelChart";
 import { MultiLineChart } from "@/components/leads/charts/MultiLineChart";
-import { CampaignsTable } from "@/components/leads/charts/CampaignsTable";
+import { CampaignsTable, type Campaign } from "@/components/leads/charts/CampaignsTable";
 import { DonutWithLegend } from "@/components/leads/charts/DonutWithLegend";
 import { formatCurrency, formatNumber } from "@/hooks/useLeadsMetrics";
+import { useMetaCampaigns } from "@/hooks/useMetaCampaigns";
 
 interface LeadsMetaViewProps {
   meta: any;
@@ -36,23 +37,45 @@ const mockRevenueData = [
 ];
 
 const mockBestAds = [
-  { name: "Ad 1", value: 35, color: "#3B82F6" },
-  { name: "Ad 2", value: 28, color: "#22C55E" },
-  { name: "Ad 3", value: 22, color: "#F97316" },
-  { name: "Outros", value: 15, color: "#6B7280" },
+  { name: "Ad 1", value: 35, color: "hsl(var(--primary))" },
+  { name: "Ad 2", value: 28, color: "hsl(142 76% 36%)" },
+  { name: "Ad 3", value: 22, color: "hsl(25 95% 53%)" },
+  { name: "Outros", value: 15, color: "hsl(var(--muted-foreground))" },
 ];
 
-const mockCampaigns = [
-  { name: "CAM - Sales - Remarketing 2025", conjuntos: 3, anuncios: 12, investimento: 5276.77, custoConversao: 25.13, compras: 212 },
-  { name: "CAM - Sales - Lookalike", conjuntos: 2, anuncios: 8, investimento: 3575.28, custoConversao: 21.48, compras: 166 },
-  { name: "CAM - Sales - Interest", conjuntos: 4, anuncios: 15, investimento: 903.82, custoConversao: 30.12, compras: 30 },
-  { name: "CAM - Awareness - Brand", conjuntos: 1, anuncios: 3, investimento: 879.16, custoConversao: 43.95, compras: 20 },
-  { name: "CAM - Traffic - Blog", conjuntos: 2, anuncios: 6, investimento: 501.25, custoConversao: 55.69, compras: 9 },
+const mockCampaigns: Campaign[] = [
+  { name: "CAM - Sales - Remarketing 2025", status: "ACTIVE", thumbnailUrl: null, conjuntos: 3, anuncios: 12, investimento: 5276.77, custoConversao: 25.13, compras: 212 },
+  { name: "CAM - Sales - Lookalike", status: "ACTIVE", thumbnailUrl: null, conjuntos: 2, anuncios: 8, investimento: 3575.28, custoConversao: 21.48, compras: 166 },
+  { name: "CAM - Sales - Interest", status: "PAUSED", thumbnailUrl: null, conjuntos: 4, anuncios: 15, investimento: 903.82, custoConversao: 30.12, compras: 30 },
+  { name: "CAM - Awareness - Brand", status: "PAUSED", thumbnailUrl: null, conjuntos: 1, anuncios: 3, investimento: 879.16, custoConversao: 43.95, compras: 20 },
+  { name: "CAM - Traffic - Blog", status: "ACTIVE", thumbnailUrl: null, conjuntos: 2, anuncios: 6, investimento: 501.25, custoConversao: 55.69, compras: 9 },
 ];
 
 export function LeadsMetaView({ meta, isLoading }: LeadsMetaViewProps) {
   const hasData = meta.connected && meta.data?.metrics;
   const metrics = meta.data?.metrics;
+
+  // Fetch real campaigns when connected
+  const { data: campaignsData, isLoading: campaignsLoading } = useMetaCampaigns({
+    enabled: meta.connected,
+  });
+
+  // Transform API campaigns to table format or use mock data
+  const campaigns: Campaign[] = React.useMemo(() => {
+    if (campaignsData?.connected && campaignsData.campaigns?.length) {
+      return campaignsData.campaigns.map((c) => ({
+        name: c.name,
+        status: c.status,
+        thumbnailUrl: c.thumbnail_url,
+        conjuntos: c.ad_sets_count,
+        anuncios: c.ads_count,
+        investimento: c.insights.spend,
+        custoConversao: c.insights.cost_per_purchase,
+        compras: c.insights.purchases,
+      }));
+    }
+    return mockCampaigns;
+  }, [campaignsData]);
 
   return (
     <div className="space-y-6">
@@ -131,7 +154,7 @@ export function LeadsMetaView({ meta, isLoading }: LeadsMetaViewProps) {
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase">Checkouts Iniciados</p>
                 <p className="text-xl font-bold text-foreground">2.474</p>
-                <span className="flex items-center text-[10px] text-green-500">
+                <span className="flex items-center text-[10px] text-emerald-500">
                   <TrendingUp className="h-2.5 w-2.5 mr-0.5" />
                   152.2%
                 </span>
@@ -145,11 +168,11 @@ export function LeadsMetaView({ meta, isLoading }: LeadsMetaViewProps) {
             {/* Chart legend */}
             <div className="flex items-center gap-4 text-xs">
               <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "hsl(142 76% 36%)" }} />
                 <span className="text-muted-foreground">Faturamento</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                <div className="w-2.5 h-2.5 rounded-full bg-primary" />
                 <span className="text-muted-foreground">Compras</span>
               </div>
             </div>
@@ -158,8 +181,8 @@ export function LeadsMetaView({ meta, isLoading }: LeadsMetaViewProps) {
             <MultiLineChart
               data={mockRevenueData}
               lines={[
-                { dataKey: "faturamento", color: "#22C55E", label: "Faturamento" },
-                { dataKey: "compras", color: "#3B82F6", label: "Compras" },
+                { dataKey: "faturamento", color: "hsl(142 76% 36%)", label: "Faturamento" },
+                { dataKey: "compras", color: "hsl(var(--primary))", label: "Compras" },
               ]}
               height={180}
             />
@@ -181,7 +204,11 @@ export function LeadsMetaView({ meta, isLoading }: LeadsMetaViewProps) {
 
       {/* Campaigns Table */}
       <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40">
-        <CampaignsTable campaigns={mockCampaigns} platform="meta" />
+        <h3 className="text-sm font-medium text-foreground mb-4">Campanhas</h3>
+        <CampaignsTable 
+          campaigns={campaigns} 
+          platform="meta" 
+        />
       </Card>
     </div>
   );

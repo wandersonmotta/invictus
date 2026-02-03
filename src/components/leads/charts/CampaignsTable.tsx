@@ -8,9 +8,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
+import { CampaignPreviewCell } from "./CampaignPreviewCell";
 
-interface Campaign {
+export interface Campaign {
   name: string;
+  status?: string;
+  thumbnailUrl?: string | null;
   conjuntos?: number;
   anuncios?: number;
   investimento: number;
@@ -39,7 +42,7 @@ export function CampaignsTable({ campaigns, platform, className }: CampaignsTabl
         <TableHeader>
           <TableRow className="bg-muted/30 hover:bg-muted/30">
             <TableHead className="text-xs font-medium text-muted-foreground">
-              Campanhas
+              {platform === "meta" ? "Campanha" : "Campanhas"}
             </TableHead>
             {platform === "meta" && (
               <>
@@ -76,8 +79,18 @@ export function CampaignsTable({ campaigns, platform, className }: CampaignsTabl
                 campaign.isHighlighted && "bg-primary/10"
               )}
             >
-              <TableCell className="text-sm font-medium text-foreground max-w-[200px] truncate">
-                {campaign.name}
+              <TableCell className="py-3">
+                {platform === "meta" ? (
+                  <CampaignPreviewCell
+                    name={campaign.name}
+                    thumbnailUrl={campaign.thumbnailUrl ?? null}
+                    status={campaign.status || "PAUSED"}
+                  />
+                ) : (
+                  <span className="text-sm font-medium text-foreground max-w-[200px] truncate block">
+                    {campaign.name}
+                  </span>
+                )}
               </TableCell>
               {platform === "meta" && (
                 <>
@@ -97,7 +110,7 @@ export function CampaignsTable({ campaigns, platform, className }: CampaignsTabl
                   <Progress
                     value={(campaign.investimento / maxInvestimento) * 100}
                     className="h-1 w-16"
-                    style={{ "--progress-color": "hsl(214 100% 50%)" } as React.CSSProperties}
+                    style={{ "--progress-color": "hsl(var(--primary))" } as React.CSSProperties}
                   />
                 </div>
               </TableCell>

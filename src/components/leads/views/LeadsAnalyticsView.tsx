@@ -6,15 +6,10 @@ import { KPICard } from "@/components/leads/KPICard";
 import { DonutWithLegend } from "@/components/leads/charts/DonutWithLegend";
 import { WeeklyBarChart } from "@/components/leads/charts/WeeklyBarChart";
 import { DualLineChart } from "@/components/leads/charts/DualLineChart";
+import { BrazilMap } from "@/components/leads/charts/BrazilMap";
+import { ViewFilters, ANALYTICS_FILTERS } from "@/components/leads/ViewFilters";
+import { AnalyticsIcon } from "@/components/leads/icons/PlatformIcons";
 import { formatNumber, formatPercent } from "@/hooks/useLeadsMetrics";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 
 interface LeadsAnalyticsViewProps {
@@ -92,6 +87,17 @@ const mockUrls = [
   { url: "invictusfraternidade.com.br/blog", acessos: 423 },
 ];
 
+const mockMapData = [
+  { code: "SP", name: "São Paulo", value: 1908 },
+  { code: "RJ", name: "Rio de Janeiro", value: 277 },
+  { code: "MG", name: "Minas Gerais", value: 246 },
+  { code: "DF", name: "Distrito Federal", value: 221 },
+  { code: "PR", name: "Paraná", value: 189 },
+  { code: "GO", name: "Goiás", value: 188 },
+  { code: "CE", name: "Ceará", value: 167 },
+  { code: "SC", name: "Santa Catarina", value: 156 },
+];
+
 export function LeadsAnalyticsView({ ga4, isLoading }: LeadsAnalyticsViewProps) {
   const hasData = ga4.connected && ga4.data?.metrics;
   const metrics = ga4.data?.metrics;
@@ -99,6 +105,15 @@ export function LeadsAnalyticsView({ ga4, isLoading }: LeadsAnalyticsViewProps) 
 
   return (
     <div className="space-y-6">
+      {/* Header with filters */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-3">
+          <AnalyticsIcon className="h-6 w-6" />
+          <h2 className="text-lg font-semibold text-foreground">Relatório Analytics</h2>
+        </div>
+        <ViewFilters filters={ANALYTICS_FILTERS} />
+      </div>
+
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <KPICard
@@ -145,12 +160,10 @@ export function LeadsAnalyticsView({ ga4, isLoading }: LeadsAnalyticsViewProps) 
 
       {/* Main Content Grid */}
       <div className="grid lg:grid-cols-3 gap-4">
-        {/* Brazil Map Placeholder + Region Table */}
+        {/* Brazil Map + Region Table */}
         <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 lg:row-span-2">
-          {/* Map placeholder */}
-          <div className="h-48 bg-muted/20 rounded-lg flex items-center justify-center mb-4 border border-border/30">
-            <span className="text-4xl">🇧🇷</span>
-          </div>
+          {/* Brazil Map */}
+          <BrazilMap data={mockMapData} className="mb-4" />
           
           {/* Region Table */}
           <div className="space-y-2">

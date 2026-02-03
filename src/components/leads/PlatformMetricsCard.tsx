@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { WeeklyBarChart } from "./charts/WeeklyBarChart";
+import { MetaIcon, GoogleAdsIcon, AnalyticsIcon } from "./icons/PlatformIcons";
 import type { PlatformMetric } from "./charts/types";
 
 interface PlatformMetricsCardProps {
@@ -16,21 +17,21 @@ interface PlatformMetricsCardProps {
 
 const platformConfig = {
   meta: {
-    icon: "📘",
+    icon: <MetaIcon />,
     legendColor: "#3B82F6",
     color: "hsl(214 100% 50%)",
     gradient: "from-blue-600/20 via-blue-500/10 to-transparent",
     borderAccent: "border-blue-500/20",
   },
   google_ads: {
-    icon: "📗",
+    icon: <GoogleAdsIcon />,
     legendColor: "#22C55E",
     color: "hsl(142 76% 36%)",
     gradient: "from-green-600/20 via-green-500/10 to-transparent",
     borderAccent: "border-green-500/20",
   },
   analytics: {
-    icon: "📊",
+    icon: <AnalyticsIcon />,
     legendColor: "#F97316",
     color: "hsl(25 95% 53%)",
     gradient: "from-orange-600/20 via-orange-500/10 to-transparent",
@@ -95,7 +96,9 @@ export function PlatformMetricsCard({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-lg">{config.icon}</span>
+            <span className="flex items-center justify-center w-6 h-6">
+              {config.icon}
+            </span>
             <h3 className="font-medium text-foreground">{title}</h3>
           </div>
         </div>

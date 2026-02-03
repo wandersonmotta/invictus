@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { WeeklyBarChart } from "./charts/WeeklyBarChart";
+import { AnalyticsIcon } from "./icons/PlatformIcons";
 import type { PlatformMetric } from "./charts/types";
 
 interface LeadsAnalyticsCardProps {
@@ -59,7 +60,9 @@ export function LeadsAnalyticsCard({
       <div className="relative z-10 space-y-4">
         {/* Header */}
         <div className="flex items-center gap-2">
-          <span className="text-lg">📊</span>
+          <span className="flex items-center justify-center w-6 h-6">
+            <AnalyticsIcon />
+          </span>
           <h3 className="font-medium text-foreground">Google Analytics</h3>
         </div>
 

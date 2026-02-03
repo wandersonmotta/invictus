@@ -52,7 +52,7 @@ export function DonutWithLegend({
       </div>
 
       {/* Legend with Progress Bars */}
-      <div className="flex-1 space-y-2.5">
+      <div className="flex-1 min-w-0 space-y-2">
         {title && (
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
             {title}
@@ -62,17 +62,17 @@ export function DonutWithLegend({
           const percentage = total > 0 ? (item.value / total) * 100 : 0;
           return (
             <div key={item.name} className="space-y-1">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between text-xs gap-2">
+                <div className="flex items-center gap-1.5 min-w-0 flex-1">
                   <div
                     className="w-2 h-2 rounded-full flex-shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-muted-foreground truncate">
+                  <span className="text-muted-foreground truncate text-[11px]">
                     {item.name}
                   </span>
                 </div>
-                <span className="font-medium tabular-nums">
+                <span className="font-medium tabular-nums flex-shrink-0 text-[11px]">
                   {showPercentage 
                     ? `${percentage.toFixed(0)}%` 
                     : item.value.toLocaleString("pt-BR")}
@@ -81,7 +81,7 @@ export function DonutWithLegend({
               {showProgress && (
                 <Progress
                   value={percentage}
-                  className="h-1.5 bg-muted/30"
+                  className="h-1 bg-muted/30"
                   style={
                     {
                       "--progress-color": item.color,

@@ -14,6 +14,128 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_metrics_cache: {
+        Row: {
+          connection_id: string
+          data: Json
+          date_range_end: string
+          date_range_start: string
+          fetched_at: string | null
+          id: string
+          metric_type: string
+        }
+        Insert: {
+          connection_id: string
+          data: Json
+          date_range_end: string
+          date_range_start: string
+          fetched_at?: string | null
+          id?: string
+          metric_type: string
+        }
+        Update: {
+          connection_id?: string
+          data?: Json
+          date_range_end?: string
+          date_range_start?: string
+          fetched_at?: string | null
+          id?: string
+          metric_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_metrics_cache_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "ad_platform_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_platform_connections: {
+        Row: {
+          access_token_encrypted: string | null
+          account_id: string | null
+          account_name: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          last_sync_at: string | null
+          platform: string
+          property_id: string | null
+          refresh_token_encrypted: string | null
+          token_expires_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token_encrypted?: string | null
+          account_id?: string | null
+          account_name?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          platform: string
+          property_id?: string | null
+          refresh_token_encrypted?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token_encrypted?: string | null
+          account_id?: string | null
+          account_name?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          platform?: string
+          property_id?: string | null
+          refresh_token_encrypted?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ad_reports: {
+        Row: {
+          created_at: string | null
+          date_range_end: string
+          date_range_start: string
+          id: string
+          pdf_storage_path: string | null
+          platforms: string[]
+          report_data: Json
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          date_range_end: string
+          date_range_start: string
+          id?: string
+          pdf_storage_path?: string | null
+          platforms: string[]
+          report_data: Json
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          date_range_end?: string
+          date_range_start?: string
+          id?: string
+          pdf_storage_path?: string | null
+          platforms?: string[]
+          report_data?: Json
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       admin_audit_logs: {
         Row: {
           action: string

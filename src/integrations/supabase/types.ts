@@ -309,6 +309,7 @@ export type Database = {
           accepted_at: string | null
           conversation_id: string
           folder: Database["public"]["Enums"]["conversation_folder"]
+          hidden_at: string | null
           joined_at: string
           last_read_at: string | null
           member_role: string
@@ -318,6 +319,7 @@ export type Database = {
           accepted_at?: string | null
           conversation_id: string
           folder?: Database["public"]["Enums"]["conversation_folder"]
+          hidden_at?: string | null
           joined_at?: string
           last_read_at?: string | null
           member_role?: string
@@ -327,6 +329,7 @@ export type Database = {
           accepted_at?: string | null
           conversation_id?: string
           folder?: Database["public"]["Enums"]["conversation_folder"]
+          hidden_at?: string | null
           joined_at?: string
           last_read_at?: string | null
           member_role?: string
@@ -752,6 +755,9 @@ export type Database = {
           body: string | null
           conversation_id: string
           created_at: string
+          deleted_at: string | null
+          deleted_for: string[] | null
+          edited_at: string | null
           id: string
           sender_id: string
         }
@@ -759,6 +765,9 @@ export type Database = {
           body?: string | null
           conversation_id: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_for?: string[] | null
+          edited_at?: string | null
           id?: string
           sender_id: string
         }
@@ -766,6 +775,9 @@ export type Database = {
           body?: string | null
           conversation_id?: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_for?: string[] | null
+          edited_at?: string | null
           id?: string
           sender_id?: string
         }
@@ -1148,6 +1160,10 @@ export type Database = {
         Args: { p_comment_id: string }
         Returns: boolean
       }
+      delete_message_for_me: {
+        Args: { p_message_id: string }
+        Returns: boolean
+      }
       delete_my_notifications: {
         Args: { p_all?: boolean; p_ids?: string[] }
         Returns: number
@@ -1205,6 +1221,16 @@ export type Database = {
           followers_count: number
           following_count: number
           is_following: boolean
+        }[]
+      }
+      get_mutual_statuses: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          display_name: string
+          expires_at: string
+          status_text: string
+          user_id: string
         }[]
       }
       get_my_threads: {

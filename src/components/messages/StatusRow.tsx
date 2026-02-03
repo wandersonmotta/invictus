@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Plus } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { StatusFeed } from "./StatusFeed";
 
 export function StatusRow() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const qc = useQueryClient();
   const [open, setOpen] = React.useState(false);
   const [text, setText] = React.useState("");
   const [saving, setSaving] = React.useState(false);
@@ -35,20 +38,23 @@ export function StatusRow() {
 
     toast({ title: "Status atualizado", description: "Válido por 24 horas." });
     setOpen(false);
+    setText("");
+    qc.invalidateQueries({ queryKey: ["mutual_statuses"] });
   };
 
   return (
     <div className="flex items-center gap-3 overflow-x-auto">
+      {/* Botão para adicionar/editar status */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <button
             type="button"
-            className="flex items-center gap-2 rounded-full border border-border/70 px-3 py-2 invictus-surface invictus-frame shrink-0"
+            className="flex flex-col items-center gap-1 shrink-0 transition-transform hover:scale-105"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-border/70">
-              <Plus className="h-4 w-4" aria-hidden="true" />
+            <span className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-dashed border-border/70 bg-muted/10">
+              <Plus className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
             </span>
-            <span className="text-sm font-medium">Seu status</span>
+            <span className="text-[10px] text-muted-foreground">Status</span>
           </button>
         </DialogTrigger>
 
@@ -56,11 +62,16 @@ export function StatusRow() {
           <div className="invictus-modal-glass invictus-frame p-5">
             <DialogHeader className="mb-4">
               <DialogTitle>Status do dia</DialogTitle>
-              <DialogDescription>Texto curto que expira em 24h.</DialogDescription>
+              <DialogDescription>Texto curto visível para conexões mútuas. Expira em 24h.</DialogDescription>
             </DialogHeader>
 
             <div className="space-y-3">
-              <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Ex.: Em reunião. Respondo mais tarde." />
+              <Input 
+                value={text} 
+                onChange={(e) => setText(e.target.value)} 
+                placeholder="Ex.: Em reunião. Respondo mais tarde."
+                maxLength={200}
+              />
               <Button className="h-11 w-full" onClick={() => void save()} disabled={saving}>
                 {saving ? "Salvando…" : "Salvar"}
               </Button>
@@ -69,9 +80,8 @@ export function StatusRow() {
         </DialogContent>
       </Dialog>
 
-      <div className="text-xs text-muted-foreground whitespace-nowrap">
-        (Feed de status dos membros vem na próxima etapa.)
-      </div>
+      {/* Feed de status de conexões mútuas */}
+      <StatusFeed />
     </div>
   );
 }

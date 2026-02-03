@@ -6,6 +6,21 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+type Platform = "google_ads" | "google_analytics";
+
+function buildScopes(platform: Platform) {
+  // IMPORTANT: Request only what is needed per platform.
+  // Requesting Google Ads scope can trigger extra verification / restrictions and cause 403 on the provider screen.
+  const base = ["openid", "email", "profile"];
+
+  if (platform === "google_ads") {
+    return ["https://www.googleapis.com/auth/adwords", ...base].join(" ");
+  }
+
+  // GA4 read-only
+  return ["https://www.googleapis.com/auth/analytics.readonly", ...base].join(" ");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -23,7 +38,9 @@ Deno.serve(async (req) => {
 
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
-    const platform = url.searchParams.get("platform"); // "google_ads" or "google_analytics"
+    const platformParam = url.searchParams.get("platform"); // "google_ads" or "google_analytics"
+    const requestedPlatform: Platform =
+      platformParam === "google_analytics" ? "google_analytics" : "google_ads";
 
     // Generate OAuth URL for redirect
     if (action === "get_auth_url") {
@@ -42,17 +59,10 @@ Deno.serve(async (req) => {
 
       const state = JSON.stringify({
         nonce: crypto.randomUUID(),
-        platform: platform || "google_ads",
+        platform: requestedPlatform,
       });
 
-      // Scopes for both Google Ads and Analytics
-      const scopes = [
-        "https://www.googleapis.com/auth/adwords", // Google Ads
-        "https://www.googleapis.com/auth/analytics.readonly", // GA4
-        "openid",
-        "email",
-        "profile",
-      ].join(" ");
+      const scopes = buildScopes(requestedPlatform);
 
       const authUrl =
         `https://accounts.google.com/o/oauth2/v2/auth?` +

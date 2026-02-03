@@ -70,14 +70,14 @@ const mockOriginData = [
 ];
 
 const mockRegions = [
-  { regiao: "State of São Paulo", cidade: "São Paulo", acessos: 1908 },
-  { regiao: "State of Rio de Janeiro", cidade: "Rio de Janeiro", acessos: 277 },
-  { regiao: "State of Minas Gerais", cidade: "Belo Horizonte", acessos: 246 },
-  { regiao: "Federal District", cidade: "Brasília", acessos: 221 },
-  { regiao: "State of Paraná", cidade: "Curitiba", acessos: 189 },
-  { regiao: "State of Goiás", cidade: "Goiânia", acessos: 188 },
+  { regiao: "São Paulo", cidade: "São Paulo", acessos: 1908 },
+  { regiao: "Rio de Janeiro", cidade: "Rio de Janeiro", acessos: 277 },
+  { regiao: "Minas Gerais", cidade: "Belo Horizonte", acessos: 246 },
+  { regiao: "Distrito Federal", cidade: "Brasília", acessos: 221 },
+  { regiao: "Paraná", cidade: "Curitiba", acessos: 189 },
+  { regiao: "Goiás", cidade: "Goiânia", acessos: 188 },
   { regiao: "Ceará", cidade: "Fortaleza", acessos: 167 },
-  { regiao: "State of Santa Catarina", cidade: "Florianópolis", acessos: 156 },
+  { regiao: "Santa Catarina", cidade: "Florianópolis", acessos: 156 },
 ];
 
 const mockUrls = [
@@ -174,29 +174,27 @@ export function LeadsAnalyticsView({ ga4, isLoading }: LeadsAnalyticsViewProps) 
                 <span>Acessos</span>
               </div>
             </div>
-            <div className="space-y-1 max-h-[200px] overflow-y-auto">
+            <div className="space-y-1 max-h-[220px] overflow-y-auto">
               {mockRegions.map((region, i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between px-1 py-1.5 rounded hover:bg-muted/20 transition-colors"
+                  className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 px-1 py-1.5 rounded hover:bg-muted/20 transition-colors"
                 >
-                  <span className="text-xs text-foreground truncate max-w-[100px]">
+                  <span className="text-xs text-foreground whitespace-nowrap overflow-hidden text-ellipsis">
                     {region.regiao}
                   </span>
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs text-muted-foreground w-20 text-right truncate">
-                      {region.cidade}
+                  <span className="text-xs text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis text-center">
+                    {region.cidade}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Progress
+                      value={(region.acessos / maxAcessos) * 100}
+                      className="h-1.5 w-14"
+                      style={{ "--progress-color": "#F97316" } as React.CSSProperties}
+                    />
+                    <span className="text-xs font-medium text-foreground tabular-nums w-12 text-right">
+                      {region.acessos.toLocaleString("pt-BR")}
                     </span>
-                    <div className="flex items-center gap-2">
-                      <Progress
-                        value={(region.acessos / maxAcessos) * 100}
-                        className="h-1.5 w-12"
-                        style={{ "--progress-color": "#F97316" } as React.CSSProperties}
-                      />
-                      <span className="text-xs font-medium text-foreground w-10 text-right">
-                        {region.acessos.toLocaleString("pt-BR")}
-                      </span>
-                    </div>
                   </div>
                 </div>
               ))}

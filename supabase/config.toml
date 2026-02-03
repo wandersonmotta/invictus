@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.leads-generate-report]
 verify_jwt = false
+
+[functions.leads-meta-campaigns]
+verify_jwt = false

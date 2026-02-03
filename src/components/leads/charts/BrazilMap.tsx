@@ -59,6 +59,7 @@ const DEFAULT_DATA: StateData[] = [
 export function BrazilMap({ data = DEFAULT_DATA, className }: BrazilMapProps) {
   const [hoveredState, setHoveredState] = React.useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = React.useState({ x: 0, y: 0 });
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
 
   // Create a map of state code to value
   const valueMap = React.useMemo(() => {
@@ -74,32 +75,33 @@ export function BrazilMap({ data = DEFAULT_DATA, className }: BrazilMapProps) {
     return Math.max(...data.map((d) => d.value), 1);
   }, [data]);
 
-  // Calculate fill color based on value
+  // Calculate fill color based on value (semantic token + opacity scaling)
   const getFillColor = (stateCode: string) => {
     const value = valueMap[stateCode] || 0;
     const intensity = value / maxValue;
-    
-    if (intensity === 0) return "hsl(0 0% 25%)";
-    
-    // Orange scale from light to dark based on intensity
-    const lightness = 70 - intensity * 40;
-    return `hsl(25 95% ${lightness}%)`;
+
+    // Use theme primary with alpha scaling for density.
+    // (No direct colors; stays inside the design system.)
+    const alpha = intensity === 0 ? 0.12 : 0.18 + intensity * 0.72;
+    return `hsl(var(--primary) / ${alpha.toFixed(3)})`;
   };
 
-  const handleMouseMove = (e: React.MouseEvent, code: string) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const svgRect = (e.currentTarget.closest('svg') as SVGSVGElement)?.getBoundingClientRect();
-    if (svgRect) {
-      setTooltipPos({
-        x: e.clientX - svgRect.left,
-        y: e.clientY - svgRect.top - 45,
-      });
-    }
+  const updateTooltipPos = React.useCallback((clientX: number, clientY: number) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setTooltipPos({
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+    });
+  }, []);
+
+  const handlePointerMove = (e: React.PointerEvent, code: string) => {
+    updateTooltipPos(e.clientX, e.clientY);
     setHoveredState(code);
   };
 
   return (
-    <div className={cn("relative w-full", className)}>
+    <div ref={containerRef} className={cn("relative w-full", className)}>
       <svg
         viewBox="70 30 580 860"
         className="w-full h-auto max-h-[280px]"
@@ -115,56 +117,36 @@ export function BrazilMap({ data = DEFAULT_DATA, className }: BrazilMapProps) {
               key={code}
               d={path}
               fill={getFillColor(code)}
-              stroke="hsl(0 0% 15%)"
+              stroke="hsl(var(--border))"
               strokeWidth={isHovered ? 2 : 1}
               className="cursor-pointer transition-all duration-150"
               style={{
                 filter: isHovered ? "brightness(1.3)" : "none",
               }}
-              onMouseMove={(e) => handleMouseMove(e, code)}
-              onMouseLeave={() => setHoveredState(null)}
+              onPointerMove={(e) => handlePointerMove(e, code)}
+              onPointerEnter={(e) => handlePointerMove(e, code)}
+              onPointerLeave={() => setHoveredState(null)}
             />
           );
         })}
-
-        {/* Custom Tooltip */}
-        {hoveredState && (
-          <g
-            transform={`translate(${tooltipPos.x}, ${tooltipPos.y})`}
-            style={{ pointerEvents: "none" }}
-          >
-            <rect
-              x={-60}
-              y={0}
-              width={120}
-              height={40}
-              rx={6}
-              fill="hsl(0 0% 10%)"
-              stroke="hsl(0 0% 25%)"
-              strokeWidth={1}
-            />
-            <text
-              x={0}
-              y={16}
-              textAnchor="middle"
-              fill="white"
-              fontSize={11}
-              fontWeight={500}
-            >
-              {STATES_PATHS[hoveredState]?.name}
-            </text>
-            <text
-              x={0}
-              y={32}
-              textAnchor="middle"
-              fill="hsl(0 0% 65%)"
-              fontSize={10}
-            >
-              {(valueMap[hoveredState] || 0).toLocaleString("pt-BR")} acessos
-            </text>
-          </g>
-        )}
       </svg>
+
+      {/* Tooltip (HTML) — mais confiável e sempre legível */}
+      {hoveredState && (
+        <div
+          className="pointer-events-none absolute z-50 -translate-x-1/2 -translate-y-[calc(100%+12px)]"
+          style={{ left: tooltipPos.x, top: tooltipPos.y }}
+        >
+          <div className="rounded-md border border-border bg-popover text-popover-foreground shadow-md px-3 py-2">
+            <div className="text-[11px] font-medium leading-tight">
+              {STATES_PATHS[hoveredState]?.name}
+            </div>
+            <div className="text-[10px] text-muted-foreground leading-tight mt-0.5 tabular-nums">
+              {(valueMap[hoveredState] || 0).toLocaleString("pt-BR")} acessos
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

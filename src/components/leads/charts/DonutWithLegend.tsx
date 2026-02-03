@@ -63,14 +63,22 @@ export function DonutWithLegend({
           return (
             <div key={item.name} className="space-y-1">
               <div className="flex items-center justify-between text-xs gap-2">
-                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                 <div className="flex items-start gap-1.5 min-w-0 flex-1">
                   <div
                     className="w-2 h-2 rounded-full flex-shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-muted-foreground truncate text-[11px]">
-                    {item.name}
-                  </span>
+                   <span
+                     className="text-muted-foreground text-[11px] leading-tight min-w-0 break-words"
+                     style={{
+                       display: "-webkit-box",
+                       WebkitLineClamp: 2,
+                       WebkitBoxOrient: "vertical",
+                       overflow: "hidden",
+                     }}
+                   >
+                     {item.name}
+                   </span>
                 </div>
                 <span className="font-medium tabular-nums flex-shrink-0 text-[11px]">
                   {showPercentage 

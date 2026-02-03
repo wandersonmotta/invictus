@@ -9,9 +9,9 @@ interface LeadsSidebarProps {
   className?: string;
 }
 
-// Meta icon (as in the reference): infinity mark
+// Meta icon - blue infinity symbol
 const MetaIcon = () => (
-  <span className="text-lg leading-none text-primary" aria-hidden>
+  <span className="text-lg leading-none font-bold" style={{ color: "#1877F2" }} aria-hidden>
     ∞
   </span>
 );

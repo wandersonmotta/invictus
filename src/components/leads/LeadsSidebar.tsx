@@ -9,6 +9,33 @@ interface LeadsSidebarProps {
   className?: string;
 }
 
+// Official Meta (Facebook) icon
+const MetaIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="#1877F2">
+    <path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.52 1.49-3.92 3.77-3.92 1.09 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.78-1.63 1.57v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 0 0 8.44-9.9c0-5.53-4.5-10.02-10-10.02Z"/>
+  </svg>
+);
+
+// Official Google Ads icon
+const GoogleAdsIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5">
+    <path fill="#FBBC04" d="M3.5 18.49l5.5-9.53 5.5 9.53a3 3 0 0 1-1.1 4.1 3 3 0 0 1-4.1-1.1L3.5 18.49Z"/>
+    <path fill="#4285F4" d="M14.5 18.49l5.5-9.53a3 3 0 0 1 4.1 1.1 3 3 0 0 1-1.1 4.1l-5.5 3.18-3-1.85Z"/>
+    <path fill="#34A853" d="M9 8.96l5.5-9.53a3 3 0 0 1 4.1 1.1l-5.5 9.53L9 8.96Z"/>
+    <circle fill="#EA4335" cx="6" cy="18" r="3"/>
+  </svg>
+);
+
+// Official Google Analytics icon
+const AnalyticsIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5">
+    <path fill="#F9AB00" d="M21 21H3v-2h18v2Z"/>
+    <path fill="#E37400" d="M21 17H3v-2h18v2Zm0-4H3v-2h18v2Z"/>
+    <path fill="#F9AB00" d="M12 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+    <path fill="#E37400" d="M12 9v4m-4 0a4 4 0 0 1 8 0"/>
+  </svg>
+);
+
 const navItems: { id: LeadsView; label: string; icon: React.ReactNode }[] = [
   {
     id: "overview",
@@ -18,23 +45,17 @@ const navItems: { id: LeadsView; label: string; icon: React.ReactNode }[] = [
   {
     id: "meta",
     label: "Meta Ads",
-    icon: (
-      <span className="text-lg leading-none text-[#1877F2]">∞</span>
-    ),
+    icon: <MetaIcon />,
   },
   {
     id: "google_ads",
     label: "Google Ads",
-    icon: (
-      <span className="text-lg leading-none text-emerald-500">▲</span>
-    ),
+    icon: <GoogleAdsIcon />,
   },
   {
     id: "analytics",
     label: "GA4",
-    icon: (
-      <span className="text-lg leading-none text-orange-500">📊</span>
-    ),
+    icon: <AnalyticsIcon />,
   },
   {
     id: "mobile",
@@ -59,8 +80,8 @@ export function LeadsSidebar({
       {/* Logo */}
       <div className="flex items-center justify-center lg:justify-start gap-2 p-3 mb-2">
         <span className="text-2xl">📈</span>
-        <span className="hidden lg:inline text-xs text-muted-foreground font-medium">
-          DashCortex
+        <span className="hidden lg:inline text-sm font-semibold text-foreground">
+          Leads
         </span>
       </div>
 

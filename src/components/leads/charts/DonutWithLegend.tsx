@@ -28,7 +28,7 @@ export function DonutWithLegend({
   const total = data.reduce((acc, item) => acc + item.value, 0);
 
   return (
-    <div className={cn("flex items-center gap-6", className)}>
+    <div className={cn("flex items-start gap-4", className)}>
       {/* Donut Chart */}
       <div className="flex-shrink-0" style={{ width: height, height }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -51,8 +51,8 @@ export function DonutWithLegend({
         </ResponsiveContainer>
       </div>
 
-      {/* Legend with Progress Bars */}
-      <div className="flex-1 min-w-0 space-y-2">
+      {/* Legend */}
+      <div className="flex-1 space-y-2 pt-1">
         {title && (
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
             {title}
@@ -62,25 +62,15 @@ export function DonutWithLegend({
           const percentage = total > 0 ? (item.value / total) * 100 : 0;
           return (
             <div key={item.name} className="space-y-1">
-              <div className="flex items-center justify-between text-xs gap-2">
-                 <div className="flex items-start gap-1.5 min-w-0 flex-1">
-                  <div
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: item.color }}
-                  />
-                   <span
-                     className="text-muted-foreground text-[11px] leading-tight min-w-0 break-words"
-                     style={{
-                       display: "-webkit-box",
-                       WebkitLineClamp: 2,
-                       WebkitBoxOrient: "vertical",
-                       overflow: "hidden",
-                     }}
-                   >
-                     {item.name}
-                   </span>
-                </div>
-                <span className="font-medium tabular-nums flex-shrink-0 text-[11px]">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="text-xs text-muted-foreground flex-1 truncate">
+                  {item.name}
+                </span>
+                <span className="text-xs font-medium tabular-nums flex-shrink-0">
                   {showPercentage 
                     ? `${percentage.toFixed(0)}%` 
                     : item.value.toLocaleString("pt-BR")}

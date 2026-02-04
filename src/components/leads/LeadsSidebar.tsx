@@ -73,14 +73,6 @@ export function LeadsSidebar({
         className
       )}
     >
-      {/* Logo */}
-      <div className="flex items-center justify-center lg:justify-start gap-2 p-3 mb-2">
-        <span className="text-2xl">📈</span>
-        <span className="hidden lg:inline text-sm font-semibold text-foreground">
-          Leads
-        </span>
-      </div>
-
       {/* Navigation */}
       <nav className="flex flex-col gap-1">
         {navItems.map((item) => {

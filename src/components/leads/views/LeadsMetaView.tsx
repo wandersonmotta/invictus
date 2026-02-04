@@ -91,7 +91,7 @@ export function LeadsMetaView({ meta, isLoading }: LeadsMetaViewProps) {
       </div>
 
       {/* KPI Cards Row */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <KPICard
           title="Investimento"
           value={hasData ? formatCurrency(metrics.spend) : "R$ 22.993,14"}
@@ -134,7 +134,7 @@ export function LeadsMetaView({ meta, isLoading }: LeadsMetaViewProps) {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Funnel */}
         <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40">
           <h3 className="text-sm font-medium text-foreground mb-4">Funil de Tráfego</h3>

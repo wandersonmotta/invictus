@@ -14,8 +14,16 @@
   );
   backdrop-filter: blur(24px) saturate(170%);
   -webkit-backdrop-filter: blur(24px) saturate(170%);
-  border-top: 1px solid hsl(var(--gold-hot) / 0.25);
-  box-shadow: 0 -4px 24px -4px hsl(var(--background) / 0.8);
+  
+  /* Floating island style */
+  margin: 0 1rem;
+  margin-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  border-radius: 1.25rem;
+  border: 1px solid hsl(var(--gold-hot) / 0.25);
+  box-shadow: 
+    0 8px 32px -4px hsl(var(--background) / 0.6),
+    0 0 0 1px hsl(var(--gold-hot) / 0.1),
+    0 -4px 24px -4px hsl(var(--background) / 0.8);
 }
 
 .invictus-mobile-nav-item {

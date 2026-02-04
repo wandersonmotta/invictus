@@ -3,6 +3,7 @@ import { DateRange } from "react-day-picker";
 import { subDays } from "date-fns";
 
 import { LeadsSidebar, type LeadsView } from "@/components/leads/LeadsSidebar";
+import { LeadsMobileViewSelector } from "@/components/leads/LeadsMobileViewSelector";
 import { LeadsDashboardHeader } from "@/components/leads/LeadsDashboardHeader";
 import { ExportReportDialog } from "@/components/leads/ExportReportDialog";
 import {
@@ -13,6 +14,7 @@ import {
   LeadsMobileView,
 } from "@/components/leads/views";
 import { useLeadsMetrics } from "@/hooks/useLeadsMetrics";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Leads() {
   const [activeView, setActiveView] = React.useState<LeadsView>("overview");
@@ -20,6 +22,7 @@ export default function Leads() {
     from: subDays(new Date(), 30),
     to: new Date(),
   });
+  const isMobile = useIsMobile();
 
   const { meta, googleAds, ga4, aggregated, refetchAll } =
     useLeadsMetrics(dateRange);
@@ -82,8 +85,16 @@ export default function Leads() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="p-4 md:p-6 border-b border-border/40">
+        <div className="p-3 md:p-6 border-b border-border/40">
           <div className="flex flex-col gap-4">
+            {/* Mobile view selector */}
+            {isMobile && (
+              <LeadsMobileViewSelector
+                activeView={activeView}
+                onViewChange={setActiveView}
+              />
+            )}
+            
             <LeadsDashboardHeader
               dateRange={dateRange}
               onDateRangeChange={setDateRange}

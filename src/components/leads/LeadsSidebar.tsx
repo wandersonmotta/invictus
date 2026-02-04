@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
-import { BarChart3, LineChart, PieChart, Smartphone, LayoutDashboard } from "lucide-react";
+import { LayoutDashboard } from "lucide-react";
 
-export type LeadsView = "overview" | "meta" | "google_ads" | "analytics" | "mobile";
+export type LeadsView = "overview" | "meta" | "google_ads" | "analytics";
 
 interface LeadsSidebarProps {
   activeView: LeadsView;
@@ -56,11 +56,6 @@ const navItems: { id: LeadsView; label: string; icon: React.ReactNode }[] = [
     id: "analytics",
     label: "GA4",
     icon: <AnalyticsIcon />,
-  },
-  {
-    id: "mobile",
-    label: "Mobile",
-    icon: <Smartphone className="h-5 w-5" />,
   },
 ];
 

@@ -77,7 +77,7 @@ export function LeadsGoogleAdsView({ googleAds, isLoading }: LeadsGoogleAdsViewP
   return (
     <div className="space-y-6">
       {/* Header with filters */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <GoogleAdsIcon className="h-6 w-6" />
           <h2 className="text-lg font-semibold text-foreground">Relatório Google Ads</h2>

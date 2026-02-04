@@ -207,7 +207,7 @@ export function FinalWarning() {
   return (
     <section className="px-4 pb-12 sm:px-6 sm:pb-16">
       <div className="mx-auto w-full max-w-6xl">
-        <Card className="invictus-auth-surface invictus-auth-frame border-0 p-6 sm:p-8">
+        <Card className="invictus-auth-surface invictus-frame border-0 p-6 sm:p-8">
           <h2 className="text-xl font-semibold">Aviso final</h2>
           <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>Se você chegou até aqui e sentiu desconforto, provavelmente não é para você.</p>

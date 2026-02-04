@@ -47,7 +47,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <div className="flex-1 p-4 sm:p-5 md:p-6 animate-fade-in">{children}</div>
+          <div className="flex-1 p-4 pb-6 sm:p-5 sm:pb-8 md:p-6 animate-fade-in">{children}</div>
         </SidebarInset>
       </div>
     </SidebarProvider>

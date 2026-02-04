@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/auth/AuthProvider";
 import { HostRouter } from "@/routing/HostRouter";
 
@@ -47,20 +48,28 @@ function App() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <AuthProvider>
-          <BrowserRouter>
-            {/* Sem fallback visual */}
-            <React.Suspense fallback={null}>
-              <HostRouter />
-            </React.Suspense>
-          </BrowserRouter>
-        </AuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="dark"
+      enableSystem={false}
+      storageKey="invictus-theme"
+      disableTransitionOnChange={false}
+    >
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <AuthProvider>
+            <BrowserRouter>
+              {/* Sem fallback visual */}
+              <React.Suspense fallback={null}>
+                <HostRouter />
+              </React.Suspense>
+            </BrowserRouter>
+          </AuthProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

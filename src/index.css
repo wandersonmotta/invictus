@@ -15,58 +15,59 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Light fallback (we default to .dark via main.tsx) */
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Light Premium: Cinza perolado + Champagne + Gold */
+    --background: 40 10% 96%;
+    --foreground: 30 5% 15%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 40 8% 98%;
+    --card-foreground: 30 5% 15%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 40 8% 98%;
+    --popover-foreground: 30 5% 15%;
 
+    /* Gold mantido (mesma identidade) */
     --primary: 42 85% 50%;
-    --primary-foreground: 222.2 84% 4.9%;
+    --primary-foreground: 40 10% 96%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 40 6% 92%;
+    --secondary-foreground: 30 5% 15%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 40 6% 90%;
+    --muted-foreground: 30 5% 42%;
 
     --accent: 42 85% 50%;
-    --accent-foreground: 222.2 84% 4.9%;
+    --accent-foreground: 40 10% 96%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 40 8% 82%;
+    --input: 40 8% 82%;
     --ring: 42 85% 50%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* Sidebar Light */
+    --sidebar-background: 40 8% 97%;
+    --sidebar-foreground: 30 5% 18%;
+    --sidebar-primary: 42 85% 50%;
+    --sidebar-primary-foreground: 40 10% 96%;
+    --sidebar-accent: 40 6% 92%;
+    --sidebar-accent-foreground: 30 5% 15%;
+    --sidebar-border: 40 8% 85%;
+    --sidebar-ring: 42 85% 50%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Glass mais opaco no light */
+    --glass: 0.78;
+    --gold-soft: 42 72% 48%;
+    --gold-hot: 44 78% 44%;
+    --gold-badge-foreground: var(--foreground);
   }
 
   .dark {
     /* Invictus premium graphite + gold (executivo, clean, 100% dark) */
-    /* Neutro (sem hue azul) para eliminar o “oceano” */
-    --background: 0 0% 7%;
+    /* Fundo levemente mais claro para reduzir peso visual */
+    --background: 0 0% 8%;
     --foreground: 210 40% 98%;
 
     /* Degraus de profundidade (grafite) */
@@ -84,7 +85,7 @@ All colors MUST be HSL.
     --secondary-foreground: 210 40% 98%;
 
     --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 72%;
+    --muted-foreground: 0 0% 68%;
 
     --accent: 42 85% 50%;
     --accent-foreground: 0 0% 7%;
@@ -104,6 +105,12 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 0 0% 18%;
     --sidebar-ring: 42 85% 50%;
+
+    /* Glass mais intenso */
+    --glass: 0.46;
+    --gold-soft: 42 92% 62%;
+    --gold-hot: 44 98% 54%;
+    --gold-badge-foreground: var(--background);
   }
 }
 
@@ -135,22 +142,16 @@ All colors MUST be HSL.
       radial-gradient(1000px 600px at 30% 5%, hsl(var(--primary) / 0.10), transparent 50%);
     background-attachment: fixed;
   }
-}
 
-@layer base {
-  :root {
-    --gold-soft: 42 90% 60%;
-    --gold-hot: 44 95% 52%;
-    /* Use "theme black" for readability on gold */
-    --gold-badge-foreground: var(--background);
-    --glass: 0.55;
+  /* Light mode: aura mais sutil */
+  :root body {
+    background-image:
+      radial-gradient(1000px 600px at 30% 5%, hsl(var(--primary) / 0.06), transparent 50%);
   }
-  .dark {
-    --gold-soft: 42 92% 62%;
-    --gold-hot: 44 98% 54%;
-    --gold-badge-foreground: var(--background);
-    /* Glass mais intenso via transparência (melhor custo que aumentar blur) */
-    --glass: 0.46;
+
+  .dark body {
+    background-image:
+      radial-gradient(1000px 600px at 30% 5%, hsl(var(--primary) / 0.10), transparent 50%);
   }
 }
 
@@ -358,9 +359,9 @@ All colors MUST be HSL.
     opacity: 0.95;
   }
 
-  /* Mobile-first page rhythm (spacing + readable headers) */
+  /* Mobile-first page rhythm (spacing + readable headers) - MELHORADO */
   .invictus-page {
-    @apply space-y-4 sm:space-y-6 lg:space-y-8;
+    @apply space-y-6 sm:space-y-8 lg:space-y-10;
   }
 
   .invictus-page-header {

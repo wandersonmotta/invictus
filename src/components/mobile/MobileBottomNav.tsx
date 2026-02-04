@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, memo, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Home, Wallet, Gift, HelpCircle, Menu } from "lucide-react";
 import { toast } from "sonner";
 
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobileOrTablet } from "@/hooks/use-mobile";
 import { MobileMenuSheet } from "./MobileMenuSheet";
 
 interface NavItem {
@@ -22,14 +22,14 @@ const navItems: NavItem[] = [
   { id: "menu", label: "Menu", icon: Menu, action: "menu" },
 ];
 
-export function MobileBottomNav() {
-  const isMobile = useIsMobile();
+function MobileBottomNavInner() {
+  const isMobileOrTablet = useIsMobileOrTablet();
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Only render on mobile
-  if (!isMobile) return null;
+  // Render on mobile AND tablets (< 1024px)
+  if (!isMobileOrTablet) return null;
 
   const isActive = (item: NavItem) => {
     if (item.action !== "navigate" || !item.url) return false;
@@ -58,7 +58,7 @@ export function MobileBottomNav() {
 
   return (
     <>
-      <nav className="invictus-mobile-nav fixed bottom-0 left-4 right-4 z-50 md:hidden">
+      <nav className="invictus-mobile-nav fixed bottom-0 left-4 right-4 z-50 lg:hidden">
         <div className="flex items-center justify-around h-14 px-2">
           {navItems.map((item) => {
             const active = isActive(item);
@@ -94,3 +94,6 @@ export function MobileBottomNav() {
     </>
   );
 }
+
+// Memoizado para evitar re-renders desnecessários
+export const MobileBottomNav = memo(MobileBottomNavInner);

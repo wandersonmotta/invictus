@@ -80,27 +80,28 @@ export function DateRangePicker({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
+          size="sm"
           className={cn(
-            "justify-start text-left font-normal",
+            "justify-start text-left font-normal text-xs sm:text-sm flex-1 sm:flex-none min-w-0",
             !value && "text-muted-foreground",
             className
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {formatRange()}
-          <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
+          <CalendarIcon className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+          <span className="truncate">{formatRange()}</span>
+          <ChevronDown className="ml-auto h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-50 shrink-0" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="end">
-        <div className="flex">
+      <PopoverContent className="w-auto p-0 max-w-[95vw]" align="end">
+        <div className="flex flex-col sm:flex-row max-h-[70vh] overflow-auto">
           {/* Presets */}
-          <div className="border-r p-2 space-y-1">
+          <div className="border-b sm:border-b-0 sm:border-r p-2 space-y-1 flex flex-row sm:flex-col overflow-x-auto sm:overflow-x-visible gap-1">
             {presets.map((preset) => (
               <Button
                 key={preset.label}
                 variant="ghost"
                 size="sm"
-                className="w-full justify-start text-xs"
+                className="whitespace-nowrap justify-start text-xs"
                 onClick={() => {
                   onChange(preset.getValue());
                   setOpen(false);
@@ -111,7 +112,17 @@ export function DateRangePicker({
             ))}
           </div>
 
-          {/* Calendar */}
+          {/* Calendar - single month on mobile */}
+          <Calendar
+            initialFocus
+            mode="range"
+            defaultMonth={value?.from}
+            selected={value}
+            onSelect={onChange} 
+            numberOfMonths={1}
+            locale={ptBR}
+            className="sm:hidden"
+          />
           <Calendar
             initialFocus
             mode="range"
@@ -120,6 +131,7 @@ export function DateRangePicker({
             onSelect={onChange}
             numberOfMonths={2}
             locale={ptBR}
+            className="hidden sm:block"
           />
         </div>
       </PopoverContent>

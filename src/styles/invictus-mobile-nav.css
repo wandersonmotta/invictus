@@ -1,0 +1,120 @@
+/* ========================================
+   INVICTUS MOBILE NAVIGATION
+   Premium glass mobile bottom nav + menu sheet
+   ======================================== */
+
+/* ----------------------------------------
+   Bottom Navigation Bar
+   ---------------------------------------- */
+.invictus-mobile-nav {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--background) / 0.88),
+    hsl(var(--background) / 0.95)
+  );
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  border-top: 1px solid hsl(var(--gold-hot) / 0.25);
+  box-shadow: 0 -4px 24px -4px hsl(var(--background) / 0.8);
+}
+
+.invictus-mobile-nav-item {
+  position: relative;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.invictus-mobile-nav-item:active {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+
+/* Active state with golden glow */
+.invictus-mobile-nav-item--active,
+.invictus-mobile-nav-item[data-active="true"] {
+  position: relative;
+}
+
+.invictus-mobile-nav-item--active::before,
+.invictus-mobile-nav-item[data-active="true"]::before {
+  content: "";
+  position: absolute;
+  top: 0.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--gold-hot)),
+    hsl(var(--gold-soft))
+  );
+  box-shadow: 0 0 8px 2px hsl(var(--gold-hot) / 0.5);
+}
+
+.invictus-mobile-nav-item--active .h-5,
+.invictus-mobile-nav-item[data-active="true"] .h-5 {
+  filter: drop-shadow(0 0 4px hsl(var(--gold-hot) / 0.4));
+}
+
+/* ----------------------------------------
+   Menu Sheet Styles
+   ---------------------------------------- */
+.invictus-mobile-menu-sheet {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--background) / 0.97),
+    hsl(var(--background))
+  ) !important;
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border-left: 1px solid hsl(var(--gold-hot) / 0.15) !important;
+}
+
+.invictus-mobile-menu-sectionLabel {
+  color: hsl(var(--muted-foreground) / 0.6);
+}
+
+.invictus-mobile-menu-item {
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.invictus-mobile-menu-item:active {
+  transform: scale(0.98);
+}
+
+.invictus-mobile-menu-item--active {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--primary) / 0.12),
+    hsl(var(--primary) / 0.06)
+  ) !important;
+  border-left: 2px solid hsl(var(--gold-hot));
+  margin-left: -2px;
+}
+
+.invictus-mobile-menu-item--active svg {
+  color: hsl(var(--gold-hot));
+  filter: drop-shadow(0 0 3px hsl(var(--gold-hot) / 0.4));
+}
+
+.invictus-mobile-menu-item--active span {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--gold-hot)),
+    hsl(var(--gold-soft))
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Safe area for devices with home indicator */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .invictus-mobile-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

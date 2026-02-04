@@ -12,7 +12,11 @@ import {
   Clapperboard,
   Shield,
   ChevronRight,
+  Wallet,
+  Gift,
+  HelpCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -27,7 +31,14 @@ interface MobileMenuSheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const menuItems = [
+interface MenuItem {
+  title: string;
+  url: string;
+  icon: typeof Home;
+  placeholder?: boolean;
+}
+
+const menuItems: MenuItem[] = [
   { title: "Início", url: "/app", icon: Home },
   { title: "Feed", url: "/feed", icon: Newspaper },
   { title: "Mapa", url: "/mapa", icon: MapPin },
@@ -37,6 +48,9 @@ const menuItems = [
   { title: "Leads", url: "/leads", icon: BarChart3 },
   { title: "Perfil", url: "/perfil", icon: User },
   { title: "Class", url: "/class", icon: Clapperboard },
+  { title: "Carteira", url: "/carteira", icon: Wallet, placeholder: true },
+  { title: "Pontos", url: "/pontos", icon: Gift, placeholder: true },
+  { title: "Suporte", url: "/suporte", icon: HelpCircle, placeholder: true },
 ];
 
 export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
@@ -89,8 +103,14 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
       : []),
   ];
 
-  const handleNavigate = (url: string) => {
-    navigate(url);
+  const handleNavigate = (item: MenuItem) => {
+    if (item.placeholder) {
+      toast.info(`${item.title} — Em breve!`, {
+        description: "Esta funcionalidade está sendo desenvolvida.",
+      });
+      return;
+    }
+    navigate(item.url);
     onOpenChange(false);
   };
 
@@ -127,7 +147,7 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
               return (
                 <button
                   key={item.url}
-                  onClick={() => handleNavigate(item.url)}
+                  onClick={() => handleNavigate(item)}
                   className={`
                     invictus-mobile-menu-item
                     flex items-center justify-between py-4 border-b border-border/20

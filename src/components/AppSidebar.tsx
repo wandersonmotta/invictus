@@ -1,6 +1,7 @@
 import { useLocation } from "react-router-dom";
-import { Home as HomeIcon, MapPin, Search, Send, User, Shield, Clapperboard, MessagesSquare, Newspaper, BarChart3 } from "lucide-react";
+import { Home as HomeIcon, MapPin, Search, Send, User, Shield, Clapperboard, MessagesSquare, Newspaper, BarChart3, Wallet, Gift, HelpCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
@@ -20,7 +21,19 @@ import {
 } from "@/components/ui/sidebar";
 
 
-const navSections = [
+interface NavItem {
+  title: string;
+  url: string;
+  icon: typeof HomeIcon;
+  placeholder?: boolean;
+}
+
+interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+const navSections: NavSection[] = [
   {
     label: "Início",
     items: [
@@ -48,9 +61,12 @@ const navSections = [
     items: [
       { title: "Perfil", url: "/perfil", icon: User },
       { title: "Class", url: "/class", icon: Clapperboard },
+      { title: "Carteira", url: "/carteira", icon: Wallet, placeholder: true },
+      { title: "Pontos", url: "/pontos", icon: Gift, placeholder: true },
+      { title: "Suporte", url: "/suporte", icon: HelpCircle, placeholder: true },
     ],
   },
-] as const;
+];
 
 export function AppSidebar() {
   const { user } = useAuth();
@@ -82,7 +98,14 @@ export function AppSidebar() {
     return currentPath === path || currentPath.startsWith(`${path}/`);
   };
 
-  const handleNavClick = () => {
+  const handleNavClick = (e: React.MouseEvent, isPlaceholder?: boolean) => {
+    if (isPlaceholder) {
+      e.preventDefault();
+      toast.info("Em breve!", {
+        description: "Esta funcionalidade está sendo desenvolvida.",
+      });
+      return;
+    }
     if (isMobile) setOpenMobile(false);
   };
 
@@ -121,11 +144,11 @@ export function AppSidebar() {
                         className="invictus-sidebar-item"
                       >
                         <NavLink
-                          to={item.url}
+                          to={item.placeholder ? "#" : item.url}
                           end={item.url === "/"}
                           className="invictus-sidebar-link"
                           aria-current={isActive(item.url) ? "page" : undefined}
-                          onClick={handleNavClick}
+                          onClick={(e) => handleNavClick(e, item.placeholder)}
                         >
                           <span className="invictus-sidebar-iconWrap" aria-hidden="true">
                             <item.icon className="invictus-sidebar-icon" aria-hidden="true" />

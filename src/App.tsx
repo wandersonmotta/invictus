@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, useLocation } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/auth/AuthProvider";
 import { HostRouter } from "@/routing/HostRouter";
@@ -33,6 +33,31 @@ function scheduleIdle(cb: () => void) {
   return window.setTimeout(cb, 700);
 }
 
+function ThemeScopeProvider({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation();
+
+  // Rotas públicas devem ser SEMPRE dark (identidade da marca)
+  const isPublicRoute =
+    pathname === "/" ||
+    pathname === "/auth" ||
+    pathname === "/reset-password" ||
+    pathname === "/aguardando-aprovacao";
+
+  return (
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem={true}
+      storageKey="invictus-theme"
+      disableTransitionOnChange={false}
+      // Trava o tema nas páginas públicas sem alterar a preferência salva do usuário
+      forcedTheme={isPublicRoute ? "dark" : undefined}
+    >
+      {children}
+    </ThemeProvider>
+  );
+}
+
 function App() {
   // Pré-carrega rotas em idle para evitar qualquer fallback visual durante navegação,
   // mantendo a landing mais leve no primeiro paint.
@@ -48,28 +73,22 @@ function App() {
   }, []);
 
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem={true}
-      storageKey="invictus-theme"
-      disableTransitionOnChange={false}
-    >
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <AuthProvider>
-            <BrowserRouter>
+    <BrowserRouter>
+      <ThemeScopeProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <AuthProvider>
               {/* Sem fallback visual */}
               <React.Suspense fallback={null}>
                 <HostRouter />
               </React.Suspense>
-            </BrowserRouter>
-          </AuthProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+            </AuthProvider>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ThemeScopeProvider>
+    </BrowserRouter>
   );
 }
 

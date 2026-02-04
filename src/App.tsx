@@ -50,8 +50,8 @@ function App() {
   return (
     <ThemeProvider
       attribute="class"
-      defaultTheme="dark"
-      enableSystem={false}
+      defaultTheme="system"
+      enableSystem={true}
       storageKey="invictus-theme"
       disableTransitionOnChange={false}
     >

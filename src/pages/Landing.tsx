@@ -12,8 +12,12 @@ import {
 } from "@/components/landing/ManifestoSections";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingBackground } from "@/components/landing/LandingBackground";
+import { useForceDark } from "@/hooks/useForceDark";
 
 export default function Landing() {
+  // Força tema dark na landing page, independente da escolha do usuário
+  useForceDark();
+
   React.useEffect(() => {
     // Fallback robusto: garante o background premium mesmo se algum device
     // não aplicar corretamente o background no container principal.

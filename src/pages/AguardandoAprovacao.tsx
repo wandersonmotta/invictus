@@ -1,9 +1,12 @@
 import { useAuth } from "@/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { AuthBackground } from "@/components/auth/AuthBackground";
+import { useForceDark } from "@/hooks/useForceDark";
 import invictusLogo from "@/assets/invictus-logo.png";
 
 export default function AguardandoAprovacao() {
+  // Força tema dark na página de aguardando aprovação
+  useForceDark();
   const { signOut } = useAuth();
 
   return (

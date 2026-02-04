@@ -53,7 +53,7 @@ export default function Mensagens() {
           <div className="invictus-surface invictus-frame border-border/70 rounded-xl overflow-hidden">
             <div className="p-3 sm:p-4 border-b border-border/60">
               <Tabs value={tab} onValueChange={(v) => setTab(v as FolderTab)}>
-                <TabsList className="invictus-surface invictus-frame bg-muted/20 h-11 w-full">
+                <TabsList className="invictus-surface invictus-frame bg-muted h-11 w-full">
                   <TabsTrigger value="inbox" className="flex-1">Inbox</TabsTrigger>
                   <TabsTrigger value="requests" className="flex-1">Solicitações</TabsTrigger>
                 </TabsList>

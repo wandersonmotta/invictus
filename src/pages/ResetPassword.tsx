@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { GoldHoverText } from "@/components/GoldHoverText";
 import { AuthBackground } from "@/components/auth/AuthBackground";
+import { useForceDark } from "@/hooks/useForceDark";
 import logo from "@/assets/invictus-logo.png";
 
 const schema = z
@@ -28,6 +29,9 @@ const schema = z
 type FormValues = z.infer<typeof schema>;
 
 export default function ResetPasswordPage() {
+  // Força tema dark na página de redefinição de senha
+  useForceDark();
+
   const { toast } = useToast();
   const { session, loading } = useAuth();
   const navigate = useNavigate();

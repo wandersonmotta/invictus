@@ -88,9 +88,10 @@ function formatCep(v: string) {
 }
 
 function normalizeUsernameInput(v: string | undefined) {
-  const raw = (v ?? "").trim().toLowerCase();
+  // Remove all @ characters first, then add single @
+  const raw = (v ?? "").trim().toLowerCase().replace(/@/g, "");
   if (!raw) return null;
-  return raw.startsWith("@") ? raw : `@${raw}`;
+  return `@${raw}`;
 }
 
 function normalizeExpertises(csv: string | undefined) {
@@ -560,24 +561,36 @@ export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () 
 
             <div className="space-y-2">
               <Label htmlFor="username">@ do usuário</Label>
-              <Input
-                id="username"
-                disabled={loading || saving}
-                placeholder="@seu.usuario"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                {...form.register("username", {
-                  onBlur: (e) => {
-                    const normalized = normalizeUsernameInput(e.target.value) ?? "";
-                    form.setValue("username", normalized, { shouldValidate: true, shouldDirty: true });
-                  },
-                })}
-              />
+              <div className="flex items-center">
+                <span className="flex h-10 items-center justify-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+                  @
+                </span>
+                <Input
+                  id="username"
+                  className="rounded-l-none"
+                  disabled={loading || saving}
+                  placeholder="seu.usuario"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  {...form.register("username", {
+                    onChange: (e) => {
+                      // Remove any @ characters the user types
+                      const clean = e.target.value.replace(/@/g, "");
+                      form.setValue("username", clean, { shouldValidate: false });
+                    },
+                    onBlur: (e) => {
+                      const value = e.target.value.replace(/@/g, "").trim();
+                      const normalized = value ? `@${value}` : "";
+                      form.setValue("username", normalized, { shouldValidate: true, shouldDirty: true });
+                    },
+                  })}
+                />
+              </div>
               {form.formState.errors.username ? (
                 <p className="text-xs text-destructive">{form.formState.errors.username.message}</p>
               ) : (
-                <p className="text-xs text-muted-foreground">Opcional. Use @ + letras minúsculas, números, . e _</p>
+                <p className="text-xs text-muted-foreground">Opcional. Use letras minúsculas, números, . e _</p>
               )}
             </div>
 

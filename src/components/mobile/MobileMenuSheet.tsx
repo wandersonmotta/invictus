@@ -12,7 +12,6 @@ import {
   Clapperboard,
   Shield,
   ChevronRight,
-  X,
 } from "lucide-react";
 
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -108,15 +107,6 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
         side="bottom"
         className="invictus-mobile-menu-sheet h-[85vh] rounded-t-3xl p-0 border-t border-border/40"
       >
-        {/* Close button */}
-        <button
-          onClick={() => onOpenChange(false)}
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted/50 transition-colors z-10"
-          aria-label="Fechar menu"
-        >
-          <X className="h-5 w-5 text-muted-foreground" />
-        </button>
-
         <ScrollArea className="h-full">
           {/* User Profile Header */}
           <div className="flex flex-col items-center pt-10 pb-6 border-b border-border/30">
@@ -126,7 +116,7 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
             </Avatar>
             <h2 className="mt-3 text-lg font-semibold text-foreground">{displayName}</h2>
             {username && (
-              <p className="text-sm text-muted-foreground">@{username}</p>
+              <p className="text-sm text-muted-foreground">{username}</p>
             )}
           </div>
 

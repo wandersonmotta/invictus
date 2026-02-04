@@ -28,7 +28,7 @@ interface ViewFiltersProps {
 
 export function ViewFilters({ filters, className }: ViewFiltersProps) {
   return (
-    <div className={cn("flex items-center gap-2 flex-wrap", className)}>
+    <div className={cn("flex items-center gap-2 flex-wrap w-full md:w-auto", className)}>
       {filters.map((filter) => (
         <Select
           key={filter.id}
@@ -36,7 +36,7 @@ export function ViewFilters({ filters, className }: ViewFiltersProps) {
           onValueChange={filter.onChange}
         >
           <SelectTrigger 
-            className="h-8 px-3 text-xs bg-card/60 border-border/40 hover:bg-muted/50 transition-colors w-auto min-w-[100px]"
+            className="h-8 px-3 text-xs bg-card/60 border-border/40 hover:bg-muted/50 transition-colors flex-1 md:flex-none min-w-0 md:min-w-[100px]"
           >
             <SelectValue placeholder={filter.label} />
           </SelectTrigger>

@@ -24,7 +24,8 @@ export function LeadsDashboardHeader({
     <div className="flex flex-col gap-3">
       {/* Top Row: Platform Logos + Date Picker */}
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-4">
+        {/* Platform Logos - Hidden on mobile (using dropdown selector instead) */}
+        <div className="hidden md:flex items-center gap-4">
           {/* Meta Logo */}
           <div className="flex items-center gap-1.5">
             <span className="text-lg font-bold" style={{ color: "#1877F2" }}>∞</span>

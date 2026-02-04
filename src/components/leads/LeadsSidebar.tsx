@@ -72,7 +72,8 @@ export function LeadsSidebar({
   return (
     <aside
       className={cn(
-        "flex flex-col gap-1 p-2 bg-card/40 backdrop-blur-sm border-r border-border/40",
+        "hidden md:flex",
+        "flex-col gap-1 p-2 bg-card/40 backdrop-blur-sm border-r border-border/40",
         "w-20 lg:w-48 shrink-0",
         className
       )}

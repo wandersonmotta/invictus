@@ -1,149 +1,170 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
-  Home as HomeIcon,
+  Home,
+  Newspaper,
   MapPin,
   Search,
   Send,
-  User,
-  Shield,
-  Clapperboard,
   MessagesSquare,
-  Newspaper,
   BarChart3,
+  User,
+  Clapperboard,
+  Shield,
+  ChevronRight,
+  X,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/auth/AuthProvider";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useMyProfile } from "@/hooks/useMyProfile";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-
-const navSections = [
-  {
-    label: "Início",
-    items: [
-      { title: "Home", url: "/app", icon: HomeIcon },
-      { title: "Feed", url: "/feed", icon: Newspaper },
-      { title: "Mapa", url: "/mapa", icon: MapPin },
-      { title: "Buscar", url: "/buscar", icon: Search },
-    ],
-  },
-  {
-    label: "Comunicação",
-    items: [
-      { title: "Mensagens", url: "/mensagens", icon: Send },
-      { title: "Comunidade", url: "/comunidade", icon: MessagesSquare },
-    ],
-  },
-  {
-    label: "Marketing",
-    items: [{ title: "Leads", url: "/leads", icon: BarChart3 }],
-  },
-  {
-    label: "Conta",
-    items: [
-      { title: "Perfil", url: "/perfil", icon: User },
-      { title: "Class", url: "/class", icon: Clapperboard },
-    ],
-  },
-] as const;
 
 interface MobileMenuSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+const menuItems = [
+  { title: "Início", url: "/app", icon: Home },
+  { title: "Feed", url: "/feed", icon: Newspaper },
+  { title: "Mapa", url: "/mapa", icon: MapPin },
+  { title: "Buscar", url: "/buscar", icon: Search },
+  { title: "Mensagens", url: "/mensagens", icon: Send },
+  { title: "Comunidade", url: "/comunidade", icon: MessagesSquare },
+  { title: "Leads", url: "/leads", icon: BarChart3 },
+  { title: "Perfil", url: "/perfil", icon: User },
+  { title: "Class", url: "/class", icon: Clapperboard },
+];
+
 export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { data: isAdmin } = useIsAdmin(user?.id);
-  const location = useLocation();
-  const navigate = useNavigate();
+  const { data: profile } = useMyProfile(user?.id);
 
-  // Fetch access_status to restrict navigation for pending users
+  // Fetch access status
   const { data: accessStatus } = useQuery({
     queryKey: ["mobile-menu-access", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("access_status")
+        .select("access_status, username")
         .eq("user_id", user!.id)
         .maybeSingle();
-      return data?.access_status ?? "pending";
+      return data;
     },
     staleTime: 10_000,
   });
 
-  const isOnboarding = accessStatus !== "approved";
+  const isOnboarding = accessStatus?.access_status !== "approved";
 
-  const isActive = (path: string) => {
-    if (path === "/") return location.pathname === "/";
-    return location.pathname === path || location.pathname.startsWith(`${path}/`);
-  };
+  // Build display name and initials
+  const displayName =
+    profile?.display_name ||
+    [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") ||
+    "Usuário";
+  const initials = displayName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+  const username = accessStatus?.username;
+
+  // Filter items based on access status
+  const visibleItems = isOnboarding
+    ? menuItems.filter((item) => item.url === "/perfil")
+    : menuItems;
+
+  // Add admin item if applicable
+  const allItems = [
+    ...visibleItems,
+    ...(isAdmin && !isOnboarding
+      ? [{ title: "Admin", url: "/admin", icon: Shield }]
+      : []),
+  ];
 
   const handleNavigate = (url: string) => {
     navigate(url);
     onOpenChange(false);
   };
 
-  const sections = isOnboarding
-    ? [{ label: "Conta", items: [{ title: "Perfil", url: "/perfil", icon: User }] }]
-    : [
-        ...navSections,
-        ...(isAdmin
-          ? [
-              {
-                label: "Administração",
-                items: [{ title: "Admin", url: "/admin", icon: Shield }],
-              },
-            ]
-          : []),
-      ];
+  const isActive = (path: string) => {
+    if (path === "/app") {
+      return location.pathname === "/app" || location.pathname === "/";
+    }
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="invictus-mobile-menu-sheet w-[280px] p-0">
-        <SheetHeader className="p-4 pb-2 border-b border-primary/10">
-          <SheetTitle className="text-sm font-semibold tracking-widest text-primary/80">
-            MENU
-          </SheetTitle>
-        </SheetHeader>
+      <SheetContent
+        side="bottom"
+        className="invictus-mobile-menu-sheet h-[85vh] rounded-t-3xl p-0 border-t border-border/40"
+      >
+        {/* Close button */}
+        <button
+          onClick={() => onOpenChange(false)}
+          className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted/50 transition-colors z-10"
+          aria-label="Fechar menu"
+        >
+          <X className="h-5 w-5 text-muted-foreground" />
+        </button>
 
-        <nav className="flex flex-col gap-2 p-4 overflow-y-auto">
-          {sections.map((section) => (
-            <div key={section.label} className="mb-2">
-              <span className="invictus-mobile-menu-sectionLabel text-[10px] font-semibold tracking-[0.2em] text-muted-foreground/60 uppercase mb-1 block px-2">
-                {section.label}
-              </span>
+        <ScrollArea className="h-full">
+          {/* User Profile Header */}
+          <div className="flex flex-col items-center pt-10 pb-6 border-b border-border/30">
+            <Avatar className="h-20 w-20 border-2 border-primary/30">
+              <AvatarImage src={profile?.avatar_url || undefined} alt={displayName} />
+              <AvatarFallback className="text-xl bg-muted">{initials}</AvatarFallback>
+            </Avatar>
+            <h2 className="mt-3 text-lg font-semibold text-foreground">{displayName}</h2>
+            {username && (
+              <p className="text-sm text-muted-foreground">@{username}</p>
+            )}
+          </div>
 
-              <div className="flex flex-col gap-0.5">
-                {section.items.map((item) => {
-                  const active = isActive(item.url);
-                  return (
-                    <button
-                      key={item.url}
-                      onClick={() => handleNavigate(item.url)}
-                      className={`invictus-mobile-menu-item flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
-                        active
-                          ? "invictus-mobile-menu-item--active bg-primary/10 text-primary"
-                          : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground"
+          {/* Navigation Items */}
+          <nav className="flex flex-col px-4 py-2">
+            {allItems.map((item) => {
+              const active = isActive(item.url);
+              return (
+                <button
+                  key={item.url}
+                  onClick={() => handleNavigate(item.url)}
+                  className={`
+                    invictus-mobile-menu-item
+                    flex items-center justify-between py-4 border-b border-border/20
+                    transition-colors hover:bg-muted/30
+                    ${active ? "invictus-mobile-menu-item--active" : ""}
+                  `}
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon
+                      className={`h-5 w-5 ${
+                        active ? "text-primary" : "text-muted-foreground"
                       }`}
-                      aria-current={active ? "page" : undefined}
+                    />
+                    <span
+                      className={`text-base ${
+                        active ? "text-foreground font-medium" : "text-foreground/80"
+                      }`}
                     >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span className="text-sm font-medium">{item.title}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </nav>
+                      {item.title}
+                    </span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              );
+            })}
+          </nav>
+        </ScrollArea>
       </SheetContent>
     </Sheet>
   );

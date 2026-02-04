@@ -1,111 +1,144 @@
 
-# Plano: Corrigir Layout do Card "Melhores Anúncios (Conversões)"
+# Plano: Ajustes Corretivos de Respiro Visual (Preservando Identidade)
 
-## Problema Identificado
+## Princípio Fundamental
 
-Na sua tela de notebook, o card "Melhores Anúncios (Conversões)" está exibindo os nomes dos anúncios truncados (mostrando apenas "A" ou "C" em vez de "Ad 1", "Ad 2", etc.). Isso acontece porque:
+**PRESERVAR INTEGRALMENTE:** tema dark premium, paleta grafite + dourado, tipografia, logotipo, imagens, efeitos glass/metal, narrativa e DNA editorial. 
 
-1. O componente `DonutWithLegend` usa layout horizontal (donut à esquerda, legenda à direita)
-2. Em telas menores/notebooks, o card fica estreito dentro do grid `lg:grid-cols-3`
-3. O donut tem tamanho fixo (180px de altura/largura), deixando pouco espaço para a legenda
-4. A propriedade `truncate` corta os nomes quando não há espaço
+**AJUSTAR APENAS:** espaçamentos e respiro entre blocos escuros consecutivos para melhorar conforto visual sem alterar identidade.
 
-## Solução
+---
 
-Refatorar o layout do `DonutWithLegend` para ser responsivo:
+## Diagnóstico Visual Atual
 
-1. **Layout adaptativo**: Em containers estreitos, colocar o donut em cima e a legenda embaixo (vertical)
-2. **Reduzir tamanho do donut**: Quando em modo vertical ou container pequeno, diminuir proporcionalmente
-3. **Garantir espaço mínimo para legenda**: Cada item da legenda deve ter espaço suficiente para exibir nome + porcentagem
+Após análise do código e screenshots, identifiquei pontos específicos de densidade excessiva:
 
-## Mudanças Técnicas
+### 1. Landing Page - Seções consecutivas muito próximas
+- `SectionShell` usa `py-10 sm:py-14` entre seções
+- Em telas maiores, os painéis de `invictus-landing-panel` ficam muito próximos
+- O respiro atual é adequado para mobile, mas insuficiente em desktop
 
-### Arquivo: `src/components/leads/charts/DonutWithLegend.tsx`
+### 2. Páginas internas (Home, Perfil) - Cards empilhados sem respiro
+- `.invictus-page` usa `space-y-4 sm:space-y-6` 
+- Cards com `.invictus-surface .invictus-frame` muito próximos verticalmente
+- Em mobile, densidade é perceptível
 
-```text
-ANTES (layout horizontal fixo):
-┌────────────────────────────────────┐
-│ [DONUT 180px]  │ A 35%             │
-│                │ ═══               │
-│                │ A 28%             │
-│                │ ═══               │
-└────────────────────────────────────┘
+### 3. Repetição de moldura dourada em proximidade
+- Seções `FinalWarning` e `WaitlistHero` ambas usam `invictus-auth-frame` (moldura dourada forte)
+- Ficam em sequência, criando "excesso de borda dourada" num trecho curto
 
-DEPOIS (layout responsivo com fallback vertical):
-┌────────────────────────────────────┐
-│         [DONUT 120px]              │
-│                                    │
-│ ● Ad 1                        35%  │
-│ ═══════════════════════════════    │
-│ ● Ad 2                        28%  │
-│ ═══════════════════════════════    │
-│ ● Ad 3                        22%  │
-│ ═══════════════════════════════    │
-│ ● Outros                      15%  │
-│ ═══════════════════════════════    │
-└────────────────────────────────────┘
+---
+
+## Ajustes Propostos (Mínimos e Cirúrgicos)
+
+### Arquivo: `src/styles/invictus-auth.css`
+
+**Ajuste 1:** Aumentar respiro entre painéis da landing em desktop
+```css
+/* Antes */
+.invictus-landing-panel {
+  padding: 1.5rem;
+}
+@media (min-width: 640px) {
+  .invictus-landing-panel {
+    padding: 2rem;
+  }
+}
+
+/* Depois - adicionar mais respiro interno em desktop grande */
+@media (min-width: 1024px) {
+  .invictus-landing-panel {
+    padding: 2.25rem 2.5rem;
+  }
+}
 ```
 
-### Alterações específicas:
+### Arquivo: `src/components/landing/SectionShell.tsx`
 
-1. **Adicionar prop `layout`** com opção `"auto" | "horizontal" | "vertical"` (padrão: `"auto"`)
-2. **Detectar espaço disponível** usando uma ref e ResizeObserver ou usar breakpoints CSS
-3. **Ajustar tamanhos do donut** para ser menor em modo vertical (ex: 100-120px)
-4. **Expandir área da legenda** para ocupar toda a largura disponível
-5. **Remover truncate** do nome e usar layout que garanta visibilidade completa
-
-### CSS/Classes a aplicar:
-
+**Ajuste 2:** Aumentar espaçamento entre seções em desktop
 ```tsx
-// Container principal - muda de row para column em espaços pequenos
-<div className={cn(
-  "flex w-full min-w-0",
-  layout === "vertical" ? "flex-col items-center gap-4" : "flex-row items-start gap-4"
-)}>
+// Antes
+className="... px-4 py-10 sm:px-6 sm:py-14 ..."
 
-// Legenda - ocupa largura total em modo vertical
-<div className={cn(
-  "space-y-2",
-  layout === "vertical" ? "w-full" : "flex-1 min-w-0"
-)}>
-
-// Item da legenda - nome visível sem truncar
-<span className="text-xs text-muted-foreground">
-  {item.name}
-</span>
+// Depois - adicionar breakpoint lg para respiro extra
+className="... px-4 py-10 sm:px-6 sm:py-14 lg:py-16 xl:py-20 ..."
 ```
 
-## Uso no LeadsMetaView
+### Arquivo: `src/index.css`
 
-O componente será chamado com `layout="vertical"` para garantir que sempre funcione:
+**Ajuste 3:** Melhorar espaçamento de páginas internas
+```css
+/* Antes */
+.invictus-page {
+  @apply space-y-4 sm:space-y-6;
+}
 
+/* Depois - adicionar respiro em desktop */
+.invictus-page {
+  @apply space-y-4 sm:space-y-6 lg:space-y-8;
+}
+```
+
+### Arquivo: `src/components/landing/ManifestoSections.tsx`
+
+**Ajuste 4:** Suavizar moldura dourada do `FinalWarning` para evitar repetição
 ```tsx
-<DonutWithLegend
-  data={mockBestAds}
-  height={120}
-  showPercentage
-  layout="vertical"
-/>
+// Antes - FinalWarning usa invictus-auth-frame (borda dourada forte)
+<Card className="invictus-auth-surface invictus-auth-frame border-0 p-6 sm:p-8">
+
+// Depois - usar invictus-frame (mais sutil) ou adicionar classe modificadora
+<Card className="invictus-auth-surface invictus-frame border-0 p-6 sm:p-8">
 ```
 
-## Resultado Esperado
+Isso diferencia visualmente o "Aviso Final" da "Lista de Espera" que vem logo abaixo, evitando duas molduras douradas fortes em sequência.
 
-| Tela | Layout | Comportamento |
-|------|--------|---------------|
-| Desktop grande | Horizontal | Donut à esquerda, legenda à direita |
-| Notebook/Desktop médio | Vertical | Donut em cima, legenda embaixo com nomes completos |
-| Mobile | Vertical | Mesmo que notebook, responsivo |
+### Arquivo: `src/components/AppLayout.tsx`
 
-## Arquivos a Modificar
+**Ajuste 5:** Adicionar um pouco mais de padding no conteúdo principal em mobile
+```tsx
+// Antes
+<div className="flex-1 p-4 sm:p-5 md:p-6 animate-fade-in">{children}</div>
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/components/leads/charts/DonutWithLegend.tsx` | Adicionar layout vertical responsivo |
-| `src/components/leads/views/LeadsMetaView.tsx` | Passar `layout="vertical"` para o card de melhores anúncios |
+// Depois
+<div className="flex-1 p-4 pb-6 sm:p-5 sm:pb-8 md:p-6 animate-fade-in">{children}</div>
+```
 
-## Testes a Realizar
+---
 
-1. Verificar em notebook (sua resolução atual)
-2. Verificar em desktop 1920x1080
-3. Verificar em tablet/mobile
-4. Confirmar que todos os nomes aparecem completos com suas porcentagens e barras de progresso
+## O Que NÃO Será Alterado
+
+| Elemento | Status |
+|----------|--------|
+| Paleta dark grafite (#7%→#18%) | Mantida |
+| Gradiente dourado (gold-hot, gold-soft) | Mantido |
+| Tipografia e tamanhos de fonte | Mantidos |
+| Logo e branding "FRATERNIDADE" | Mantidos |
+| Efeitos glassmorphism e metal | Mantidos |
+| Animações de reveal e stagger | Mantidas |
+| Imagens editoriais coloridas | Mantidas |
+| Background cinematográfico B&W | Mantido |
+| Hover "Pull Forward" nos cards | Mantido |
+
+---
+
+## Resumo de Arquivos
+
+| Arquivo | Tipo de Mudança |
+|---------|-----------------|
+| `src/styles/invictus-auth.css` | Adicionar media query para padding extra em lg+ |
+| `src/components/landing/SectionShell.tsx` | Adicionar classes `lg:py-16 xl:py-20` |
+| `src/index.css` | Adicionar `lg:space-y-8` ao `.invictus-page` |
+| `src/components/landing/ManifestoSections.tsx` | Trocar `invictus-auth-frame` por `invictus-frame` no FinalWarning |
+| `src/components/AppLayout.tsx` | Adicionar padding-bottom extra em mobile |
+
+---
+
+## Validação
+
+Após implementação, o site deve:
+- Parecer o MESMO visualmente (identidade, tom, cores)
+- Ter melhor "respiro" entre blocos escuros
+- Manter toda a sofisticação e impacto premium
+- Não ter nenhum elemento novo, cor nova ou estilo diferente
+
+Se qualquer ajuste alterar a percepção de identidade, será revertido.

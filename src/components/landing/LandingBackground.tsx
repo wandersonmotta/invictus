@@ -1,23 +1,27 @@
 import * as React from "react";
+import { useTheme } from "next-themes";
 
 /**
  * FONTE ÚNICA do background da landing - otimizado para performance.
- * 
- * Estratégia:
- * - Imagem com fetchPriority="high" para prioridade máxima
- * - will-change: transform promove layer na GPU (evita descarregamento)
- * - Overlay simplificado (3 gradientes vs 5+) para menos recomposição
- * - Sem animação contínua para reduzir trabalho do browser
+ * Suporta tema dark (cinematográfico) e light (perolado sofisticado).
  */
 export function LandingBackground() {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+
+  // Evita mismatch de hydration
+  React.useEffect(() => setMounted(true), []);
+
+  const isDark = !mounted || resolvedTheme === "dark";
+
   return (
     <div
       aria-hidden
       className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
       style={{
         willChange: "transform",
-        transform: "translateZ(0)", // força GPU layer
-        contain: "paint layout", // otimização de rendering
+        transform: "translateZ(0)",
+        contain: "paint layout",
       }}
     >
       <picture>
@@ -29,30 +33,36 @@ export function LandingBackground() {
         <img
           src="/images/invictus-landing-bg-1536x1920-v2.jpg"
           alt=""
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover transition-opacity duration-500"
           loading="eager"
           decoding="sync"
           fetchPriority="high"
           style={{
             willChange: "transform",
             transform: "translateZ(0)",
+            // Light: imagem mais clara; Dark: full intensity
+            opacity: isDark ? 1 : 0.35,
           }}
         />
       </picture>
 
-      {/* Overlay simplificado: 3 gradientes essenciais (vs 5+) */}
+      {/* Overlay adaptativo por tema */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 transition-all duration-500"
         style={{
-          backgroundImage: [
-            // vinheta central para legibilidade
-            "radial-gradient(1000px 700px at 50% 30%, hsl(var(--background) / 0.75), transparent 55%)",
-            // sombra inferior suave
-            "radial-gradient(1400px 800px at 50% 110%, hsl(var(--background) / 0.85), transparent 50%)",
-            // aura dourada sutil (única)
-            "radial-gradient(800px 500px at 25% 5%, hsl(var(--primary) / 0.08), transparent 50%)",
-          ].join(", "),
-          // GPU layer para evitar recomposição
+          backgroundImage: isDark
+            ? [
+                // DARK: overlay existente (cinematográfico)
+                "radial-gradient(1000px 700px at 50% 30%, hsl(var(--background) / 0.75), transparent 55%)",
+                "radial-gradient(1400px 800px at 50% 110%, hsl(var(--background) / 0.85), transparent 50%)",
+                "radial-gradient(800px 500px at 25% 5%, hsl(var(--primary) / 0.08), transparent 50%)",
+              ].join(", ")
+            : [
+                // LIGHT: overlay perolado sofisticado
+                "linear-gradient(180deg, hsl(40 10% 96% / 0.88) 0%, hsl(40 10% 96% / 0.82) 100%)",
+                "radial-gradient(1000px 700px at 50% 30%, hsl(40 10% 96% / 0.65), transparent 55%)",
+                "radial-gradient(800px 500px at 25% 5%, hsl(42 85% 50% / 0.05), transparent 50%)",
+              ].join(", "),
           willChange: "transform",
           transform: "translateZ(0)",
         }}

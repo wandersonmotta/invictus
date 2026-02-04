@@ -9,41 +9,48 @@
   */
 
   /* Container (alvo real é o [data-sidebar="sidebar"] interno)
-     Assinatura: vinheta + marca d’água (monograma) + “champagne edge” (sem textura). */
+     Assinatura: vinheta + marca d'água (monograma) + "champagne edge" (sem textura). */
   .invictus-sidebar [data-sidebar="sidebar"] {
     position: relative;
     overflow: visible;
     /* Tuning knobs (light defaults; dark overrides below) */
-    --sidebar-marble-opacity: 0.14;
-    --sidebar-top-highlight-opacity: 0.78;
+    --sidebar-marble-opacity: 0.10;
+    --sidebar-top-highlight-opacity: 0.70;
     --sidebar-marble-blend: soft-light;
     /* Frame (champagne) */
-    --sidebar-frame-opacity: 0.92;
-    --sidebar-frame-soft: 0.18;
-    --sidebar-frame-hot: 0.62;
-    /* Clean glass (sem "glaze" dourado) */
+    --sidebar-frame-opacity: 0.88;
+    --sidebar-frame-soft: 0.14;
+    --sidebar-frame-hot: 0.52;
+    /* Light mode: glass mais sólido */
     background: linear-gradient(
       180deg,
-      /* vidro real: mais transparente que --card */
-      hsl(var(--background) / 0.22) 0%,
-      hsl(var(--background) / 0.12) 100%
+      hsl(var(--background) / 0.85) 0%,
+      hsl(var(--background) / 0.78) 100%
     );
-    backdrop-filter: blur(24px) saturate(170%);
+    backdrop-filter: blur(20px) saturate(140%);
     box-shadow:
-      /* depth only (frame is a real border via ::after) */
       0 0 0 1px hsl(var(--border) / 0.46) inset,
-      /* internal metal polish */
-      0 1px 0 0 hsl(var(--foreground) / 0.08) inset,
-      0 24px 80px -60px hsl(var(--foreground) / 0.55);
+      0 1px 0 0 hsl(var(--foreground) / 0.05) inset,
+      0 24px 80px -60px hsl(var(--foreground) / 0.25);
   }
 
-  /* Dark: um pouco mais presente sem virar “glaze” */
+  /* Dark: vidro translúcido + glass mais intenso */
   .dark .invictus-sidebar [data-sidebar="sidebar"] {
     --sidebar-marble-opacity: 0.26;
     --sidebar-top-highlight-opacity: 0.90;
     --sidebar-frame-opacity: 0.96;
     --sidebar-frame-soft: 0.20;
     --sidebar-frame-hot: 0.70;
+    background: linear-gradient(
+      180deg,
+      hsl(var(--background) / 0.22) 0%,
+      hsl(var(--background) / 0.12) 100%
+    );
+    backdrop-filter: blur(24px) saturate(170%);
+    box-shadow:
+      0 0 0 1px hsl(var(--border) / 0.46) inset,
+      0 1px 0 0 hsl(var(--foreground) / 0.08) inset,
+      0 24px 80px -60px hsl(var(--foreground) / 0.55);
   }
 
   /* Borda real (champagne) — sempre fina, sempre visível, sem engrossar */
@@ -82,7 +89,7 @@
       linear-gradient(135deg, hsl(var(--gold-hot) / 0.08), transparent 60%),
       /* controlled specular */
       linear-gradient(180deg, hsl(var(--foreground) / 0.10), transparent 36%),
-      /* “mármore sob o vidro”: dourado + grafite, bem sutil */
+      /* "mármore sob o vidro": dourado + grafite, bem sutil */
       radial-gradient(120% 90% at 14% 10%, hsl(var(--gold-hot) / 0.10), transparent 56%),
       radial-gradient(120% 90% at 92% 18%, hsl(var(--gold-soft) / 0.08), transparent 60%),
       /* veios grafite (bem suaves) */
@@ -120,7 +127,7 @@
   }
 
   /* Menu item (aplicado em SidebarMenuButton)
-     Motif: “Crest discreto” (placa limpa + friso interno), sem recortes. */
+     Motif: "Crest discreto" (placa limpa + friso interno), sem recortes. */
   .invictus-sidebar-item {
     position: relative;
     overflow: hidden;
@@ -134,7 +141,7 @@
       filter 180ms ease;
   }
 
-  /* Command Deck: sem “placa”/capsule — só friso de precisão */
+  /* Command Deck: sem "placa"/capsule — só friso de precisão */
   .invictus-sidebar-item::before {
     content: "";
     position: absolute;
@@ -167,6 +174,15 @@
     );
     backdrop-filter: blur(12px) saturate(155%);
     box-shadow: none;
+  }
+
+  /* Light mode: capsule mais sólido */
+  :root:not(.dark) .invictus-sidebar-item[data-active="true"] {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--background) / 0.65) 0%,
+      hsl(var(--background) / 0.55) 100%
+    );
   }
 
   /* Aro fino dourado (capsule) */
@@ -232,7 +248,7 @@
     z-index: 1;
   }
 
-  /* Wrapper dedicado para permitir “icon plate” no ativo */
+  /* Wrapper dedicado para permitir "icon plate" no ativo */
   .invictus-sidebar-iconWrap {
     position: relative;
     display: grid;
@@ -273,7 +289,7 @@
     filter: none;
   }
 
-  /* Hover/Focus: comportamento “deck” (contraste, não efeito) */
+  /* Hover/Focus: comportamento "deck" (contraste, não efeito) */
   .invictus-sidebar-item:hover .invictus-sidebar-label {
     color: hsl(var(--sidebar-foreground) / 0.88);
   }
@@ -282,7 +298,7 @@
     color: hsl(var(--sidebar-foreground) / 0.78);
   }
 
-  /* Tooltip com skin (para estado colapsado ficar “Invictus”) */
+  /* Tooltip com skin (para estado colapsado ficar "Invictus") */
   .invictus-tooltip {
     border-radius: 0.85rem;
     background:
@@ -295,7 +311,16 @@
       0 18px 70px -44px hsl(var(--foreground) / 0.55);
   }
 
-  /* Mini (collapsed): manter mesma assinatura sem “sumir” */
+  /* Light mode: tooltip mais sólido */
+  :root:not(.dark) .invictus-tooltip {
+    background:
+      linear-gradient(180deg, hsl(var(--background) / 0.92), hsl(var(--background) / 0.88));
+    box-shadow:
+      0 1px 0 0 hsl(var(--foreground) / 0.06) inset,
+      0 18px 70px -44px hsl(var(--foreground) / 0.25);
+  }
+
+  /* Mini (collapsed): manter mesma assinatura sem "sumir" */
   .group[data-collapsible="icon"] .invictus-sidebar-item {
     border-radius: 0.9rem;
   }

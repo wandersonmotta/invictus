@@ -17,7 +17,6 @@ const viewOptions: { value: LeadsView; label: string }[] = [
   { value: "meta", label: "Meta Ads" },
   { value: "google_ads", label: "Google Ads" },
   { value: "analytics", label: "Analytics" },
-  { value: "mobile", label: "Mobile" },
 ];
 
 export function LeadsMobileViewSelector({

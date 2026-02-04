@@ -11,7 +11,6 @@ import {
   LeadsMetaView,
   LeadsGoogleAdsView,
   LeadsAnalyticsView,
-  LeadsMobileView,
 } from "@/components/leads/views";
 import { useLeadsMetrics } from "@/hooks/useLeadsMetrics";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -41,8 +40,6 @@ export default function Leads() {
         return "Relatório Google Ads";
       case "analytics":
         return "Relatório Analytics";
-      case "mobile":
-        return "Relatório Mobile";
       default:
         return "Invictus Fraternidade";
     }
@@ -70,8 +67,6 @@ export default function Leads() {
         );
       case "analytics":
         return <LeadsAnalyticsView ga4={ga4} isLoading={ga4.isLoading} />;
-      case "mobile":
-        return <LeadsMobileView />;
       default:
         return null;
     }

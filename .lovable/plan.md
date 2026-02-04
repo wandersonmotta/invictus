@@ -1,144 +1,190 @@
 
-# Plano: Ajustes Corretivos de Respiro Visual (Preservando Identidade)
+# Plano: Bottom Navigation Bar Mobile (Estilo Invictus)
 
-## Princípio Fundamental
+## Visão Geral
 
-**PRESERVAR INTEGRALMENTE:** tema dark premium, paleta grafite + dourado, tipografia, logotipo, imagens, efeitos glass/metal, narrativa e DNA editorial. 
+Implementar uma barra de navegação fixa na parte inferior da tela (bottom navigation) visível apenas em dispositivos mobile, seguindo o modelo da imagem de referência. A barra terá 5 itens principais, sendo o último um botão "Menu" que abre um drawer/sheet com todas as opções de navegação.
 
-**AJUSTAR APENAS:** espaçamentos e respiro entre blocos escuros consecutivos para melhorar conforto visual sem alterar identidade.
+## Estrutura da Bottom Nav
 
----
+```text
+┌─────────────────────────────────────────────────────────┐
+│  🏠       💼        🎁        ❓        ☰              │
+│ Início  Carteira  Pontos   Suporte   Menu             │
+└─────────────────────────────────────────────────────────┘
+```
 
-## Diagnóstico Visual Atual
+### Comportamento dos Itens:
 
-Após análise do código e screenshots, identifiquei pontos específicos de densidade excessiva:
+| Item | Ícone | Ação |
+|------|-------|------|
+| **Início** | Home | Navega para `/app` (Home) |
+| **Carteira** | Wallet | Placeholder (futuro - mostra toast de "em breve") |
+| **Pontos** | Gift/Award | Placeholder (futuro - mostra toast de "em breve") |
+| **Suporte** | HelpCircle | Placeholder ou link externo (configurável) |
+| **Menu** | Menu (hamburger) | Abre sheet/drawer com todas as rotas |
 
-### 1. Landing Page - Seções consecutivas muito próximas
-- `SectionShell` usa `py-10 sm:py-14` entre seções
-- Em telas maiores, os painéis de `invictus-landing-panel` ficam muito próximos
-- O respiro atual é adequado para mobile, mas insuficiente em desktop
+### Menu Drawer (ao clicar em "Menu"):
 
-### 2. Páginas internas (Home, Perfil) - Cards empilhados sem respiro
-- `.invictus-page` usa `space-y-4 sm:space-y-6` 
-- Cards com `.invictus-surface .invictus-frame` muito próximos verticalmente
-- Em mobile, densidade é perceptível
+O drawer lateral (ou bottom sheet) conterá:
+- Feed
+- Mapa
+- Buscar
+- Mensagens
+- Comunidade
+- Leads
+- Perfil
+- Class
+- Admin (se for admin)
 
-### 3. Repetição de moldura dourada em proximidade
-- Seções `FinalWarning` e `WaitlistHero` ambas usam `invictus-auth-frame` (moldura dourada forte)
-- Ficam em sequência, criando "excesso de borda dourada" num trecho curto
+## Arquivos a Criar/Modificar
 
----
+### 1. Criar: `src/components/mobile/MobileBottomNav.tsx`
 
-## Ajustes Propostos (Mínimos e Cirúrgicos)
+Componente principal da bottom navigation:
 
-### Arquivo: `src/styles/invictus-auth.css`
+```tsx
+// Estrutura básica
+- Container fixo no bottom com backdrop-blur (glassmorphism Invictus)
+- 5 botões com ícones e labels
+- Estado ativo para "Início" quando em /app
+- Click handlers para cada item
+- Integração com sheet para o "Menu"
+```
 
-**Ajuste 1:** Aumentar respiro entre painéis da landing em desktop
+### 2. Criar: `src/components/mobile/MobileMenuSheet.tsx`
+
+Drawer/sheet que abre ao clicar em "Menu":
+
+```tsx
+// Conteúdo
+- Lista de navegação estilizada (mesmo visual da sidebar)
+- Agrupa itens por seção (Início, Comunicação, Marketing, Conta)
+- Fecha ao selecionar um item
+- Animação suave de entrada/saída
+```
+
+### 3. Criar: `src/styles/invictus-mobile-nav.css`
+
+Estilos específicos para a bottom nav seguindo o padrão Invictus:
+
 ```css
-/* Antes */
-.invictus-landing-panel {
-  padding: 1.5rem;
-}
-@media (min-width: 640px) {
-  .invictus-landing-panel {
-    padding: 2rem;
-  }
+/* Estilo glass premium */
+.invictus-mobile-nav {
+  background: linear-gradient(180deg, hsl(var(--background) / 0.85), hsl(var(--background) / 0.92));
+  backdrop-filter: blur(24px) saturate(170%);
+  border-top: 1px solid hsl(var(--gold-hot) / 0.25);
+  /* Borda dourada sutil no topo */
 }
 
-/* Depois - adicionar mais respiro interno em desktop grande */
-@media (min-width: 1024px) {
-  .invictus-landing-panel {
-    padding: 2.25rem 2.5rem;
-  }
+.invictus-mobile-nav-item {
+  /* Estilo do item */
+}
+
+.invictus-mobile-nav-item[data-active="true"] {
+  /* Item ativo com destaque dourado */
 }
 ```
 
-### Arquivo: `src/components/landing/SectionShell.tsx`
+### 4. Modificar: `src/components/AppLayout.tsx`
 
-**Ajuste 2:** Aumentar espaçamento entre seções em desktop
+Adicionar a bottom nav e ajustar padding do conteúdo:
+
 ```tsx
-// Antes
-className="... px-4 py-10 sm:px-6 sm:py-14 ..."
-
-// Depois - adicionar breakpoint lg para respiro extra
-className="... px-4 py-10 sm:px-6 sm:py-14 lg:py-16 xl:py-20 ..."
+// Mudanças:
+- Importar MobileBottomNav
+- Renderizar MobileBottomNav apenas em mobile (useIsMobile)
+- Adicionar padding-bottom extra no conteúdo principal em mobile
+  para não ficar escondido atrás da nav
+- Ocultar o SidebarTrigger no header (a sidebar será acessada via Menu)
 ```
 
-### Arquivo: `src/index.css`
+### 5. Modificar: `src/index.css`
 
-**Ajuste 3:** Melhorar espaçamento de páginas internas
+Importar o novo arquivo de estilos:
+
 ```css
-/* Antes */
-.invictus-page {
-  @apply space-y-4 sm:space-y-6;
-}
-
-/* Depois - adicionar respiro em desktop */
-.invictus-page {
-  @apply space-y-4 sm:space-y-6 lg:space-y-8;
-}
+@import "./styles/invictus-mobile-nav.css";
 ```
 
-### Arquivo: `src/components/landing/ManifestoSections.tsx`
+## Layout Técnico
 
-**Ajuste 4:** Suavizar moldura dourada do `FinalWarning` para evitar repetição
-```tsx
-// Antes - FinalWarning usa invictus-auth-frame (borda dourada forte)
-<Card className="invictus-auth-surface invictus-auth-frame border-0 p-6 sm:p-8">
+### Dimensões:
+- Altura da bottom nav: `64px` (h-16)
+- Padding inferior do conteúdo: `pb-20` (80px para dar respiro)
+- Z-index: `z-50` (acima do conteúdo, abaixo de modais)
 
-// Depois - usar invictus-frame (mais sutil) ou adicionar classe modificadora
-<Card className="invictus-auth-surface invictus-frame border-0 p-6 sm:p-8">
+### Responsividade:
+- Visível apenas em: `md:hidden` (abaixo de 768px)
+- Desktop: Mantém sidebar atual inalterada
+
+### Hierarquia Visual:
+```text
+┌────────────────────────────────┐
+│          Top Bar               │ z-20
+├────────────────────────────────┤
+│                                │
+│         Conteúdo               │
+│                                │
+│                                │
+├────────────────────────────────┤
+│       Bottom Nav               │ z-50
+└────────────────────────────────┘
 ```
 
-Isso diferencia visualmente o "Aviso Final" da "Lista de Espera" que vem logo abaixo, evitando duas molduras douradas fortes em sequência.
+## Detalhes de Implementação
 
-### Arquivo: `src/components/AppLayout.tsx`
+### Ícones (Lucide React):
+- Início: `Home`
+- Carteira: `Wallet`
+- Pontos: `Gift` ou `Award`
+- Suporte: `HelpCircle`
+- Menu: `Menu`
 
-**Ajuste 5:** Adicionar um pouco mais de padding no conteúdo principal em mobile
-```tsx
-// Antes
-<div className="flex-1 p-4 sm:p-5 md:p-6 animate-fade-in">{children}</div>
+### Estados Visuais:
+- **Default**: Ícone e texto em cor muted
+- **Active**: Ícone e texto com gradiente/brilho dourado
+- **Pressed**: Leve feedback visual (scale ou opacidade)
 
-// Depois
-<div className="flex-1 p-4 pb-6 sm:p-5 sm:pb-8 md:p-6 animate-fade-in">{children}</div>
-```
+### Animações:
+- Menu sheet: slide-in da direita ou bottom (usando Sheet do shadcn)
+- Itens: transição suave de cor (180ms)
 
----
+## Segurança e Condições
 
-## O Que NÃO Será Alterado
+### Usuários Pendentes (access_status !== "approved"):
+- Bottom nav mostra apenas: Início, Carteira, Pontos, Suporte
+- Menu mostra apenas: Perfil
+- Mesma lógica já aplicada na sidebar atual
 
-| Elemento | Status |
-|----------|--------|
-| Paleta dark grafite (#7%→#18%) | Mantida |
-| Gradiente dourado (gold-hot, gold-soft) | Mantido |
-| Tipografia e tamanhos de fonte | Mantidos |
-| Logo e branding "FRATERNIDADE" | Mantidos |
-| Efeitos glassmorphism e metal | Mantidos |
-| Animações de reveal e stagger | Mantidas |
-| Imagens editoriais coloridas | Mantidas |
-| Background cinematográfico B&W | Mantido |
-| Hover "Pull Forward" nos cards | Mantido |
+### Admins:
+- Menu inclui item "Admin" na lista
 
----
+## Resultado Visual Esperado
+
+A bottom nav terá o estilo premium Invictus:
+- Background glass com blur
+- Borda dourada sutil no topo (champagne edge)
+- Ícones e texto com tratamento metálico
+- Item ativo destacado com acento dourado
+- Transições suaves e elegantes
 
 ## Resumo de Arquivos
 
-| Arquivo | Tipo de Mudança |
-|---------|-----------------|
-| `src/styles/invictus-auth.css` | Adicionar media query para padding extra em lg+ |
-| `src/components/landing/SectionShell.tsx` | Adicionar classes `lg:py-16 xl:py-20` |
-| `src/index.css` | Adicionar `lg:space-y-8` ao `.invictus-page` |
-| `src/components/landing/ManifestoSections.tsx` | Trocar `invictus-auth-frame` por `invictus-frame` no FinalWarning |
-| `src/components/AppLayout.tsx` | Adicionar padding-bottom extra em mobile |
+| Arquivo | Operação |
+|---------|----------|
+| `src/components/mobile/MobileBottomNav.tsx` | Criar |
+| `src/components/mobile/MobileMenuSheet.tsx` | Criar |
+| `src/styles/invictus-mobile-nav.css` | Criar |
+| `src/components/AppLayout.tsx` | Modificar |
+| `src/index.css` | Modificar |
 
----
+## Testes a Realizar
 
-## Validação
-
-Após implementação, o site deve:
-- Parecer o MESMO visualmente (identidade, tom, cores)
-- Ter melhor "respiro" entre blocos escuros
-- Manter toda a sofisticação e impacto premium
-- Não ter nenhum elemento novo, cor nova ou estilo diferente
-
-Se qualquer ajuste alterar a percepção de identidade, será revertido.
+1. Verificar visualização em mobile (iPhone, Android)
+2. Testar navegação: Início deve ir para /app
+3. Testar placeholder: Carteira/Pontos/Suporte mostram toast "Em breve"
+4. Testar Menu: abre drawer com todas as opções
+5. Testar navegação pelo Menu: fecha drawer e navega corretamente
+6. Verificar que a sidebar original continua funcionando em desktop
+7. Confirmar que o conteúdo não fica escondido atrás da bottom nav

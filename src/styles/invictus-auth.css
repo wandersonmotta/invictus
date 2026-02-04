@@ -320,6 +320,18 @@ body.invictus-landing-body {
   padding: 1.5rem;
 }
 
+@media (min-width: 640px) {
+  .invictus-landing-panel {
+    padding: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .invictus-landing-panel {
+    padding: 2.25rem 2.5rem;
+  }
+}
+
 /* Assinatura Invictus (título + separador) */
 .invictus-section-eyebrow {
   font-size: 0.6875rem;

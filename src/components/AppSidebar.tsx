@@ -44,6 +44,12 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    label: "Treinamentos",
+    items: [
+      { title: "Class", url: "/class", icon: Clapperboard },
+    ],
+  },
+  {
     label: "Comunicação",
     items: [
       { title: "Mensagens", url: "/mensagens", icon: Send },
@@ -60,7 +66,6 @@ const navSections: NavSection[] = [
     label: "Conta",
     items: [
       { title: "Perfil", url: "/perfil", icon: User },
-      { title: "Class", url: "/class", icon: Clapperboard },
       { title: "Carteira", url: "/carteira", icon: Wallet, placeholder: true },
       { title: "Pontos", url: "/pontos", icon: Gift, placeholder: true },
       { title: "Suporte", url: "/suporte", icon: HelpCircle, placeholder: true },

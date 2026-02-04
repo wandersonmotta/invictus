@@ -38,19 +38,49 @@ interface MenuItem {
   placeholder?: boolean;
 }
 
-const menuItems: MenuItem[] = [
-  { title: "Início", url: "/app", icon: Home },
-  { title: "Feed", url: "/feed", icon: Newspaper },
-  { title: "Mapa", url: "/mapa", icon: MapPin },
-  { title: "Buscar", url: "/buscar", icon: Search },
-  { title: "Mensagens", url: "/mensagens", icon: Send },
-  { title: "Comunidade", url: "/comunidade", icon: MessagesSquare },
-  { title: "Leads", url: "/leads", icon: BarChart3 },
-  { title: "Perfil", url: "/perfil", icon: User },
-  { title: "Class", url: "/class", icon: Clapperboard },
-  { title: "Carteira", url: "/carteira", icon: Wallet, placeholder: true },
-  { title: "Pontos", url: "/pontos", icon: Gift, placeholder: true },
-  { title: "Suporte", url: "/suporte", icon: HelpCircle, placeholder: true },
+interface MenuSection {
+  label: string;
+  items: MenuItem[];
+}
+
+const menuSections: MenuSection[] = [
+  {
+    label: "Início",
+    items: [
+      { title: "Início", url: "/app", icon: Home },
+      { title: "Feed", url: "/feed", icon: Newspaper },
+      { title: "Mapa", url: "/mapa", icon: MapPin },
+      { title: "Buscar", url: "/buscar", icon: Search },
+    ],
+  },
+  {
+    label: "Treinamentos",
+    items: [
+      { title: "Class", url: "/class", icon: Clapperboard },
+    ],
+  },
+  {
+    label: "Comunicação",
+    items: [
+      { title: "Mensagens", url: "/mensagens", icon: Send },
+      { title: "Comunidade", url: "/comunidade", icon: MessagesSquare },
+    ],
+  },
+  {
+    label: "Marketing",
+    items: [
+      { title: "Leads", url: "/leads", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Conta",
+    items: [
+      { title: "Perfil", url: "/perfil", icon: User },
+      { title: "Carteira", url: "/carteira", icon: Wallet, placeholder: true },
+      { title: "Pontos", url: "/pontos", icon: Gift, placeholder: true },
+      { title: "Suporte", url: "/suporte", icon: HelpCircle, placeholder: true },
+    ],
+  },
 ];
 
 export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
@@ -90,18 +120,15 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
     .slice(0, 2);
   const username = accessStatus?.username;
 
-  // Filter items based on access status
-  const visibleItems = isOnboarding
-    ? menuItems.filter((item) => item.url === "/perfil")
-    : menuItems;
-
-  // Add admin item if applicable
-  const allItems = [
-    ...visibleItems,
-    ...(isAdmin && !isOnboarding
-      ? [{ title: "Admin", url: "/admin", icon: Shield }]
-      : []),
-  ];
+  // Build sections based on access status
+  const visibleSections: MenuSection[] = isOnboarding
+    ? [{ label: "Conta", items: [{ title: "Perfil", url: "/perfil", icon: User }] }]
+    : [
+        ...menuSections,
+        ...(isAdmin
+          ? [{ label: "Administração", items: [{ title: "Admin", url: "/admin", icon: Shield }] }]
+          : []),
+      ];
 
   const handleNavigate = (item: MenuItem) => {
     if (item.placeholder) {
@@ -142,37 +169,44 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
 
           {/* Navigation Items */}
           <nav className="flex flex-col px-4 py-2">
-            {allItems.map((item) => {
-              const active = isActive(item.url);
-              return (
-                <button
-                  key={item.url}
-                  onClick={() => handleNavigate(item)}
-                  className={`
-                    invictus-mobile-menu-item
-                    flex items-center justify-between py-4 border-b border-border/20
-                    transition-colors hover:bg-muted/30
-                    ${active ? "invictus-mobile-menu-item--active" : ""}
-                  `}
-                >
-                  <div className="flex items-center gap-3">
-                    <item.icon
-                      className={`h-5 w-5 ${
-                        active ? "text-primary" : "text-muted-foreground"
-                      }`}
-                    />
-                    <span
-                      className={`text-base ${
-                        active ? "text-foreground font-medium" : "text-foreground/80"
-                      }`}
+            {visibleSections.map((section) => (
+              <div key={section.label} className="mb-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 py-2">
+                  {section.label}
+                </p>
+                {section.items.map((item) => {
+                  const active = isActive(item.url);
+                  return (
+                    <button
+                      key={item.url}
+                      onClick={() => handleNavigate(item)}
+                      className={`
+                        invictus-mobile-menu-item
+                        flex items-center justify-between py-3 px-1 w-full
+                        transition-colors hover:bg-muted/30
+                        ${active ? "invictus-mobile-menu-item--active" : ""}
+                      `}
                     >
-                      {item.title}
-                    </span>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </button>
-              );
-            })}
+                      <div className="flex items-center gap-3">
+                        <item.icon
+                          className={`h-5 w-5 ${
+                            active ? "text-primary" : "text-muted-foreground"
+                          }`}
+                        />
+                        <span
+                          className={`text-base ${
+                            active ? "text-foreground font-medium" : "text-foreground/80"
+                          }`}
+                        >
+                          {item.title}
+                        </span>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
           </nav>
         </ScrollArea>
       </SheetContent>

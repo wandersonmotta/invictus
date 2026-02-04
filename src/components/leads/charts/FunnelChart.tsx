@@ -23,6 +23,9 @@ export function FunnelChart({ steps, className }: FunnelChartProps) {
   // Calculate widths - top is widest, bottom is narrowest
   const widths = [100, 85, 65, 50];
 
+  // Collect rates for mobile display
+  const rates = steps.filter((s) => s.rate !== undefined);
+
   return (
     <div className={cn("relative flex flex-col items-center gap-0 py-2", className)}>
       {steps.map((step, index) => {
@@ -69,9 +72,9 @@ export function FunnelChart({ steps, className }: FunnelChartProps) {
               </div>
             </div>
             
-            {/* Rate indicators on the right */}
+            {/* Rate indicators on the right - hidden on mobile */}
             {step.rate !== undefined && (
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 pl-4 text-right w-28">
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 pl-4 text-right w-28 hidden md:block">
                 <p className="text-[9px] text-muted-foreground whitespace-nowrap leading-tight">
                   {step.rateLabel}
                 </p>
@@ -83,6 +86,18 @@ export function FunnelChart({ steps, className }: FunnelChartProps) {
           </div>
         );
       })}
+
+      {/* Mobile rate indicators - shown below funnel */}
+      {rates.length > 0 && (
+        <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-border/30 w-full md:hidden">
+          {rates.map((step, i) => (
+            <div key={i} className="text-center">
+              <p className="text-[9px] text-muted-foreground">{step.rateLabel}</p>
+              <p className="text-xs font-semibold text-foreground">{step.rate?.toFixed(2)}%</p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

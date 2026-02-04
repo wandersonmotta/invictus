@@ -159,9 +159,9 @@ export function LeadsAnalyticsView({ ga4, isLoading }: LeadsAnalyticsViewProps) 
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Brazil Map + Region Table */}
-        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 lg:row-span-2">
+        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 md:col-span-2 lg:col-span-1 lg:row-span-2">
           {/* Brazil Map */}
           <BrazilMap data={mockMapData} className="mb-4" />
           
@@ -233,7 +233,7 @@ export function LeadsAnalyticsView({ ga4, isLoading }: LeadsAnalyticsViewProps) 
       </div>
 
       {/* Bottom Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* OS Donut */}
         <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40">
           <h3 className="text-sm font-medium text-foreground mb-4">Sistema Operacional</h3>

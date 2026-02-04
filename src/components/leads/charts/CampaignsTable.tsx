@@ -37,8 +37,11 @@ export function CampaignsTable({ campaigns, platform, className }: CampaignsTabl
   const maxInvestimento = Math.max(...campaigns.map((c) => c.investimento));
 
   return (
-    <div className={cn("rounded-lg border border-border/40 overflow-x-auto", className)}>
-      <Table className="min-w-[500px]">
+    <div className={cn("relative rounded-lg border border-border/40", className)}>
+      {/* Scroll indicator for mobile */}
+      <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-card/80 to-transparent pointer-events-none z-10 sm:hidden" />
+      <div className="overflow-x-auto scrollbar-thin">
+        <Table className="min-w-[600px]">
         <TableHeader>
           <TableRow className="bg-muted/30 hover:bg-muted/30">
             <TableHead className="text-xs font-medium text-muted-foreground">
@@ -131,6 +134,7 @@ export function CampaignsTable({ campaigns, platform, className }: CampaignsTabl
           ))}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }

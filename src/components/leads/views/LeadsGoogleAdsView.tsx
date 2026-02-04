@@ -86,7 +86,7 @@ export function LeadsGoogleAdsView({ googleAds, isLoading }: LeadsGoogleAdsViewP
       </div>
 
       {/* KPI Cards Row */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
         <KPICard
           title="Investimento"
           value={hasData ? formatCurrency(metrics.spend) : "R$ 2.075,87"}

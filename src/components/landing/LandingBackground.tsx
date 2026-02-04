@@ -1,18 +1,10 @@
-import * as React from "react";
-import { useTheme } from "next-themes";
-
 /**
  * FONTE ÚNICA do background da landing - otimizado para performance.
- * Suporta tema dark (cinematográfico) e light (perolado sofisticado).
+ * Páginas públicas são SEMPRE dark — não consulta o tema do sistema.
  */
 export function LandingBackground() {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-
-  // Evita mismatch de hydration
-  React.useEffect(() => setMounted(true), []);
-
-  const isDark = !mounted || resolvedTheme === "dark";
+  // Hardcoded: páginas públicas sempre usam o tema dark cinematográfico
+  const isDark = true;
 
   return (
     <div

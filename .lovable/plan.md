@@ -1,128 +1,211 @@
 
-# Plano: Adicionar Carteira, Pontos e Suporte na Sidebar Desktop
+# Plano: Reorganizar Categorias + Menu Mobile com Seções
 
 ## Situação Atual
 
-O **MobileBottomNav** (menu inferior para celulares/tablets) possui:
-- **Início** → `/app` (funcional)
-- **Carteira** → placeholder (sem página ainda)
-- **Pontos** → placeholder (sem página ainda)
-- **Suporte** → placeholder (sem página ainda)
-- **Menu** → abre drawer com navegação completa
+**Sidebar Desktop (AppSidebar):**
+- Início: Início, Feed, Mapa, Buscar
+- Comunicação: Mensagens, Comunidade
+- Marketing: Leads
+- Conta: Perfil, **Class**, Carteira, Pontos, Suporte
+- Administração: Admin (se admin)
 
-A **AppSidebar** (barra lateral desktop/notebook) possui:
-- Início, Feed, Mapa, Buscar
-- Mensagens, Comunidade
-- Leads
-- Perfil, Class
-- Admin (se aplicável)
+**MobileMenuSheet (drawer):** Lista plana sem categorias, todos os itens juntos.
 
-**Problema:** Carteira, Pontos e Suporte não estão na sidebar desktop.
+**Problema:** "Class" é treinamentos, não faz sentido em "Conta". E o menu mobile não tem organização por categorias.
 
 ---
 
 ## Solução
 
-Adicionar os três itens na sidebar desktop na categoria **"Conta"**, já que são funcionalidades relacionadas ao usuário individual. Por enquanto, como são placeholders:
+### Parte 1: Nova Categoria "Treinamentos"
 
-1. Clicar nesses itens vai mostrar um toast "Em breve!"
-2. Quando as páginas forem criadas, basta remover a marcação de placeholder
+Criar categoria **"Treinamentos"** entre "Início" e "Comunicação", e mover "Class" para lá.
 
----
+**Nova ordem das categorias:**
 
-## Organização Proposta da Sidebar
+| Ordem | Categoria | Itens |
+|-------|-----------|-------|
+| 1 | **Início** | Início, Feed, Mapa, Buscar |
+| 2 | **Treinamentos** | Class |
+| 3 | **Comunicação** | Mensagens, Comunidade |
+| 4 | **Marketing** | Leads |
+| 5 | **Conta** | Perfil, Carteira, Pontos, Suporte |
+| 6 | **Administração** | Admin (só admins) |
 
-| Categoria | Itens |
-|-----------|-------|
-| **Início** | Início, Feed, Mapa, Buscar |
-| **Comunicação** | Mensagens, Comunidade |
-| **Marketing** | Leads |
-| **Conta** | Perfil, Class, Carteira, Pontos, Suporte |
-| **Administração** | Admin (só admins) |
+### Parte 2: MobileMenuSheet com Categorias
 
----
+Transformar o menu mobile de lista plana para lista organizada por seções, igual ao desktop. Cada categoria terá um label visual separando os itens.
 
-## Arquivo a Modificar
+**Visual esperado no mobile:**
 
-### `src/components/AppSidebar.tsx`
+```text
+[Avatar do Usuário]
+Nome do Usuário
+@username
 
-**Mudanças:**
-
-1. Importar os ícones necessários:
-```tsx
-import { Wallet, Gift, HelpCircle } from "lucide-react";
+─────────────────
+INÍCIO
+  → Início
+  → Feed
+  → Mapa
+  → Buscar
+─────────────────
+TREINAMENTOS
+  → Class
+─────────────────
+COMUNICAÇÃO
+  → Mensagens
+  → Comunidade
+─────────────────
+MARKETING
+  → Leads
+─────────────────
+CONTA
+  → Perfil
+  → Carteira
+  → Pontos
+  → Suporte
+─────────────────
+ADMINISTRAÇÃO (se admin)
+  → Admin
 ```
 
-2. Adicionar os novos itens na seção "Conta":
+---
+
+## Arquivos a Modificar
+
+### 1. `src/components/AppSidebar.tsx`
+
+Reorganizar o array `navSections`:
+
 ```tsx
-{
-  label: "Conta",
-  items: [
-    { title: "Perfil", url: "/perfil", icon: User },
-    { title: "Class", url: "/class", icon: Clapperboard },
-    { title: "Carteira", url: "/carteira", icon: Wallet, placeholder: true },
-    { title: "Pontos", url: "/pontos", icon: Gift, placeholder: true },
-    { title: "Suporte", url: "/suporte", icon: HelpCircle, placeholder: true },
-  ],
-},
+const navSections: NavSection[] = [
+  {
+    label: "Início",
+    items: [
+      { title: "Início", url: "/app", icon: HomeIcon },
+      { title: "Feed", url: "/feed", icon: Newspaper },
+      { title: "Mapa", url: "/mapa", icon: MapPin },
+      { title: "Buscar", url: "/buscar", icon: Search },
+    ],
+  },
+  {
+    label: "Treinamentos",
+    items: [
+      { title: "Class", url: "/class", icon: Clapperboard },
+    ],
+  },
+  {
+    label: "Comunicação",
+    items: [
+      { title: "Mensagens", url: "/mensagens", icon: Send },
+      { title: "Comunidade", url: "/comunidade", icon: MessagesSquare },
+    ],
+  },
+  {
+    label: "Marketing",
+    items: [
+      { title: "Leads", url: "/leads", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Conta",
+    items: [
+      { title: "Perfil", url: "/perfil", icon: User },
+      { title: "Carteira", url: "/carteira", icon: Wallet, placeholder: true },
+      { title: "Pontos", url: "/pontos", icon: Gift, placeholder: true },
+      { title: "Suporte", url: "/suporte", icon: HelpCircle, placeholder: true },
+    ],
+  },
+];
 ```
 
-3. Modificar o handler de clique para mostrar toast em placeholders:
+### 2. `src/components/mobile/MobileMenuSheet.tsx`
+
+Mudar de lista plana (`menuItems[]`) para estrutura por seções (`menuSections[]`) e renderizar com labels de categoria:
+
 ```tsx
-const handleNavClick = (e: React.MouseEvent, isPlaceholder?: boolean) => {
-  if (isPlaceholder) {
-    e.preventDefault();
-    toast.info("Em breve!", {
-      description: "Esta funcionalidade está sendo desenvolvida.",
-    });
-    return;
-  }
-  if (isMobile) setOpenMobile(false);
-};
+interface MenuSection {
+  label: string;
+  items: MenuItem[];
+}
+
+const menuSections: MenuSection[] = [
+  {
+    label: "Início",
+    items: [
+      { title: "Início", url: "/app", icon: Home },
+      { title: "Feed", url: "/feed", icon: Newspaper },
+      { title: "Mapa", url: "/mapa", icon: MapPin },
+      { title: "Buscar", url: "/buscar", icon: Search },
+    ],
+  },
+  {
+    label: "Treinamentos",
+    items: [
+      { title: "Class", url: "/class", icon: Clapperboard },
+    ],
+  },
+  {
+    label: "Comunicação",
+    items: [
+      { title: "Mensagens", url: "/mensagens", icon: Send },
+      { title: "Comunidade", url: "/comunidade", icon: MessagesSquare },
+    ],
+  },
+  {
+    label: "Marketing",
+    items: [
+      { title: "Leads", url: "/leads", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Conta",
+    items: [
+      { title: "Perfil", url: "/perfil", icon: User },
+      { title: "Carteira", url: "/carteira", icon: Wallet, placeholder: true },
+      { title: "Pontos", url: "/pontos", icon: Gift, placeholder: true },
+      { title: "Suporte", url: "/suporte", icon: HelpCircle, placeholder: true },
+    ],
+  },
+];
 ```
 
-4. Passar a flag `placeholder` para o componente de link e aplicar o comportamento
+E atualizar a renderização para iterar por seções:
+
+```tsx
+<nav className="flex flex-col px-4 py-2">
+  {sections.map((section) => (
+    <div key={section.label} className="mb-2">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 py-2">
+        {section.label}
+      </p>
+      {section.items.map((item) => (
+        <button key={item.url} onClick={() => handleNavigate(item)} ...>
+          ...
+        </button>
+      ))}
+    </div>
+  ))}
+</nav>
+```
 
 ---
 
-## Consistência com Mobile
-
-Também vou adicionar esses mesmos itens no **MobileMenuSheet** (menu drawer que abre ao clicar em "Menu"):
-
-### `src/components/mobile/MobileMenuSheet.tsx`
-
-Adicionar Carteira, Pontos e Suporte na lista de itens do menu drawer para que fiquem disponíveis também quando o usuário abre o menu completo no mobile.
-
----
-
-## Resumo de Mudanças
+## Resumo das Mudanças
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/AppSidebar.tsx` | Adicionar Carteira, Pontos, Suporte na categoria "Conta" com comportamento de placeholder |
-| `src/components/mobile/MobileMenuSheet.tsx` | Adicionar os mesmos itens para consistência no drawer mobile |
-
----
-
-## Visual Esperado
-
-**Sidebar Desktop (categoria Conta):**
-```
-CONTA
-├── Perfil
-├── Class  
-├── Carteira ★ (em breve)
-├── Pontos ★ (em breve)
-└── Suporte ★ (em breve)
-```
-
-Os itens marcados como placeholder terão o mesmo comportamento visual, mas ao clicar mostram o toast "Em breve!" ao invés de navegar.
+| `src/components/AppSidebar.tsx` | Criar categoria "Treinamentos" e mover "Class" para ela; remover "Class" de "Conta" |
+| `src/components/mobile/MobileMenuSheet.tsx` | Transformar lista plana em estrutura por seções com labels de categoria |
 
 ---
 
 ## Testes a Realizar
 
-1. Abrir em desktop (≥1024px) e verificar que Carteira, Pontos e Suporte aparecem na sidebar
-2. Clicar em cada um e confirmar que o toast "Em breve!" aparece
-3. Abrir em tablet/mobile e verificar que os itens também aparecem no menu drawer
-4. Confirmar que a navegação para rotas existentes continua funcionando normalmente
+1. Abrir em desktop e verificar que "Class" aparece na categoria "Treinamentos" (entre Início e Comunicação)
+2. Verificar que "Class" não aparece mais em "Conta"
+3. Abrir em mobile/tablet, clicar em "Menu" e verificar que as categorias aparecem organizadas
+4. Clicar em itens de cada categoria para confirmar navegação funcionando
+5. Testar itens placeholder (Carteira, Pontos, Suporte) para confirmar toast "Em breve!"

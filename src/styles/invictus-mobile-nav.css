@@ -1,6 +1,7 @@
 /* ========================================
    INVICTUS MOBILE NAVIGATION
    Premium glass mobile bottom nav + menu sheet
+   Otimizado para tablets e celulares (< 1024px)
    ======================================== */
 
 /* ----------------------------------------
@@ -12,8 +13,9 @@
     hsl(var(--background) / 0.88),
     hsl(var(--background) / 0.95)
   );
-  backdrop-filter: blur(24px) saturate(170%);
-  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  /* Blur reduzido para performance em mobile */
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
   
   /* Floating island style */
   margin: 0 1rem;
@@ -24,6 +26,10 @@
     0 8px 32px -4px hsl(var(--background) / 0.6),
     0 0 0 1px hsl(var(--gold-hot) / 0.1),
     0 -4px 24px -4px hsl(var(--background) / 0.8);
+  
+  /* GPU acceleration */
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .invictus-mobile-nav-item {
@@ -76,8 +82,8 @@
     hsl(var(--background) / 0.97),
     hsl(var(--background))
   ) !important;
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
   border-left: 1px solid hsl(var(--gold-hot) / 0.15) !important;
 }
 

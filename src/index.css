@@ -156,6 +156,13 @@ All colors MUST be HSL.
 }
 
 @layer components {
+  /* Performance: content-visibility para componentes pesados */
+  .invictus-surface,
+  .invictus-frame {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 200px;
+  }
+
   /* Premium glass surface + frame (clean executive + impact) */
   /* Light mode: glass mais sólido e visível */
   :root .invictus-surface {
@@ -181,7 +188,14 @@ All colors MUST be HSL.
     box-shadow: none;
   }
 
-  @media (min-width: 768px) {
+  /* Blur reduzido em mobile/tablet para performance */
+  @media (max-width: 1023px) {
+    .invictus-surface {
+      backdrop-filter: blur(12px);
+    }
+  }
+
+  @media (min-width: 1024px) {
     .invictus-surface {
       backdrop-filter: blur(20px);
     }

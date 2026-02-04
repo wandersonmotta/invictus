@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { FeedMode, FeedPost } from "@/features/feed/types";
 import { createSignedUrl } from "@/features/feed/storage";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { NewFeedPostDialog } from "@/components/feed/NewFeedPostDialog";
 import { FeedPostCard } from "@/components/feed/FeedPostCard";
 export default function Feed() {
@@ -56,7 +57,22 @@ export default function Feed() {
       </header>
 
       <section className="space-y-6 pb-8">
-        {feedQuery.isLoading ? <div className="mx-auto w-full max-w-[480px] text-sm text-muted-foreground">Carregando…</div> : feedQuery.isError ? <div className="mx-auto w-full max-w-[480px] text-sm text-muted-foreground">Não foi possível carregar o feed.</div> : feedQuery.data?.length ? feedQuery.data.map(p => <FeedPostCard key={p.post_id} post={p} />) : <div className="mx-auto w-full max-w-[480px] text-sm text-muted-foreground">Ainda não há posts aqui.</div>}
+        {feedQuery.isLoading ? (
+          <div className="mx-auto w-full max-w-[480px] space-y-4">
+            <Skeleton className="h-[400px] w-full rounded-xl" />
+            <Skeleton className="h-[400px] w-full rounded-xl" />
+          </div>
+        ) : feedQuery.isError ? (
+          <div className="mx-auto w-full max-w-[480px] text-sm text-muted-foreground">
+            Não foi possível carregar o feed.
+          </div>
+        ) : feedQuery.data?.length ? (
+          feedQuery.data.map((p) => <FeedPostCard key={p.post_id} post={p} />)
+        ) : (
+          <div className="mx-auto w-full max-w-[480px] text-sm text-muted-foreground">
+            Ainda não há posts aqui.
+          </div>
+        )}
       </section>
     </main>;
 }

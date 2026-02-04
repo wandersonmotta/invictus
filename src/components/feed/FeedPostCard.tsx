@@ -10,7 +10,7 @@ import { Heart, MessageCircle } from "lucide-react";
 
 import { FeedPostViewerDialog, type FeedPostWithUrls } from "@/components/feed/FeedPostViewerDialog";
 
-export function FeedPostCard({
+function FeedPostCardInner({
   post,
 }: {
   post: FeedPost & {
@@ -227,3 +227,6 @@ export function FeedPostCard({
     </Card>
   );
 }
+
+// Memoizado para evitar re-renders quando a lista atualiza
+export const FeedPostCard = React.memo(FeedPostCardInner);

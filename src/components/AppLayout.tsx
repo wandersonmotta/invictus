@@ -6,12 +6,12 @@ import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { UserMenu } from "@/components/UserMenu";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobileOrTablet } from "@/hooks/use-mobile";
 
 import logo from "@/assets/invictus-logo.png";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const isMobile = useIsMobile();
+  const isMobileOrTablet = useIsMobileOrTablet();
 
   return (
     <SidebarProvider toggleable={true} mobileMode="sheet">
@@ -49,8 +49,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          {/* Add extra bottom padding on mobile for the bottom nav */}
-          <div className={`flex-1 p-4 pb-6 sm:p-5 sm:pb-8 md:p-6 animate-fade-in ${isMobile ? "pb-24" : ""}`}>
+          {/* Add extra bottom padding on mobile/tablet for the bottom nav */}
+          <div className={`flex-1 p-4 pb-6 sm:p-5 sm:pb-8 lg:p-6 animate-fade-in ${isMobileOrTablet ? "pb-24" : ""}`}>
             {children}
           </div>
         </SidebarInset>

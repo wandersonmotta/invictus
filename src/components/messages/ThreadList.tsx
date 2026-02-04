@@ -83,7 +83,7 @@ export function ThreadList({
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="truncate text-sm font-medium">{t.title}</div>
+                    <div className="truncate text-sm font-medium text-foreground">{t.title}</div>
                     <div className="shrink-0 text-xs text-muted-foreground">{formatTime(t.last_message_at)}</div>
                   </div>
                   <div className="truncate text-xs text-muted-foreground">

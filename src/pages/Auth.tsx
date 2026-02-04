@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { GoldHoverText } from "@/components/GoldHoverText";
 import { AuthBackground } from "@/components/auth/AuthBackground";
+import { useForceDark } from "@/hooks/useForceDark";
 import logo from "@/assets/invictus-logo.png";
 
 const loginSchema = z.object({
@@ -45,6 +46,9 @@ const resetSchema = z.object({
 type ResetFormValues = z.infer<typeof resetSchema>;
 
 export default function AuthPage() {
+  // Força tema dark na página de autenticação
+  useForceDark();
+
   const { toast } = useToast();
   const { session, signIn, resetPassword } = useAuth();
   const [resetOpen, setResetOpen] = React.useState(false);

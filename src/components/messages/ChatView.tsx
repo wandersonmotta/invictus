@@ -179,7 +179,7 @@ export function ChatView({
           </Button>
         ) : null}
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold">Conversa</div>
+          <div className="truncate text-sm font-semibold text-foreground">Conversa</div>
         </div>
 
         {/* Menu de opções da conversa */}

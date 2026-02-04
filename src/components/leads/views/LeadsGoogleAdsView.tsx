@@ -129,9 +129,9 @@ export function LeadsGoogleAdsView({ googleAds, isLoading }: LeadsGoogleAdsViewP
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Keywords Table with Pagination */}
-        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 lg:row-span-2">
+        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 md:row-span-2">
           <KeywordsTable keywords={displayedKeywords} />
           
           {/* Pagination */}
@@ -174,9 +174,9 @@ export function LeadsGoogleAdsView({ googleAds, isLoading }: LeadsGoogleAdsViewP
         </Card>
 
         {/* Multi-line Chart */}
-        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 lg:col-span-2">
+        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 md:col-span-2 lg:col-span-2">
           {/* Chart legend */}
-          <div className="flex items-center gap-4 text-xs mb-4">
+          <div className="flex flex-wrap items-center gap-3 md:gap-4 text-xs mb-4">
             <div className="flex items-center gap-1.5">
               <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
               <span className="text-muted-foreground">Investimento</span>

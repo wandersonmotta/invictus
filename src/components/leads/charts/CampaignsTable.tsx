@@ -37,8 +37,8 @@ export function CampaignsTable({ campaigns, platform, className }: CampaignsTabl
   const maxInvestimento = Math.max(...campaigns.map((c) => c.investimento));
 
   return (
-    <div className={cn("rounded-lg border border-border/40 overflow-hidden", className)}>
-      <Table>
+    <div className={cn("rounded-lg border border-border/40 overflow-x-auto", className)}>
+      <Table className="min-w-[500px]">
         <TableHeader>
           <TableRow className="bg-muted/30 hover:bg-muted/30">
             <TableHead className="text-xs font-medium text-muted-foreground">
@@ -46,10 +46,10 @@ export function CampaignsTable({ campaigns, platform, className }: CampaignsTabl
             </TableHead>
             {platform === "meta" && (
               <>
-                <TableHead className="text-xs font-medium text-muted-foreground text-center">
+                <TableHead className="text-xs font-medium text-muted-foreground text-center hidden md:table-cell">
                   Conjuntos
                 </TableHead>
-                <TableHead className="text-xs font-medium text-muted-foreground text-center">
+                <TableHead className="text-xs font-medium text-muted-foreground text-center hidden md:table-cell">
                   Anúncios
                 </TableHead>
               </>
@@ -94,10 +94,10 @@ export function CampaignsTable({ campaigns, platform, className }: CampaignsTabl
               </TableCell>
               {platform === "meta" && (
                 <>
-                  <TableCell className="text-sm text-center text-muted-foreground">
+                  <TableCell className="text-sm text-center text-muted-foreground hidden md:table-cell">
                     {campaign.conjuntos ?? "-"}
                   </TableCell>
-                  <TableCell className="text-sm text-center text-muted-foreground">
+                  <TableCell className="text-sm text-center text-muted-foreground hidden md:table-cell">
                     {campaign.anuncios ?? "-"}
                   </TableCell>
                 </>

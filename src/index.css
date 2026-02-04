@@ -3,6 +3,7 @@
 @import "./styles/invictus-sidebar.css";
 @import "./styles/invictus-topbar.css";
 @import "./styles/invictus-auth.css";
+@import "./styles/invictus-mobile-nav.css";
 
 @tailwind base;
 @tailwind components;

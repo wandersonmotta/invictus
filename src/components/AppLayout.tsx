@@ -2,13 +2,17 @@ import * as React from "react";
 
 import { AppSidebar } from "@/components/AppSidebar";
 import { GoldHoverText } from "@/components/GoldHoverText";
+import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { UserMenu } from "@/components/UserMenu";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import logo from "@/assets/invictus-logo.png";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  const isMobile = useIsMobile();
+
   return (
     <SidebarProvider toggleable={true} mobileMode="sheet">
       <div className="min-h-svh flex w-full">
@@ -25,8 +29,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             }
           >
             <div className="flex flex-1 items-center gap-2 sm:gap-1.5 lg:gap-3 min-w-0">
-              <SidebarTrigger className="md:hidden" />
-
               <img
                 src={logo}
                 alt="Logo da Fraternidade Invictus"
@@ -47,8 +49,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <div className="flex-1 p-4 pb-6 sm:p-5 sm:pb-8 md:p-6 animate-fade-in">{children}</div>
+          {/* Add extra bottom padding on mobile for the bottom nav */}
+          <div className={`flex-1 p-4 pb-6 sm:p-5 sm:pb-8 md:p-6 animate-fade-in ${isMobile ? "pb-24" : ""}`}>
+            {children}
+          </div>
         </SidebarInset>
+
+        {/* Mobile bottom navigation */}
+        <MobileBottomNav />
       </div>
     </SidebarProvider>
   );

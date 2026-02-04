@@ -19,10 +19,4 @@ export function useForceDark() {
       document.documentElement.classList.remove("dark", "light");
     };
   }, []);
-  
-  // Também força no render inicial (SSR safety)
-  if (typeof document !== "undefined") {
-    document.documentElement.classList.add("dark");
-    document.documentElement.classList.remove("light");
-  }
 }

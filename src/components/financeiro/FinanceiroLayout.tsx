@@ -8,6 +8,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
  import invictusLogo from "@/assets/INVICTUS-GOLD_1.png";
 import { cn } from "@/lib/utils";
  import { isLovableHost } from "@/lib/appOrigin";
+ import { FinanceiroBottomNav } from "./FinanceiroBottomNav";
  
  interface FinanceiroLayoutProps {
    children: ReactNode;
@@ -28,7 +29,7 @@ import { cn } from "@/lib/utils";
    return (
      <div className="flex min-h-screen bg-background">
        {/* Sidebar */}
-       <aside className="hidden w-64 flex-col border-r border-border bg-card md:flex">
+       <aside className="hidden w-64 flex-col border-r border-border bg-card lg:flex">
          <div className="flex h-16 items-center gap-2 border-b border-border px-4">
            <img src={invictusLogo} alt="Invictus" className="h-6 shrink-0" />
            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -96,51 +97,20 @@ import { cn } from "@/lib/utils";
        {/* Main content */}
        <div className="flex flex-1 flex-col">
          {/* Mobile header */}
-         <header className="flex h-16 items-center justify-between border-b border-border px-4 md:hidden">
+         <header className="flex h-16 items-center justify-between border-b border-border px-4 lg:hidden">
            <div className="flex items-center gap-2">
              <img src={invictusLogo} alt="Invictus" className="h-5 shrink-0" />
              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                Financeiro
              </span>
            </div>
-            <div className="flex items-center gap-2">
-              {/* Mobile Theme Toggle */}
-              <ToggleGroup
-                type="single"
-                value={theme}
-                onValueChange={(value) => value && setTheme(value)}
-                className="gap-0.5"
-              >
-                <ToggleGroupItem
-                  value="system"
-                  aria-label="Padrão do sistema"
-                  className="h-8 w-8 p-0 data-[state=on]:bg-accent"
-                >
-                  <Monitor className="h-3.5 w-3.5" />
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="light"
-                  aria-label="Modo claro"
-                  className="h-8 w-8 p-0 data-[state=on]:bg-accent"
-                >
-                  <Sun className="h-3.5 w-3.5" />
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="dark"
-                  aria-label="Modo escuro"
-                  className="h-8 w-8 p-0 data-[state=on]:bg-accent"
-                >
-                  <Moon className="h-3.5 w-3.5" />
-                </ToggleGroupItem>
-              </ToggleGroup>
-              <Button variant="ghost" size="icon" onClick={handleLogout}>
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
          </header>
  
-         <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+         <main className="flex-1 overflow-auto p-4 pb-24 lg:p-6 lg:pb-6">{children}</main>
        </div>
+ 
+       {/* Mobile Bottom Navigation */}
+       <FinanceiroBottomNav />
      </div>
    );
  }

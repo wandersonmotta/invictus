@@ -15,10 +15,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider toggleable={true} mobileMode="sheet">
-      <div className="min-h-svh flex w-full">
-        <AppSidebar />
+      <div className="min-h-svh flex w-full overflow-x-hidden">
 
-        <SidebarInset>
+        <SidebarInset className="overflow-x-hidden">
           <header
             className={
               "sticky top-0 z-20 flex h-14 items-center gap-2 px-2 sm:px-2 md:px-3 lg:px-4 backdrop-blur-xl " +

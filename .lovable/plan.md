@@ -1,164 +1,119 @@
 
 
-# Plano: Filtro de Palavras Ofensivas na Comunidade
+# Plano: Seção de Depoimentos na Landing Page
 
 ## Objetivo
 
-Implementar um sistema que bloqueie o envio de mensagens contendo palavras ofensivas na Comunidade, impedindo que o usuário consiga postar conteúdo inadequado.
+Adicionar uma seção de depoimentos/testemunhos logo abaixo da Waitlist, com:
+- Fotos de perfil realistas geradas via IA
+- Textos persuasivos alinhados com a narrativa da Invictus (disciplina, resultado, transformação)
+- Design integrado ao estilo premium existente
 
-## Abordagem
-
-Criar uma **função de validação no banco de dados** que verifica o texto antes de permitir a inserção. Isso garante que:
-- A validação acontece no servidor (não pode ser burlada pelo cliente)
-- Todas as funcionalidades passam pelo mesmo filtro
-- A lista de palavras pode ser atualizada sem deploy
-
-## Arquitetura
+## Arquitetura Visual
 
 ```text
-Usuário digita mensagem
-        │
-        ▼
-Frontend envia para RPC
-        │
-        ▼
-┌───────────────────────────────────┐
-│  contains_profanity(texto)        │
-│  └─ Normaliza: lowercase, remove  │
-│     acentos, variações l33t       │
-│  └─ Verifica contra lista         │
-└───────────────────────────────────┘
-        │
-        ├─ Contém? → RAISE EXCEPTION
-        │            "Mensagem contém
-        │             conteúdo inadequado"
-        │
-        └─ Não contém? → Continua normalmente
+                    DEPOIMENTOS
+┌────────────────────────────────────────────────────────────────────────────┐
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
+│  │    [👤]     │  │    [👤]     │  │    [👤]     │  │    [👤]     │       │
+│  │  Ricardo M. │  │  Camila S.  │  │  Bruno F.   │  │  Lucas P.   │       │
+│  │  "A Invictus│  │ "Nunca mais │  │  "Entrei    │  │ "Fiz 10 mil │       │
+│  │   mudou..." │  │  desculpas" │  │   cético..."│  │  em 1 mês"  │       │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘       │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Mudanças Técnicas
 
-### 1. Criar tabela `blocked_words`
+### 1. Criar componente `TestimonialsSection.tsx`
 
-Armazena palavras/expressões bloqueadas:
+Novo componente em `src/components/landing/TestimonialsSection.tsx` que:
 
-| Coluna | Tipo | Descrição |
-|--------|------|-----------|
-| id | UUID | Chave primária |
-| word | TEXT | Palavra ou expressão |
-| category | TEXT | Categoria (ofensivo, spam, etc) |
-| active | BOOLEAN | Se está ativa |
-| created_at | TIMESTAMP | Data de criação |
+- Usa `SectionShell` para manter consistência visual
+- Exibe 4 depoimentos em grid responsivo (1 coluna mobile, 2 tablet, 4 desktop)
+- Cada card de depoimento contém:
+  - Avatar circular com foto realista
+  - Nome e cargo/área de atuação
+  - Texto do depoimento com aspas estilizadas
+  - Ícone de aspas decorativo
+- Aplica classes `invictus-landing-card invictus-landing-card--lift` para hover premium
+- Usa animação stagger `invictus-stagger--lr` para entrada em sequência
 
-Políticas RLS: Apenas admins podem gerenciar.
-
-### 2. Criar função `contains_profanity(text)`
-
-Função SQL que:
-1. Normaliza o texto (lowercase, remove acentos)
-2. Verifica se contém alguma palavra da lista
-3. Retorna `true` se encontrar match
-
-```sql
-CREATE OR REPLACE FUNCTION public.contains_profanity(p_text TEXT)
-RETURNS BOOLEAN
-LANGUAGE plpgsql
-STABLE SECURITY DEFINER
-AS $$
-DECLARE
-  v_normalized TEXT;
-  v_found BOOLEAN;
-BEGIN
-  IF p_text IS NULL OR p_text = '' THEN
-    RETURN false;
-  END IF;
-  
-  -- Normaliza: lowercase + remove acentos
-  v_normalized := lower(unaccent(p_text));
-  
-  -- Verifica contra lista de palavras bloqueadas
-  SELECT EXISTS (
-    SELECT 1 FROM public.blocked_words bw
-    WHERE bw.active = true
-      AND v_normalized ~* ('\m' || bw.word || '\M')
-  ) INTO v_found;
-  
-  RETURN v_found;
-END;
-$$;
+**Estrutura do card:**
+```text
+┌───────────────────────────────────────────┐
+│  ❝                                        │
+│  "Texto do depoimento que inspira e       │
+│   mostra transformação real..."           │
+│                                           │
+│  ┌────┐                                   │
+│  │ 👤 │  Lucas Pereira                    │
+│  └────┘  Empreendedor, MG                 │
+└───────────────────────────────────────────┘
 ```
 
-A expressão regular `\m...\M` garante match de **palavras inteiras** (não pega "assumir" quando bloqueia "um").
+### 2. Gerar fotos de perfil via IA
 
-### 3. Atualizar RPCs da Comunidade
+Utilizar o modelo de geração de imagens para criar 4 fotos de perfil:
 
-Adicionar validação nas funções existentes:
+- **Estilo**: Retrato profissional, iluminação natural, fundo neutro/escuro
+- **Diversidade**: Homens e mulheres, diferentes idades (28-45 anos), brasileiros
+- **Formato**: Quadrado, otimizado para avatar circular
+- **Qualidade**: Alta resolução, expressão confiante/profissional
 
-**`create_community_post`**:
-```sql
-IF public.contains_profanity(v_body) THEN
-  RAISE EXCEPTION 'Mensagem contém conteúdo inadequado';
-END IF;
+As imagens serão salvas em `src/assets/testimonials/` para garantir hashing no build.
+
+### 3. Atualizar `Landing.tsx`
+
+Importar e posicionar `TestimonialsSection` após `WaitlistHero`:
+
+```tsx
+<WaitlistHero />
+<TestimonialsSection />
+<LandingFooter />
 ```
 
-**`edit_community_post`**:
-```sql
-IF public.contains_profanity(v_body) THEN
-  RAISE EXCEPTION 'Mensagem contém conteúdo inadequado';
-END IF;
-```
+### 4. Conteúdo dos Depoimentos (4 testemunhos)
 
-**`create_community_thread`** (título e body):
-```sql
-IF public.contains_profanity(v_title) OR 
-   public.contains_profanity(v_body) THEN
-  RAISE EXCEPTION 'Conteúdo contém palavras inadequadas';
-END IF;
-```
+Textos alinhados com a narrativa da Invictus:
 
-### 4. Feedback no Frontend
+**Depoimento 1 - Ricardo M., Empresário, SP**
+> "A Invictus me tirou da zona de conforto. Em 6 meses, estruturei processos que adiava há anos. Aqui não tem espaço pra desculpa — só pra resultado."
 
-Atualizar os componentes para exibir mensagem de erro amigável quando a validação falhar:
+**Depoimento 2 - Camila S., Investidora, RJ**
+> "Nunca encontrei um ambiente assim. Pessoas sérias, com mentalidade de crescimento real. A cobrança incomoda, mas é ela que move."
 
-**`CommunityThreadView.tsx`**:
-```typescript
-onError: (err) => {
-  const msg = err.message?.includes('inadequado') 
-    ? 'Sua mensagem contém palavras não permitidas.'
-    : 'Não foi possível enviar.';
-  toast({ title: 'Erro', description: msg, variant: 'destructive' });
-}
-```
+**Depoimento 3 - Bruno F., Consultor, PR**
+> "Entrei cético, achando que seria mais um grupo. Me enganei. A disciplina aqui é diferente — quem não acompanha, sai. Simples assim."
 
-**`NewThreadDialog.tsx`**:
-```typescript
-// Mesmo tratamento de erro
-```
-
-### 5. Lista Inicial de Palavras
-
-Inserir uma lista base de palavras ofensivas em português (palavrões, termos discriminatórios, etc.). A lista pode ser expandida pelos administradores posteriormente.
+**Depoimento 4 - Lucas P., Empreendedor, MG** (NOVO - foco em produtos/serviços e resultado financeiro)
+> "Dentro da Invictus encontrei produtos e serviços que mudaram minha vida. Em apenas 1 mês, com disciplina e fazendo o que tinha que ser feito, ganhei mais de R$ 10 mil. Aqui o resultado é questão de tempo pra quem executa."
 
 ## Arquivos a Criar/Modificar
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/migrations/xxx_profanity_filter.sql` | Criar tabela, função e atualizar RPCs |
-| `src/components/community/CommunityThreadView.tsx` | Adicionar tratamento de erro |
-| `src/components/community/NewThreadDialog.tsx` | Adicionar tratamento de erro |
+| `src/components/landing/TestimonialsSection.tsx` | Criar |
+| `src/assets/testimonials/ricardo.jpg` | Criar (foto gerada via IA) |
+| `src/assets/testimonials/camila.jpg` | Criar (foto gerada via IA) |
+| `src/assets/testimonials/bruno.jpg` | Criar (foto gerada via IA) |
+| `src/assets/testimonials/lucas.jpg` | Criar (foto gerada via IA) |
+| `src/pages/Landing.tsx` | Modificar (adicionar import e componente) |
 
-## Considerações
+## Considerações de Design
 
-- **Apenas Comunidade**: O filtro será aplicado apenas na comunidade (fórum público). As mensagens diretas (DMs) são privadas e não passarão por esse filtro.
-- **Extensibilidade**: A tabela `blocked_words` permite que admins adicionem/removam palavras sem necessidade de novo deploy.
-- **Performance**: A função usa índice e regex otimizado para não impactar a experiência.
-- **Bypass impossível**: Como a validação é no banco (SECURITY DEFINER), não pode ser burlada pelo cliente.
+- **Quantidade**: 4 depoimentos (grid 2x2 em tablet, 4 colunas em desktop)
+- **Persuasão**: Textos focam em transformação, resultados tangíveis (incluindo financeiro) e a dor de não fazer parte
+- **Credibilidade**: Fotos realistas, nomes brasileiros, estados diferentes, cargos que ressoam com o público-alvo
+- **Resultado financeiro**: O depoimento do Lucas traz prova social de ganho concreto (R$ 10 mil em 1 mês)
+- **Animação**: Cards entram da direita com o mesmo efeito de "encaixe" das outras seções
+- **Responsivo**: Stack vertical no mobile, 2x2 em tablet, 4 colunas no desktop
 
 ## Fluxo do Usuário
 
-1. Usuário digita mensagem com palavra ofensiva
-2. Clica em "Enviar"
-3. Backend rejeita com erro
-4. Frontend exibe: "Sua mensagem contém palavras não permitidas"
-5. Usuário precisa reformular a mensagem
+1. Usuário rola página após ler sobre a Invictus
+2. Preenche (ou não) a lista de espera
+3. Vê depoimentos de pessoas que já fazem parte, incluindo resultados financeiros
+4. Sente urgência: "Se ele fez R$ 10 mil em 1 mês, eu também posso"
+5. Retorna ao CTA se ainda não preencheu
 

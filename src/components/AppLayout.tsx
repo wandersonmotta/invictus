@@ -15,13 +15,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider toggleable={true} mobileMode="sheet">
-      <div className="min-h-svh flex w-full overflow-x-hidden">
+      <div className="h-svh flex w-full overflow-hidden">
         <AppSidebar />
 
-        <SidebarInset className="overflow-x-hidden">
+        <SidebarInset className="overflow-hidden flex flex-col">
           <header
             className={
-              "sticky top-0 z-20 flex h-14 items-center gap-2 px-2 sm:px-2 md:px-3 lg:px-4 backdrop-blur-xl " +
+              "sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 px-2 sm:px-2 md:px-3 lg:px-4 backdrop-blur-xl " +
               "invictus-surface " +
               // barra clara SUTIL para separar do topo (sem ficar branca/estourada)
               "relative after:content-[''] after:absolute after:left-0 after:right-0 after:bottom-0 after:h-px " +
@@ -49,8 +49,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          {/* Add extra bottom padding on mobile/tablet for the bottom nav */}
-          <div className={`flex-1 p-4 pb-6 sm:p-5 sm:pb-8 lg:p-6 animate-fade-in ${isMobileOrTablet ? "pb-24" : ""}`}>
+          {/* Main content area - scrollable */}
+          <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-5 lg:p-6 animate-fade-in ${isMobileOrTablet ? "pb-24" : ""}`}>
             {children}
           </div>
         </SidebarInset>

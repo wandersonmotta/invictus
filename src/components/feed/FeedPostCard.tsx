@@ -6,7 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/auth/AuthProvider";
+import { toast } from "sonner";
 
 import { FeedPostViewerDialog, type FeedPostWithUrls } from "@/components/feed/FeedPostViewerDialog";
 
@@ -25,8 +33,26 @@ function FeedPostCardInner({
   onPostDeleted?: () => void;
 }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const [viewerOpen, setViewerOpen] = React.useState(false);
   const [initialFocus, setInitialFocus] = React.useState<"comment" | "none">("none");
+  const [deleting, setDeleting] = React.useState(false);
+
+  const isMyPost = user?.id === post.author_user_id;
+
+  const handleDelete = async () => {
+    if (!isMyPost) return;
+    setDeleting(true);
+    const { error } = await supabase.rpc("delete_feed_post", { p_post_id: post.post_id });
+    setDeleting(false);
+    if (error) {
+      toast.error("Não foi possível excluir");
+      return;
+    }
+    toast.success("Publicação excluída");
+    onPostDeleted?.();
+    qc.invalidateQueries({ queryKey: ["feed_posts"] });
+  };
 
   const likeMutation = useMutation({
     mutationFn: async () => {
@@ -132,6 +158,23 @@ function FeedPostCardInner({
                 ) : null}
               </div>
             </>
+          )}
+
+          {isMyPost && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" disabled={deleting}>
+                  <MoreHorizontal className="h-5 w-5" />
+                  <span className="sr-only">Opções</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
 

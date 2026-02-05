@@ -1,199 +1,164 @@
 
 
-# Plano: Adicionar Anexos e Áudio nas Mensagens Diretas
+# Plano: Filtro de Palavras Ofensivas na Comunidade
 
-## Visão Geral
+## Objetivo
 
-Implementar envio de **anexos** (imagens, PDFs, documentos) e **mensagens de áudio** no sistema de mensagens diretas, seguindo o padrão do Instagram:
-- Botão de anexo para arquivos/imagens
-- Botão de microfone para gravar áudio
-- Opção de apagar para todos / apagar para mim nos anexos e áudios
+Implementar um sistema que bloqueie o envio de mensagens contendo palavras ofensivas na Comunidade, impedindo que o usuário consiga postar conteúdo inadequado.
 
-## Estrutura Atual
+## Abordagem
 
-| Componente | Status |
-|------------|--------|
-| Bucket `dm-attachments` | Existe |
-| Tabela `message_attachments` | Existe |
-| Políticas de upload/download | Existe |
-| RPC `send_message` retorna `message_id` | Existe |
-| RPC `delete_message_for_me` | Existe |
+Criar uma **função de validação no banco de dados** que verifica o texto antes de permitir a inserção. Isso garante que:
+- A validação acontece no servidor (não pode ser burlada pelo cliente)
+- Todas as funcionalidades passam pelo mesmo filtro
+- A lista de palavras pode ser atualizada sem deploy
 
-A infraestrutura já está pronta, falta apenas a interface e a lógica de upload.
+## Arquitetura
+
+```text
+Usuário digita mensagem
+        │
+        ▼
+Frontend envia para RPC
+        │
+        ▼
+┌───────────────────────────────────┐
+│  contains_profanity(texto)        │
+│  └─ Normaliza: lowercase, remove  │
+│     acentos, variações l33t       │
+│  └─ Verifica contra lista         │
+└───────────────────────────────────┘
+        │
+        ├─ Contém? → RAISE EXCEPTION
+        │            "Mensagem contém
+        │             conteúdo inadequado"
+        │
+        └─ Não contém? → Continua normalmente
+```
 
 ## Mudanças Técnicas
 
-### 1. Criar componente `AudioRecorder.tsx`
+### 1. Criar tabela `blocked_words`
 
-Novo componente para gravação de áudio usando a API `MediaRecorder`:
+Armazena palavras/expressões bloqueadas:
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  [🎤]  ────────────────────  0:12  [⏹️]                    │
-│   Gravando...                                               │
-└─────────────────────────────────────────────────────────────┘
-```
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | UUID | Chave primária |
+| word | TEXT | Palavra ou expressão |
+| category | TEXT | Categoria (ofensivo, spam, etc) |
+| active | BOOLEAN | Se está ativa |
+| created_at | TIMESTAMP | Data de criação |
 
-**Funcionalidades:**
-- Pressionar para iniciar gravação
-- Barra de progresso com tempo decorrido
-- Botão de parar/cancelar
-- Limite máximo de 60 segundos
-- Formato de saída: WebM (ampla compatibilidade)
+Políticas RLS: Apenas admins podem gerenciar.
 
-### 2. Criar componente `AttachmentPicker.tsx`
+### 2. Criar função `contains_profanity(text)`
 
-Componente para seleção de arquivos:
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  📎 foto.jpg (1.2 MB)                        [❌ Remover]   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Tipos permitidos:**
-- Imagens: JPEG, PNG, WEBP, GIF
-- Documentos: PDF
-- Limite: 20MB por arquivo
-
-### 3. Criar componente `AudioPlayer.tsx`
-
-Player de áudio para exibir mensagens de voz:
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  [▶️]  ●────────────────  0:12 / 0:45                      │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Funcionalidades:**
-- Play/Pause
-- Barra de progresso clicável
-- Indicação de tempo atual/total
-
-### 4. Modificar `ChatView.tsx`
-
-Atualizar a área de input:
-
-**Antes:**
-```text
-┌──────────────────────────────────────────────────────────┐
-│  [           Mensagem...           ]  [Enviar]           │
-└──────────────────────────────────────────────────────────┘
-```
-
-**Depois:**
-```text
-┌──────────────────────────────────────────────────────────┐
-│  [📎]  [           Mensagem...           ]  [🎤/Enviar]  │
-└──────────────────────────────────────────────────────────┘
-```
-
-**Lógica:**
-- Se campo vazio: mostra ícone de microfone para gravar áudio
-- Se campo com texto: mostra botão "Enviar"
-- Clique no 📎: abre seletor de arquivo
-- Clique no 🎤: inicia gravação
-
-**Fluxo de envio com anexo:**
-1. Usuário seleciona arquivo(s)
-2. Preview aparece acima do input
-3. Ao enviar:
-   - Chama `send_message` para criar a mensagem (pode ser só com body ou body vazio)
-   - Faz upload do(s) arquivo(s) para `dm-attachments/{conversation_id}/{message_id}/`
-   - Insere metadados em `message_attachments`
-
-### 5. Modificar `MessageBubble.tsx`
-
-Exibir anexos e áudios junto com a mensagem:
-
-```text
-Mensagem com anexo:
-┌─────────────────────────────────────────────────────────────┐
-│  [🖼️ Imagem]                                               │
-│  Olha essa foto!                                           │
-│  10:42                                                     │
-└─────────────────────────────────────────────────────────────┘
-
-Mensagem de áudio:
-┌─────────────────────────────────────────────────────────────┐
-│  [▶️]  ●────────────  0:12                                 │
-│  10:43                                                     │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Query atualizada:**
-```sql
-SELECT m.*, 
-  COALESCE(
-    (SELECT json_agg(row_to_json(a.*))
-     FROM message_attachments a 
-     WHERE a.message_id = m.id), '[]'
-  ) as attachments
-FROM messages m
-WHERE m.conversation_id = $1
-```
-
-### 6. Criar função RPC `send_message_with_attachments`
-
-Nova RPC que permite enviar mensagem com body opcional (para áudios sem texto):
+Função SQL que:
+1. Normaliza o texto (lowercase, remove acentos)
+2. Verifica se contém alguma palavra da lista
+3. Retorna `true` se encontrar match
 
 ```sql
-CREATE OR REPLACE FUNCTION send_message_with_attachments(
-  p_conversation_id UUID,
-  p_body TEXT DEFAULT NULL
-)
-RETURNS UUID
+CREATE OR REPLACE FUNCTION public.contains_profanity(p_text TEXT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+STABLE SECURITY DEFINER
+AS $$
+DECLARE
+  v_normalized TEXT;
+  v_found BOOLEAN;
+BEGIN
+  IF p_text IS NULL OR p_text = '' THEN
+    RETURN false;
+  END IF;
+  
+  -- Normaliza: lowercase + remove acentos
+  v_normalized := lower(unaccent(p_text));
+  
+  -- Verifica contra lista de palavras bloqueadas
+  SELECT EXISTS (
+    SELECT 1 FROM public.blocked_words bw
+    WHERE bw.active = true
+      AND v_normalized ~* ('\m' || bw.word || '\M')
+  ) INTO v_found;
+  
+  RETURN v_found;
+END;
+$$;
 ```
 
-- Permite `p_body` vazio/null (para mensagens só de áudio/anexo)
-- Retorna `message_id` para uso no upload
+A expressão regular `\m...\M` garante match de **palavras inteiras** (não pega "assumir" quando bloqueia "um").
 
-### 7. Atualização do tipo `MessageRow`
+### 3. Atualizar RPCs da Comunidade
 
+Adicionar validação nas funções existentes:
+
+**`create_community_post`**:
+```sql
+IF public.contains_profanity(v_body) THEN
+  RAISE EXCEPTION 'Mensagem contém conteúdo inadequado';
+END IF;
+```
+
+**`edit_community_post`**:
+```sql
+IF public.contains_profanity(v_body) THEN
+  RAISE EXCEPTION 'Mensagem contém conteúdo inadequado';
+END IF;
+```
+
+**`create_community_thread`** (título e body):
+```sql
+IF public.contains_profanity(v_title) OR 
+   public.contains_profanity(v_body) THEN
+  RAISE EXCEPTION 'Conteúdo contém palavras inadequadas';
+END IF;
+```
+
+### 4. Feedback no Frontend
+
+Atualizar os componentes para exibir mensagem de erro amigável quando a validação falhar:
+
+**`CommunityThreadView.tsx`**:
 ```typescript
-export type MessageRow = {
-  id: string;
-  sender_id: string;
-  body: string | null;
-  created_at: string;
-  edited_at?: string | null;
-  deleted_at?: string | null;
-  deleted_for?: string[] | null;
-  attachments?: {
-    id: string;
-    storage_path: string;
-    content_type: string;
-    file_name: string | null;
-    size_bytes: number | null;
-  }[];
-};
+onError: (err) => {
+  const msg = err.message?.includes('inadequado') 
+    ? 'Sua mensagem contém palavras não permitidas.'
+    : 'Não foi possível enviar.';
+  toast({ title: 'Erro', description: msg, variant: 'destructive' });
+}
 ```
 
-## Fluxo de Exclusão
+**`NewThreadDialog.tsx`**:
+```typescript
+// Mesmo tratamento de erro
+```
 
-A exclusão já funciona para a mensagem toda. Os anexos:
-- **Excluir para todos**: `deleted_at` na mensagem esconde tudo
-- **Excluir para mim**: `deleted_for` na mensagem esconde tudo
+### 5. Lista Inicial de Palavras
 
-Os arquivos no storage não são deletados imediatamente (soft-delete), permitindo recuperação se necessário.
+Inserir uma lista base de palavras ofensivas em português (palavrões, termos discriminatórios, etc.). A lista pode ser expandida pelos administradores posteriormente.
 
 ## Arquivos a Criar/Modificar
 
 | Arquivo | Ação |
 |---------|------|
-| `src/components/messages/AudioRecorder.tsx` | Criar |
-| `src/components/messages/AudioPlayer.tsx` | Criar |
-| `src/components/messages/AttachmentPicker.tsx` | Criar |
-| `src/components/messages/AttachmentPreview.tsx` | Criar |
-| `src/components/messages/ChatView.tsx` | Modificar |
-| `src/components/messages/MessageBubble.tsx` | Modificar |
-| `supabase/migrations/xxx.sql` | Criar (RPC atualizada) |
+| `supabase/migrations/xxx_profanity_filter.sql` | Criar tabela, função e atualizar RPCs |
+| `src/components/community/CommunityThreadView.tsx` | Adicionar tratamento de erro |
+| `src/components/community/NewThreadDialog.tsx` | Adicionar tratamento de erro |
 
-## UX Mobile
+## Considerações
 
-O comportamento será responsivo:
-- Botão de microfone segue padrão "tap to record, tap to stop"
-- Prévia de arquivos compacta
-- Player de áudio otimizado para toque
+- **Apenas Comunidade**: O filtro será aplicado apenas na comunidade (fórum público). As mensagens diretas (DMs) são privadas e não passarão por esse filtro.
+- **Extensibilidade**: A tabela `blocked_words` permite que admins adicionem/removam palavras sem necessidade de novo deploy.
+- **Performance**: A função usa índice e regex otimizado para não impactar a experiência.
+- **Bypass impossível**: Como a validação é no banco (SECURITY DEFINER), não pode ser burlada pelo cliente.
+
+## Fluxo do Usuário
+
+1. Usuário digita mensagem com palavra ofensiva
+2. Clica em "Enviar"
+3. Backend rejeita com erro
+4. Frontend exibe: "Sua mensagem contém palavras não permitidas"
+5. Usuário precisa reformular a mensagem
 

@@ -35,6 +35,8 @@ const LeadsConexoes = React.lazy(() => import("@/pages/LeadsConexoes"));
 const FinanceiroAuth = React.lazy(() => import("@/pages/financeiro/FinanceiroAuth"));
 const FinanceiroDashboard = React.lazy(() => import("@/pages/financeiro/FinanceiroDashboard"));
 const AuditoriaDetalhe = React.lazy(() => import("@/pages/financeiro/AuditoriaDetalhe"));
+ const FinanceiroHistorico = React.lazy(() => import("@/pages/financeiro/FinanceiroHistorico"));
+ const FinanceiroRelatorios = React.lazy(() => import("@/pages/financeiro/FinanceiroRelatorios"));
 
 export function HostRouter() {
   const hostname = window.location.hostname;
@@ -78,6 +80,30 @@ export function HostRouter() {
            </RequireFinanceiroAuth>
           }
         />
+       <Route
+         path="/financeiro/historico"
+         element={
+           <RequireFinanceiroAuth>
+             <RequireFinanceiro>
+               <FinanceiroLayout>
+                 <FinanceiroHistorico />
+               </FinanceiroLayout>
+             </RequireFinanceiro>
+           </RequireFinanceiroAuth>
+         }
+       />
+       <Route
+         path="/financeiro/relatorios"
+         element={
+           <RequireFinanceiroAuth>
+             <RequireFinanceiro>
+               <FinanceiroLayout>
+                 <FinanceiroRelatorios />
+               </FinanceiroLayout>
+             </RequireFinanceiro>
+           </RequireFinanceiroAuth>
+         }
+       />
 
         <Route
           path="/aguardando-aprovacao"
@@ -286,6 +312,30 @@ export function HostRouter() {
            </RequireFinanceiroAuth>
           }
         />
+       <Route
+         path="/historico"
+         element={
+           <RequireFinanceiroAuth>
+             <RequireFinanceiro>
+               <FinanceiroLayout>
+                 <FinanceiroHistorico />
+               </FinanceiroLayout>
+             </RequireFinanceiro>
+           </RequireFinanceiroAuth>
+         }
+       />
+       <Route
+         path="/relatorios"
+         element={
+           <RequireFinanceiroAuth>
+             <RequireFinanceiro>
+               <FinanceiroLayout>
+                 <FinanceiroRelatorios />
+               </FinanceiroLayout>
+             </RequireFinanceiro>
+           </RequireFinanceiroAuth>
+         }
+       />
         <Route path="*" element={<NotFound />} />
       </Routes>
     );

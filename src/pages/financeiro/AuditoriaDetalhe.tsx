@@ -19,6 +19,7 @@
  import { ArrowLeft, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
  import { format } from "date-fns";
  import { ptBR } from "date-fns/locale";
+ import { isLovableHost } from "@/lib/appOrigin";
  
  interface AuditDetails {
    withdrawal: {
@@ -80,6 +81,10 @@
    const [rejectReason, setRejectReason] = useState("");
    const [processing, setProcessing] = useState(false);
  
+   const dashboardPath = isLovableHost(window.location.hostname)
+     ? "/financeiro/dashboard"
+     : "/dashboard";
+ 
    useEffect(() => {
      if (!withdrawalId) return;
  
@@ -128,7 +133,7 @@
        description: "O saque foi aprovado e registrado no sistema.",
      });
  
-     navigate("/dashboard");
+     navigate(dashboardPath);
    };
  
    const handleReject = async () => {
@@ -157,7 +162,7 @@
      });
  
      setRejectOpen(false);
-     navigate("/dashboard");
+     navigate(dashboardPath);
    };
  
    if (loading) {
@@ -173,7 +178,7 @@
      return (
        <div className="flex flex-col items-center justify-center py-12">
          <p className="text-muted-foreground">Solicitação não encontrada</p>
-         <Button variant="link" onClick={() => navigate("/dashboard")}>
+         <Button variant="link" onClick={() => navigate(dashboardPath)}>
            Voltar à fila
          </Button>
        </div>
@@ -193,7 +198,7 @@
    return (
      <div className="space-y-6">
        <div className="flex items-center gap-4">
-         <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+         <Button variant="ghost" size="icon" onClick={() => navigate(dashboardPath)}>
            <ArrowLeft className="h-4 w-4" />
          </Button>
          <h1 className="text-xl font-bold">

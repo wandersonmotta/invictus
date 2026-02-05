@@ -1,167 +1,174 @@
 
 
-## Plano: Member Diamond + Cards Maiores + Layout Mobile Vertical
+## Plano: Correção do Layout Mobile - Cards Compactos e Responsivos
 
-Vou implementar as melhorias solicitadas na pagina de Reconhecimento.
+O problema identificado: no mobile, os cards estão ocupando 100% da largura da tela (`w-full`) combinado com aspect ratio 4:5, criando cards gigantes que tomam quase toda a altura da tela.
 
 ---
 
-### Resumo das Alteracoes
+### Problema Visual Atual
 
-1. **Novo nivel Member Diamond** - R$ 1 milhao em resultados, 12.000 pontos
-2. **Cards maiores** - Aumentar tamanho para melhor visualizacao das placas
-3. **Correcao do efeito hover** - Borda dourada nao vai mais sumir no topo
-4. **Layout mobile/tablet vertical** - Scroll de cima para baixo em vez de horizontal
+```text
+Mobile (390x844):
++------------------------+
+| Header                 |
++------------------------+
+|                        |
+|   [Card Bronze         |
+|    ocupando            |
+|    praticamente        |
+|    toda a tela]        |
+|                        |
+|                        |
++------------------------+
+| Nav                    |
++------------------------+
+```
+
+---
+
+### Solução: Cards Horizontais Compactos
+
+Em vez de cards verticais gigantes, vou usar um **layout horizontal compacto** no mobile:
+
+```text
+Mobile (390x844):
++------------------------+
+| Header                 |
++------------------------+
+| +--------------------+ |
+| | [Img] Bronze       | |  <- Card horizontal
+| |       100 pts      | |
+| +--------------------+ |
+| +--------------------+ |
+| | [Img] Silver       | |
+| |       500 pts      | |
+| +--------------------+ |
+| +--------------------+ |
+| | [Img] Gold         | |
+| |       1.000 pts    | |
+| +--------------------+ |
+| ... mais cards ...     |
++------------------------+
+```
 
 ---
 
 ### Arquivos a Modificar
 
-#### 1. `src/components/reconhecimento/recognitionLevels.ts`
+#### 1. `src/components/reconhecimento/RecognitionCard.tsx`
 
-Adicionar novo nivel Diamond:
+**Mudanças principais:**
 
-```text
-{
-  id: "diamond",
-  name: "Member Diamond",
-  description: "Acumule R$ 1 milhao em resultados",
-  requirement: "R$ 1 milhao",
-  points: 12000,
-  gradient: "from-cyan-300 via-blue-200 to-cyan-400",
-  accent: "bg-cyan-400",
-  imageUrl: undefined  // Sera gerado depois
+1. Adicionar prop `compact` para layout horizontal compacto
+2. No modo compacto:
+   - Layout flex horizontal (imagem à esquerda, conteúdo à direita)
+   - Imagem com tamanho fixo (80x100px aproximadamente)
+   - Altura controlada do card
+
+```typescript
+interface RecognitionCardProps {
+  level: RecognitionLevel;
+  isCurrentLevel?: boolean;
+  isAchieved?: boolean;
+  isFuture?: boolean;
+  /** Compact horizontal layout for mobile */
+  compact?: boolean;
 }
 ```
 
-#### 2. `src/components/reconhecimento/RecognitionCard.tsx`
+**Estrutura do card compacto:**
 
-**Aumentar tamanho do card:**
-- Desktop: de `clamp(140px,42vw,188px)` para `clamp(200px,50vw,280px)`
-- Aspect ratio maior para destacar a placa
-
-**Corrigir efeito hover da borda dourada:**
-- Problema atual: `overflow-hidden` esta cortando a borda (ring)
-- Solucao: Remover `overflow-hidden` do container principal e aplicar apenas na area da imagem
-- Ajustar `ring-offset` para nao ser cortado
-
-```text
-// Antes (problema)
-className="... overflow-hidden ..."
-isCurrentLevel && "ring-2 ring-primary ring-offset-2 ..."
-
-// Depois (corrigido)
-className="... overflow-visible ..."
-// Overflow hidden apenas no container da imagem
+```tsx
+{compact ? (
+  // Layout horizontal compacto
+  <article className="flex gap-3 w-full h-[100px] rounded-xl ...">
+    {/* Imagem pequena à esquerda */}
+    <div className="w-20 h-full shrink-0 rounded-l-xl overflow-hidden">
+      <img ... />
+    </div>
+    
+    {/* Conteúdo à direita */}
+    <div className="flex-1 py-2 pr-3">
+      <h3>Member Bronze</h3>
+      <p>Adicione 3 pessoas</p>
+      <Badge>100 pts</Badge>
+    </div>
+  </article>
+) : (
+  // Layout vertical original para desktop
+  <article className="w-[clamp(200px,50vw,280px)] ...">
+    ...
+  </article>
+)}
 ```
 
-#### 3. `src/pages/Reconhecimento.tsx`
+#### 2. `src/pages/Reconhecimento.tsx`
 
-**Layout responsivo diferenciado:**
-- Desktop (lg+): Manter scroll horizontal com cards maiores
-- Mobile/Tablet (<1024px): Grid vertical (coluna unica) com scroll vertical natural
+**Mudanças:**
 
-```text
-// Mobile/Tablet (< lg)
-+---------------------------+
-|  [Bronze - ATUAL]         |  <- Borda dourada
-|  -------------------------+
-|  [Silver]                 |
-|  -------------------------+
-|  [Gold]                   |
-|  -------------------------+
-|  [Black]                  |
-|  -------------------------+
-|  [Elite]                  |
-|  -------------------------+
-|  [Diamond]                |
-+---------------------------+
-
-// Desktop (lg+)
-[Bronze] [Silver] [Gold] [Black] [Elite] [Diamond] ->
-         <- Scroll horizontal
-```
-
-**Implementacao:**
+Passar `compact={true}` para cards no mobile em vez de `fullWidth`:
 
 ```typescript
-import { useIsMobileOrTablet } from "@/hooks/use-mobile";
-
-// ...
-
-const isMobileOrTablet = useIsMobileOrTablet();
-
 {isMobileOrTablet ? (
-  // Layout vertical para mobile/tablet
-  <div className="flex flex-col gap-4">
-    {recognitionLevels.map(...)}
+  <div className="flex flex-col gap-3">
+    {recognitionLevels.map((level, index) => (
+      <RecognitionCard
+        key={level.id}
+        level={level}
+        isCurrentLevel={index === currentLevelIndex}
+        isAchieved={index < currentLevelIndex}
+        isFuture={index > currentLevelIndex}
+        compact  // <-- Layout horizontal compacto
+      />
+    ))}
   </div>
 ) : (
-  // Layout horizontal para desktop
-  <div className="-mx-4 px-4 overflow-x-auto snap-x ...">
-    <div className="flex gap-6 min-w-max pb-3">
-      {recognitionLevels.map(...)}
-    </div>
-  </div>
+  // Desktop mantém horizontal scroll com cards verticais grandes
+  ...
 )}
 ```
 
 ---
 
-### Correcao Detalhada do Efeito Hover
+### Especificações do Card Compacto
 
-O problema ocorre porque:
-1. `overflow-hidden` no card corta o `ring` (borda externa)
-2. O `ring-offset` precisa de espaco fora do elemento
-
-**Solucao:**
-1. Usar `overflow-visible` no container do card
-2. Aplicar `overflow-hidden` apenas no `div` da imagem (para conter a imagem)
-3. Adicionar `rounded-xl` no container da imagem tambem
-
-```tsx
-<article className="... overflow-visible rounded-xl">
-  {/* Imagem com overflow hidden separado */}
-  <div className="relative aspect-[4/5] w-full overflow-hidden rounded-t-xl">
-    <img ... />
-  </div>
-  
-  {/* Conteudo */}
-  <div className="p-4 ...">
-    ...
-  </div>
-</article>
-```
+| Elemento | Valor |
+|----------|-------|
+| Altura total | 100px |
+| Largura imagem | 80px (aspect 4:5 respeitado) |
+| Gap | 12px (gap-3) |
+| Padding conteúdo | py-2 pr-3 |
+| Fonte título | text-sm font-semibold |
+| Fonte descrição | text-xs text-muted-foreground |
+| Badge | text-[10px] |
 
 ---
 
-### Tamanhos Ajustados
+### Destaque do Nível Atual (Compacto)
 
-| Elemento | Atual | Novo |
-|----------|-------|------|
-| Largura card desktop | 140-188px | 200-280px |
-| Largura card mobile | 140-188px | 100% (full width) |
-| Gap entre cards | 4 (16px) | 6 (24px) desktop, 4 mobile |
-| Aspect ratio | 4/5 | Manter 4/5 |
-| Padding conteudo | p-3 | p-4 |
-| Fonte titulo | text-sm | text-base |
-| Fonte descricao | text-xs | text-sm |
-
----
-
-### Geracao da Placa Diamond
-
-Depois de implementar as alteracoes, vou chamar a Edge Function para gerar a placa Diamond:
+No modo compacto, a borda dourada vai envolver todo o card horizontal:
 
 ```text
-POST /generate-recognition-awards
-{ "level": "diamond" }
++----[DOURADO]-------------+
+| [Img] Bronze   SEU NÍVEL |
+|       100 pts            |
++---------------------------+
 ```
 
-Prompt da IA para Diamond:
-- Cristal translucido azul-cyan com reflexos prismaticos
-- Faixa diagonal cyan/azul clara
-- Visual "diamante" com brilho intenso
+---
+
+### Resultado Esperado
+
+1. **Mobile/Tablet**: Cards horizontais compactos (~100px altura cada)
+   - Todos os 6 níveis visíveis com scroll mínimo
+   - Imagem da placa visível à esquerda
+   - Informações legíveis à direita
+   - Nível atual com destaque dourado
+
+2. **Desktop**: Mantém layout atual com scroll horizontal e cards verticais grandes
+
+3. **Responsivo**: Transição suave entre layouts sem quebras
 
 ---
 
@@ -169,19 +176,7 @@ Prompt da IA para Diamond:
 
 ```text
 Modificar:
-- src/components/reconhecimento/recognitionLevels.ts (adicionar Diamond)
-- src/components/reconhecimento/RecognitionCard.tsx (cards maiores + fix hover)
-- src/pages/Reconhecimento.tsx (layout responsivo vertical/horizontal)
+- src/components/reconhecimento/RecognitionCard.tsx (adicionar modo compact)
+- src/pages/Reconhecimento.tsx (usar compact no mobile)
 ```
-
----
-
-### Resultado Esperado
-
-1. Novo nivel Member Diamond com requisito de R$ 1 milhao
-2. Cards visivelmente maiores mostrando melhor as placas 3D
-3. Borda dourada do nivel atual visivel em todos os lados (sem corte)
-4. Mobile/tablet com layout vertical (scroll natural de cima para baixo)
-5. Desktop com layout horizontal (deslizar para os lados)
-6. Nivel atual sempre destacado com borda dourada em ambos os layouts
 

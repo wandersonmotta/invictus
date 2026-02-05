@@ -8,8 +8,8 @@ interface RecognitionCardProps {
   isCurrentLevel?: boolean;
   isAchieved?: boolean;
   isFuture?: boolean;
-  /** Full width for mobile vertical layout */
-  fullWidth?: boolean;
+  /** Compact horizontal layout for mobile */
+  compact?: boolean;
 }
 
 export function RecognitionCard({
@@ -17,23 +17,92 @@ export function RecognitionCard({
   isCurrentLevel = false,
   isAchieved = false,
   isFuture = false,
-  fullWidth = false,
+  compact = false,
 }: RecognitionCardProps) {
+  // Compact horizontal layout for mobile/tablet
+  if (compact) {
+    return (
+      <article
+        className={cn(
+          "flex gap-3 w-full h-[100px]",
+          "invictus-surface invictus-frame",
+          "rounded-xl overflow-visible",
+          "transition-all duration-300",
+          isCurrentLevel && "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-[0_0_16px_hsl(var(--primary)/0.4)]",
+          isFuture && "opacity-60"
+        )}
+      >
+        {/* Award Image - Left side */}
+        <div
+          className={cn(
+            "w-20 h-full shrink-0 rounded-l-xl overflow-hidden",
+            "flex items-center justify-center",
+            !level.imageUrl && `bg-gradient-to-br ${level.gradient}`
+          )}
+        >
+          {level.imageUrl ? (
+            <img
+              src={level.imageUrl}
+              alt={`Placa ${level.name}`}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <Trophy
+              className="h-8 w-8 text-white/80 drop-shadow-lg"
+              strokeWidth={1.5}
+            />
+          )}
+
+          {/* Achieved checkmark */}
+          {isAchieved && (
+            <div className="absolute top-1 right-1 bg-emerald-600 rounded-full p-0.5 shadow-lg">
+              <Check className="h-3 w-3 text-white" strokeWidth={3} />
+            </div>
+          )}
+        </div>
+
+        {/* Content - Right side */}
+        <div className="flex-1 flex flex-col justify-center py-2 pr-3 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="text-sm font-semibold text-foreground truncate">
+              {level.name}
+            </h3>
+            {isCurrentLevel && (
+              <Badge
+                variant="default"
+                className="text-[9px] font-bold px-1.5 py-0 bg-primary text-primary-foreground shrink-0"
+              >
+                ATUAL
+              </Badge>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground leading-snug line-clamp-2 mb-1.5">
+            {level.description}
+          </p>
+          <Badge
+            variant="secondary"
+            className="text-[10px] font-medium px-2 py-0.5 w-fit"
+          >
+            Ganha: {level.points.toLocaleString("pt-BR")} pts
+          </Badge>
+        </div>
+      </article>
+    );
+  }
+
+  // Full vertical layout for desktop
   return (
     <article
       className={cn(
         "group flex-shrink-0 snap-start",
-        // Desktop: larger cards; Mobile with fullWidth: 100%
-        fullWidth ? "w-full" : "w-[clamp(200px,50vw,280px)]",
+        "w-[clamp(200px,50vw,280px)]",
         "invictus-surface invictus-frame",
         "rounded-xl",
-        // Keep overflow visible so ring isn't clipped
         "overflow-visible",
         "transition-all duration-300",
         "md:hover:scale-[1.03] md:hover:shadow-[0_0_24px_hsl(var(--primary)/0.25)]",
-        // Current level: gold ring highlight
         isCurrentLevel && "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-[0_0_20px_hsl(var(--primary)/0.4)]",
-        // Future levels: reduced opacity
         isFuture && "opacity-60"
       )}
     >
@@ -43,7 +112,6 @@ export function RecognitionCard({
           "relative aspect-[4/5] w-full",
           "flex items-center justify-center",
           "overflow-hidden rounded-t-xl",
-          // Gradient placeholder when no image
           !level.imageUrl && `bg-gradient-to-br ${level.gradient}`
         )}
       >

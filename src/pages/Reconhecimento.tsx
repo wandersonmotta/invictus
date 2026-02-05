@@ -25,8 +25,8 @@ export default function Reconhecimento() {
         <h2 className="text-base font-semibold text-foreground">Premiações</h2>
 
         {isMobileOrTablet ? (
-          /* Mobile/Tablet: Vertical layout with full-width cards */
-          <div className="flex flex-col gap-4">
+          /* Mobile/Tablet: Compact horizontal cards */
+          <div className="flex flex-col gap-3">
             {recognitionLevels.map((level, index) => (
               <RecognitionCard
                 key={level.id}
@@ -34,7 +34,7 @@ export default function Reconhecimento() {
                 isCurrentLevel={index === currentLevelIndex}
                 isAchieved={index < currentLevelIndex}
                 isFuture={index > currentLevelIndex}
-                fullWidth
+                compact
               />
             ))}
           </div>

@@ -1,127 +1,97 @@
 
-# Plano: Adaptar Views Meta Ads, Google Ads e Analytics para Mobile/Tablet
+Objetivo
+- Eliminar completamente a rolagem horizontal (rolar para a direita) no celular e tablet nas views:
+  - Meta Ads
+  - Google Ads
+- Manter a experiência “rica” no desktop, mas no mobile tudo deve caber na largura da tela.
 
-## Problema Identificado
+Diagnóstico (com base no código atual)
+- O componente `CampaignsTable` ainda força largura mínima (`min-w-[600px]`) e isso, mesmo com `overflow-x-auto`, costuma gerar sensação de “tela não responsiva” (e em alguns casos acaba criando overflow no layout pai).
+- Em mobile, tabelas densas são o principal motivo de overflow. Você confirmou que no mobile quer “Cards (sem rolagem)”.
 
-A **Visão Geral** do Leads já está responsiva, mas as três outras views têm problemas de layout em telas menores:
+Mudanças que vou implementar (sem alterar o visual desktop)
 
-### Meta Ads (LeadsMetaView.tsx)
-- Grid `lg:grid-cols-3` não se adapta bem em tablet
-- Tabela de campanhas com muitas colunas fica cortada
-- Funil com indicadores à direita não cabem em telas estreitas
+1) CampaignsTable: criar layout “Cards” para mobile e manter tabela para md+
+Arquivos:
+- `src/components/leads/charts/CampaignsTable.tsx`
 
-### Google Ads (LeadsGoogleAdsView.tsx)
-- Grid `lg:grid-cols-3` com keywords table ocupando 2 rows
-- Gráfico multi-linha com legenda horizontal que trunca
-- Tabela de campanhas com 6 colunas não cabe
+O que será feito:
+- Renderização condicional por breakpoint:
+  - Mobile (< md): lista de cards (um card por campanha), sem tabela e sem `min-width` forçando overflow.
+  - Desktop (md+): tabela como hoje (pode manter a versão atual com colunas completas).
+- Remover/evitar `min-w-[600px]` no layout mobile.
+- Conteúdo dos cards (mobile):
+  - Meta:
+    - Nome (com status)
+    - Investimento
+    - Custo por compra
+    - Compras
+  - Google Ads:
+    - Nome
+    - Investimento
+    - Custo por conversão
+    - Conversões
+    - Taxa de conversão (se existir)
+- Ajustar truncamento (`min-w-0`, `truncate`) para garantir que textos longos não empurrem a largura.
+- Manter o “efeito premium” (vidro fosco) nos cards e tipografia consistente com o dashboard.
 
-### Analytics (LeadsAnalyticsView.tsx)
-- Mapa do Brasil + tabela de regiões em espaço apertado
-- Múltiplos donuts lado a lado que comprimem
-- Grid de URLs com textos truncados
+2) LeadsMetaView: garantir que nada “force” largura no mobile
+Arquivos:
+- `src/components/leads/views/LeadsMetaView.tsx`
 
----
+O que será feito:
+- Trocar o uso de `CampaignsTable` para aproveitar automaticamente o novo modo “cards no mobile”.
+- Revisar containers de cards e grids para garantir `min-w-0` quando necessário (principalmente em blocos com texto + números).
+- Garantir que o bloco de legenda do gráfico não crie overflow (ex.: adicionar `flex-wrap` ou reduzir gaps em telas pequenas, se necessário).
 
-## Soluções por View
+3) LeadsGoogleAdsView + KeywordsTable: impedir overflow por cabeçalhos/colunas rígidas
+Arquivos:
+- `src/components/leads/views/LeadsGoogleAdsView.tsx`
+- `src/components/leads/charts/KeywordsTable.tsx`
 
-### 1. LeadsMetaView.tsx
+O que será feito:
+- `CampaignsTable` (Google Ads) vai passar a usar cards no mobile automaticamente após a mudança no componente.
+- `KeywordsTable`:
+  - Ajustar o cabeçalho (linha com “Cliques” e “Conversões”) para não depender de `gap-6` fixo em telas estreitas.
+  - Opção que vou aplicar: transformar o cabeçalho em um mini-grid responsivo (ou `flex-wrap`) e reduzir gaps no mobile.
+  - Garantir que keyword longa nunca estoure a largura: reforçar `min-w-0` no container do item + `truncate`.
 
-| Elemento | Problema | Solução |
-|----------|----------|---------|
-| Grid principal | `lg:grid-cols-3` fixo | Usar `grid-cols-1 md:grid-cols-2 lg:grid-cols-3` |
-| FunnelChart | Indicadores de taxa à direita truncam | Esconder indicadores laterais em mobile, mostrar abaixo |
-| CampaignsTable | 6 colunas não cabem | Scroll horizontal + priorizar colunas essenciais |
-| KPIs | 5 cards em linha | Já está `grid-cols-2 lg:grid-cols-5`, manter |
+4) “Trava de segurança” contra overflow no container principal (somente se necessário)
+Arquivo:
+- `src/pages/Leads.tsx`
 
-**Mudanças específicas:**
-- Linha 137: `grid-cols-1 lg:grid-cols-3` → `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`
-- FunnelChart: Adicionar prop `compact` para mobile que move rates para baixo
-- Tabela: Envolver em `overflow-x-auto` e ocultar colunas "Conjuntos" e "Anúncios" em mobile
+O que será feito (com cuidado):
+- Se após os ajustes ainda existir overflow horizontal, vou aplicar `overflow-x-hidden` no container de conteúdo (não no body inteiro) para impedir qualquer “vazamento” de largura.
+- Importante: só farei isso depois que os componentes estiverem realmente responsivos, para não “mascarar” problema cortando conteúdo.
 
-### 2. LeadsGoogleAdsView.tsx
+Como vou testar (de verdade) antes de te devolver
+Ambiente mobile (390x844):
+1) Abrir `/leads` no mobile.
+2) Trocar para “Meta Ads” (via dropdown do seletor mobile):
+   - Confirmar: não existe rolagem horizontal da página.
+   - Confirmar: seção “Campanhas” aparece em cards empilhados, legível.
+3) Trocar para “Google Ads”:
+   - Confirmar: não existe rolagem horizontal da página.
+   - Confirmar: “Palavras-chave” não estoura largura.
+   - Confirmar: “Campanhas” em cards, sem scroll lateral.
+4) Tablet (ex.: 768px de largura):
+   - Confirmar: layout fica em 2 colunas quando aplicável, sem overflow.
+5) Desktop:
+   - Confirmar: tabelas continuam em formato tabela com colunas completas.
 
-| Elemento | Problema | Solução |
-|----------|----------|---------|
-| Grid principal | Keywords table span 2 rows | Em mobile, cada card ocupa 100% |
-| KeywordsTable | Largura fixa trunca | Full width em mobile |
-| Chart legend | 3 itens em linha | Wrap em mobile |
-| Gender Donut | Fica espremido | Full width em mobile |
+Critérios de aceite (o que vai ficar “certo”)
+- No celular:
+  - Zero rolagem horizontal na página.
+  - Campanhas em cards (não tabela) para Meta e Google Ads.
+  - Textos longos truncam com reticências, sem estourar o layout.
+- No tablet:
+  - Layout fluido, sem precisar “arrastar para o lado”.
+- No desktop:
+  - Mantém o layout completo (tabela + colunas).
 
-**Mudanças específicas:**
-- Linha 132: `lg:grid-cols-3` → `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`
-- Linha 134: `lg:row-span-2` → `md:row-span-2 lg:row-span-2` (só span em md+)
-- Linha 177: `lg:col-span-2` → `md:col-span-2 lg:col-span-2`
-- Legenda do chart: `flex-wrap` para quebrar em mobile
-
-### 3. LeadsAnalyticsView.tsx
-
-| Elemento | Problema | Solução |
-|----------|----------|---------|
-| BrazilMap + tabela | Card muito alto | Ajustar altura do mapa em mobile |
-| Grid de donuts | 3 colunas comprimidas | `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` |
-| Tabela de URLs | Truncamento excessivo | Melhorar responsividade |
-| Region table | Colunas fixas | Adaptar para mobile |
-
-**Mudanças específicas:**
-- Linha 162: `lg:grid-cols-3` → `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`
-- Linha 164: `lg:row-span-2` → Remover span em mobile
-- Linha 236: `md:grid-cols-2 lg:grid-cols-3` → `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`
-- BrazilMap: Reduzir altura máxima em mobile
-
----
-
-## Componentes a Modificar
-
-### CampaignsTable.tsx
-- Adicionar `overflow-x-auto` no container
-- Ocultar colunas secundárias em mobile via classes `hidden md:table-cell`
-- Reduzir padding em mobile
-
-### FunnelChart.tsx
-- Mover indicadores de taxa para baixo do funil em mobile
-- Usar media query ou prop `compact`
-
-### KeywordsTable.tsx
-- Já está OK, apenas garantir `overflow-hidden` nos textos
-
----
-
-## Resumo de Arquivos
-
-| Arquivo | Mudanças |
-|---------|----------|
-| `src/components/leads/views/LeadsMetaView.tsx` | Ajustar grids, adicionar responsividade |
-| `src/components/leads/views/LeadsGoogleAdsView.tsx` | Ajustar grids e spans |
-| `src/components/leads/views/LeadsAnalyticsView.tsx` | Ajustar grids, mapa e tabelas |
-| `src/components/leads/charts/CampaignsTable.tsx` | Scroll horizontal + ocultar colunas em mobile |
-| `src/components/leads/charts/FunnelChart.tsx` | Layout compacto para mobile |
-
----
-
-## Breakpoints Utilizados
-
-| Breakpoint | Largura | Dispositivos |
-|------------|---------|--------------|
-| default | < 640px | Celulares |
-| `sm:` | ≥ 640px | Celulares grandes |
-| `md:` | ≥ 768px | Tablets pequenos |
-| `lg:` | ≥ 1024px | Tablets grandes / Notebooks |
-| `xl:` | ≥ 1280px | Desktops |
-
----
-
-## Resultado Esperado
-
-1. **Celulares (< 640px)** → Cards empilhados verticalmente, tabelas com scroll horizontal
-2. **Tablets (768-1023px)** → Grids de 2 colunas, elementos críticos visíveis
-3. **Notebooks/Desktops (≥ 1024px)** → Layout completo de 3 colunas
-
----
-
-## Testes a Realizar
-
-1. Abrir Meta Ads em celular → verificar funil e tabela de campanhas
-2. Abrir Google Ads em tablet → verificar keywords e gráfico
-3. Abrir Analytics em celular → verificar mapa do Brasil e donuts
-4. Testar scroll horizontal nas tabelas em mobile
-5. Verificar que nenhum texto está cortado/truncado excessivamente
+Arquivos envolvidos (previsto)
+- `src/components/leads/charts/CampaignsTable.tsx`
+- `src/components/leads/views/LeadsMetaView.tsx`
+- `src/components/leads/views/LeadsGoogleAdsView.tsx`
+- `src/components/leads/charts/KeywordsTable.tsx`
+- (opcional, só se necessário) `src/pages/Leads.tsx`

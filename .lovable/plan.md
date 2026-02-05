@@ -1,129 +1,63 @@
 
+Objetivo
+- No desktop (computador/notebook), a página /reconhecimento deve caber 100% na altura visível, sem rolagem vertical, mantendo o tamanho/visual original dos cards (sem “compactar” o card).
+- A rolagem deve existir apenas na horizontal (carrossel de premiações).
 
-## Plano: Fixar Top Bar Durante Scroll Horizontal dos Cards
+Diagnóstico (pelo código atual + seu print)
+- O scroll vertical está vindo do container principal do layout (`AppLayout`), que sempre usa `overflow-y-auto` no “Main content area”.
+- Mesmo com o `Reconhecimento` tentando ocupar `h-full` e usando `flex-1 min-h-0`, a combinação de:
+  - padding vertical do conteúdo (`p-4 sm:p-5 lg:p-6`)
+  - gaps/space-y do header/section
+  - `pb-3` no carrossel
+  pode causar alguns pixels de overflow vertical. Como o pai é `overflow-y-auto`, você consegue “descer” para ver a parte de baixo.
 
-### Problema Identificado
+Estratégia de correção (sem mexer no tamanho do card)
+1) Tornar o “Main content area” do `AppLayout` configurável por rota
+- Usar `useLocation()` dentro de `AppLayout` para detectar `pathname === "/reconhecimento"` (desktop).
+- Para essa rota especificamente:
+  - Trocar `overflow-y-auto` por `overflow-y-hidden` (no desktop) para impedir qualquer rolagem vertical.
+  - Ajustar o padding do container apenas o necessário (normalmente reduzir um pouco o padding vertical) para garantir que o conteúdo caiba sem cortar nada.
+  - Manter o comportamento atual de mobile/tablet (continua com `overflow-y-auto` + `pb-24` por causa do bottom nav).
 
-O container dos cards no desktop usa:
-```css
--mx-4 px-4 overflow-x-auto
-```
+2) Ajuste fino no `Reconhecimento.tsx` (desktop) só para eliminar micro-overflow
+Sem alterar o card:
+- Remover o `pb-3` do container do carrossel (isso frequentemente cria “sobrinha” vertical desnecessária).
+- Garantir que o container do carrossel não crie altura extra:
+  - Manter `flex-1 min-h-0 overflow-hidden` no wrapper (já está ok).
+  - Manter `h-full` no `overflow-x-auto` (já está ok).
+- Se ainda sobrar 1–8px de overflow por conta de gaps/space-y, reduzir apenas espaçamentos verticais no desktop (sem tocar no card):
+  - `gap-6` -> `gap-4` somente no desktop
+  - `section space-y-4` -> `space-y-3` somente no desktop
+  - `header space-y-1` pode virar `space-y-0.5` somente no desktop
+Esses ajustes preservam o “tamanho do card” e só refinam o ritmo vertical para caber na dobra.
 
-Esse `-mx-4` faz o container "vazar" para fora do seu pai, criando um scroll horizontal que afeta a visualização do header. O header está `sticky top-0`, que funciona para scroll **vertical**, mas o scroll horizontal do container filho está causando o deslocamento visual.
+3) Critério de sucesso (o que vou validar no teste)
+- Desktop:
+  - Não deve existir scroll vertical no conteúdo da página (trackpad/mouse wheel não move para baixo).
+  - Todo o conteúdo (títulos + cards completos com nome/descrição/badge) deve estar visível sem precisar rolar.
+  - O carrossel continua com scroll horizontal funcionando e com snap.
+- Mobile/Tablet:
+  - Continua tendo scroll vertical natural e `pb-24` para não ficar atrás do bottom nav.
 
----
+4) Teste prático (automatizado + visual) que vou executar ao implementar
+- Abrir /reconhecimento em viewport desktop e validar:
+  - `mainContent.scrollHeight === mainContent.clientHeight` (ou diferença 0/1px) e que o wheel não desloca verticalmente.
+- Validar em viewport menor de notebook (ex.: 1366x768) e maior (1920x1080).
+- Validar rapidamente mobile (390x844) para garantir que não quebrou o padding do bottom nav nem a pilha vertical.
 
-### Causa Técnica
+Arquivos que serão alterados
+- `src/components/AppLayout.tsx`
+  - Adicionar `useLocation()`
+  - Aplicar classes condicionais por rota (/reconhecimento) e por breakpoint (desktop vs mobile/tablet)
+- `src/pages/Reconhecimento.tsx`
+  - Remover `pb-3` do carrossel desktop
+  - (Se necessário) reduzir somente espaçamentos verticais no desktop para eliminar overflow residual
 
-```text
-┌──────────────────────────────────────────────┐
-│ SidebarInset (main)                          │
-│ ┌──────────────────────────────────────────┐ │
-│ │ Header (sticky top-0)                    │ │ ← Sticky no eixo Y
-│ └──────────────────────────────────────────┘ │
-│ ┌──────────────────────────────────────────┐ │
-│ │ Content div                              │ │
-│ │ ┌────────────────────────────────────────┼─┼──► Cards com -mx-4
-│ │ │ Cards container (overflow-x-auto)      │ │    vazando para fora
-│ │ └────────────────────────────────────────┼─┘
-│ └──────────────────────────────────────────┘ │
-└──────────────────────────────────────────────┘
-```
+Riscos / Observações
+- Se a altura da tela for muito baixa (ex.: janelas pequenas), qualquer layout pode precisar de scroll. A correção vai focar em “desktop normal” (notebook/monitor) e remover o overflow que hoje aparece mesmo com espaço suficiente.
+- Vou evitar qualquer mudança em `RecognitionCard.tsx` para garantir “tamanho original do card”.
 
-Quando o usuário faz scroll horizontal nos cards, o container pai também pode ser afetado devido ao "vazamento" do `-mx-4`.
-
----
-
-### Solução
-
-Remover o `-mx-4` do container de scroll horizontal e usar uma abordagem que não vaze para fora do container:
-
-**Arquivo:** `src/pages/Reconhecimento.tsx`
-
-**Antes:**
-```tsx
-<div className="-mx-4 px-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 scrollbar-hide">
-```
-
-**Depois:**
-```tsx
-<div className="overflow-x-auto snap-x snap-mandatory scrollbar-hide -mr-4 pr-4">
-```
-
-Ou, melhor ainda, encapsular os cards em um container que tenha `overflow-x-auto` sem usar margens negativas:
-
-```tsx
-<div className="w-full overflow-hidden">
-  <div className="overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-3">
-    <div className="flex gap-6 min-w-max pl-0 pr-4">
-      {/* Cards */}
-    </div>
-  </div>
-</div>
-```
-
----
-
-### Mudanças Específicas
-
-#### `src/pages/Reconhecimento.tsx`
-
-Linha 43-44, trocar:
-
-```tsx
-{/* Desktop: Horizontal scroll container with larger cards */}
-<div className="-mx-4 px-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 scrollbar-hide">
-  <div className="flex gap-6 min-w-max pb-3">
-```
-
-Por:
-
-```tsx
-{/* Desktop: Horizontal scroll container with larger cards */}
-<div className="w-full overflow-hidden">
-  <div className="overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-3">
-    <div className="flex gap-6 min-w-max pr-4">
-```
-
-E fechar corretamente:
-
-```tsx
-    </div>
-  </div>
-</div>
-```
-
----
-
-### Resultado Esperado
-
-```text
-┌──────────────────────────────────────────────┐
-│ SidebarInset (main)                          │
-│ ┌──────────────────────────────────────────┐ │
-│ │ Header (sticky top-0) - FIXO             │ │ ← Não se move mais
-│ └──────────────────────────────────────────┘ │
-│ ┌──────────────────────────────────────────┐ │
-│ │ Content div                              │ │
-│ │ ┌──────────────────────────────────────┐ │ │
-│ │ │ overflow-hidden wrapper              │ │ │
-│ │ │ ┌──────────────────────────────────┐ │ │ │
-│ │ │ │ Cards (overflow-x-auto) ──────►  │ │ │ │ ← Scroll contido
-│ │ │ └──────────────────────────────────┘ │ │ │
-│ │ └──────────────────────────────────────┘ │ │
-│ └──────────────────────────────────────────┘ │
-└──────────────────────────────────────────────┘
-```
-
-1. **Top bar permanece fixo** durante scroll horizontal dos cards
-2. **Cards ainda têm scroll horizontal** no desktop
-3. **Layout mobile não é afetado** (já usa scroll vertical)
-
----
-
-### Arquivo a Modificar
-
-```text
-src/pages/Reconhecimento.tsx
-```
-
+Sequência de implementação
+1) Ajustar `AppLayout.tsx` para suportar modo “sem scroll vertical” especificamente em /reconhecimento no desktop.
+2) Ajustar `Reconhecimento.tsx` (remover `pb-3` e, se necessário, pequenos ajustes em gap/space-y só no desktop).
+3) Rodar testes visuais nos breakpoints e confirmar que a rolagem vertical sumiu sem cortar conteúdo.

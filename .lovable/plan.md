@@ -1,78 +1,132 @@
 
 
-## Correção do Sistema de Mensagens (Direct)
+## Melhoria da Página de Busca - Estilo Instagram
 
-Vou resolver os 4 problemas que você identificou:
-
-### Problema 1: Membro fantasma "Membro" aparece na lista de seleção
-
-**Diagnóstico**: A função `search_approved_members` retorna TODOS os perfis aprovados, incluindo perfis sem nome preenchido (que aparecem como "Membro" por padrão). O perfil `cab4930c-f275-4079-a89f-b1e97a0a4898` no banco tem `display_name = null` e `username = null`.
-
-**Solução**: Modificar a função `search_approved_members` para excluir perfis que não têm nem `display_name` nem `username` preenchidos.
-
-### Problema 2: Lista de "Nova mensagem" mostra qualquer membro (não só mútuos)
-
-**Diagnóstico**: A função `search_approved_members` atualmente retorna qualquer membro aprovado, sem verificar se existe conexão mútua. Você quer que só apareçam pessoas que você segue E que te seguem.
-
-**Solução**: Criar uma nova função `search_mutual_connections` que filtra apenas conexões mútuas (seguem um ao outro) para usar no diálogo de Nova Mensagem.
-
-### Problema 3: Histórico reaparece ao iniciar conversa com pessoa que já excluiu
-
-**Diagnóstico**: Quando você clica em "Nova mensagem" com a Joyce, a função `create_conversation` encontra a conversa existente (mesmo que você tenha marcado `hidden_at`) e retorna o ID dela. O problema é que:
-1. A conversa é "re-descoberta" (retorna ID existente)
-2. O `hidden_at` NÃO é limpo
-3. Mas as mensagens antigas continuam visíveis porque o chat carrega todas mensagens da conversa
-
-**Solução**:
-1. Modificar `create_conversation` para, ao re-descobrir conversa oculta, limpar o `hidden_at` (reativar a conversa)
-2. Quando a conversa é reativada, marcar todas as mensagens antigas como "excluídas para mim" automaticamente, para que você comece do zero (comportamento Instagram)
-
-### Problema 4: Mensagem "Excluir para todos" ainda mostra placeholder
-
-**Diagnóstico**: Atualmente o `MessageBubble` mostra "Mensagem excluída" quando `deleted_at` está preenchido. Você quer que a mensagem suma completamente (como Instagram).
-
-**Solução**: Modificar o `MessageBubble.tsx` para retornar `null` quando `deleted_at` está preenchido, em vez de mostrar o placeholder.
+### Objetivo
+Transformar a busca para funcionar como o Instagram:
+- Buscar por **nome** (ex: "Thiago Silva") OU por **@username**
+- Retornar **múltiplos resultados** (lista)
+- Exibir cada resultado como: foto circular + nome + @arroba
 
 ---
 
-## Arquivos a serem modificados
+### Mudanças Planejadas
 
-### 1. Nova migration SQL
+#### 1. Nova função SQL: `search_members`
 
-Criar migration com:
+Criar uma função de busca mais flexível que:
+- Busca por nome (display_name) OU username
+- Retorna múltiplos resultados (até 30)
+- Exclui perfis sem nome/username válidos (sem "Membro fantasma")
+- Respeita visibilidade do perfil (members/mutuals)
 
 ```text
-1. CREATE FUNCTION search_mutual_connections(p_search, p_limit)
-   - Retorna apenas conexões mútuas
-   - Exclui perfis sem nome E sem username
-
-2. UPDATE FUNCTION create_conversation()
-   - Ao encontrar conversa DM existente:
-     - Se hidden_at do usuário atual está preenchido:
-       - Limpar hidden_at (reativar conversa)
-       - Marcar TODAS mensagens antigas como deleted_for do usuário
-   - Isso faz com que ao reabrir, o histórico comece do zero
+search_members(p_search text, p_limit int DEFAULT 30)
+→ user_id, display_name, username, avatar_url
 ```
 
-### 2. `src/components/messages/NewMessageDialog.tsx`
+A busca vai funcionar assim:
+- "Thiago" → encontra todos com "Thiago" no nome
+- "Thiago Silva" → encontra todos com "Thiago Silva" no nome
+- "@thiago" → encontra todos com @thiago... no username
 
-- Trocar de `search_approved_members` para `search_mutual_connections`
-- Só conexões mútuas aparecem na lista de seleção
+#### 2. Atualizar a página `/buscar` (Buscar.tsx)
 
-### 3. `src/components/messages/MessageBubble.tsx`
+**Layout atual:**
+- Input de busca + botão "Buscar"
+- Exibe UM resultado detalhado (foto, nome, @, cidade, botões de ação)
 
-- Remover o bloco que mostra "Mensagem excluída"
-- Quando `deleted_at` está preenchido, retornar `null` (mensagem some completamente)
+**Novo layout (estilo Instagram):**
+
+```text
+┌─────────────────────────────────────────┐
+│ 🔍 Buscar                               │
+│ Encontre membros pelo nome ou @         │
+├─────────────────────────────────────────┤
+│ [________________] [Buscar] [Limpar]    │
+│  "Thiago Silva"                         │
+├─────────────────────────────────────────┤
+│  ┌────┐                                 │
+│  │ 😊 │  Thiago Silva                   │
+│  └────┘  @thiago.silva                  │
+│  ─────────────────────────────────────  │
+│  ┌────┐                                 │
+│  │ 😊 │  Thiago Oliveira                │
+│  └────┘  @thiago.oliveira               │
+│  ─────────────────────────────────────  │
+│  ┌────┐                                 │
+│  │ 😊 │  Thiago Santos                  │
+│  └────┘  @thiago.santos                 │
+└─────────────────────────────────────────┘
+```
+
+**Comportamento:**
+- Ao digitar e clicar "Buscar", exibe lista de resultados
+- Cada item é clicável → navega para `/membro/:username`
+- Sem botões inline (Seguir, Mensagem) na lista — isso fica no perfil
+- Lista com scroll se houver muitos resultados (max-height)
+
+**Alternativa de UX** (mais fluida):
+- Busca "live" conforme digita (com debounce de 300ms)
+- Sem botão "Buscar" explícito
+- Similar ao Instagram onde os resultados aparecem enquanto você digita
 
 ---
 
-## Resumo das mudanças de comportamento
+### Arquivos a Modificar
 
-| Cenário | Antes | Depois |
-|---------|-------|--------|
-| Quem aparece em "Nova mensagem" | Qualquer membro aprovado | Apenas conexões mútuas |
-| Perfis sem nome/username | Aparecem como "Membro" | Não aparecem |
-| Excluir conversa → reabrir | Histórico reaparece | Começa do zero |
-| "Excluir para todos" | Mostra "Mensagem excluída" | Some totalmente |
-| Outra pessoa envia msg após você excluir | Não reaparecia | Reaparece na caixa (hidden_at limpo) |
+| Arquivo | Alteração |
+|---------|-----------|
+| Nova migration SQL | Criar função `search_members` |
+| `src/pages/Buscar.tsx` | Refatorar para lista de resultados estilo Instagram |
+
+---
+
+### Detalhes Técnicos
+
+#### Função SQL `search_members`
+
+```sql
+CREATE OR REPLACE FUNCTION public.search_members(
+  p_search text DEFAULT ''::text,
+  p_limit integer DEFAULT 30
+)
+RETURNS TABLE(
+  user_id uuid,
+  display_name text,
+  username text,
+  avatar_url text
+)
+-- Busca por display_name OU username
+-- Respeita profile_visibility
+-- Exclui perfis sem nome/username
+```
+
+#### Componente de Item de Resultado
+
+```tsx
+// Cada resultado na lista
+<button
+  onClick={() => navigate(`/membro/${username.replace(/^@/, "")}`)}
+  className="flex w-full items-center gap-3 p-3 hover:bg-muted/20"
+>
+  <img src={avatar_url} className="h-12 w-12 rounded-full" />
+  <div>
+    <div className="font-medium">{display_name}</div>
+    <div className="text-muted-foreground text-sm">{username}</div>
+  </div>
+</button>
+```
+
+---
+
+### Resumo Visual
+
+| Estado | Exibição |
+|--------|----------|
+| Inicial | "Digite um nome ou @ para buscar" |
+| Digitando/Buscando | "Buscando…" |
+| Com resultados | Lista de perfis (foto + nome + @) |
+| Sem resultados | "Nenhum membro encontrado" |
+| Erro | "Não foi possível buscar" |
 

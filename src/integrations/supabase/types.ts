@@ -1390,6 +1390,26 @@ export type Database = {
           post_id: string
         }[]
       }
+      list_followers: {
+        Args: { p_limit?: number; p_search?: string; p_user_id: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          is_following: boolean
+          user_id: string
+          username: string
+        }[]
+      }
+      list_following: {
+        Args: { p_limit?: number; p_search?: string; p_user_id: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          is_following: boolean
+          user_id: string
+          username: string
+        }[]
+      }
       list_my_notifications: {
         Args: { p_before?: string; p_limit?: number }
         Returns: {
@@ -1428,6 +1448,7 @@ export type Database = {
         }[]
       }
       mark_notifications_read: { Args: { p_before: string }; Returns: number }
+      remove_follower: { Args: { p_follower_id: string }; Returns: boolean }
       search_approved_members: {
         Args: { p_limit?: number; p_search?: string }
         Returns: {

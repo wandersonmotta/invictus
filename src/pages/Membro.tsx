@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PostCommentsPanel } from "@/components/feed/PostCommentsPanel";
 import { ExpertisesChips } from "@/components/profile/ExpertisesChips";
+import { FollowListDialog } from "@/components/profile/FollowListDialog";
 type PublicProfile = {
   user_id: string;
   username: string | null;
@@ -44,6 +45,7 @@ export default function Membro() {
     url: string;
     contentType: string | null;
   }[]>([]);
+  const [followListMode, setFollowListMode] = React.useState<"followers" | "following" | null>(null);
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const primary = selectedMediaUrls[0];
   const isVideo = Boolean(primary?.contentType?.startsWith("video/"));
@@ -218,18 +220,30 @@ export default function Membro() {
                   </div>
 
                   <div className="flex gap-6 text-sm">
-                    <div>
+                    <button
+                      type="button"
+                      className="text-center hover:opacity-80 transition-opacity"
+                      onClick={() => {}}
+                    >
                       <div className="font-semibold">{postsQuery.data?.length ?? 0}</div>
                       <div className="text-xs text-muted-foreground">Posts</div>
-                    </div>
-                    <div>
+                    </button>
+                    <button
+                      type="button"
+                      className="text-center hover:opacity-80 transition-opacity"
+                      onClick={() => setFollowListMode("followers")}
+                    >
                       <div className="font-semibold">{s?.followers_count ?? 0}</div>
                       <div className="text-xs text-muted-foreground">Seguidores</div>
-                    </div>
-                    <div>
+                    </button>
+                    <button
+                      type="button"
+                      className="text-center hover:opacity-80 transition-opacity"
+                      onClick={() => setFollowListMode("following")}
+                    >
                       <div className="font-semibold">{s?.following_count ?? 0}</div>
                       <div className="text-xs text-muted-foreground">Seguindo</div>
-                    </div>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -291,6 +305,17 @@ export default function Membro() {
                 </div> : null}
             </DialogContent>
           </Dialog>
+
+          <FollowListDialog
+            open={followListMode !== null}
+            onOpenChange={(open) => {
+              if (!open) setFollowListMode(null);
+            }}
+            userId={p.user_id}
+            mode={followListMode ?? "followers"}
+            isMyProfile={isMe}
+            onFollowChange={() => statsQuery.refetch()}
+          />
         </div>}
     </main>;
 }

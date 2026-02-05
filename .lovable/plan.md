@@ -1,282 +1,272 @@
 
-# Plano: Refatorar Carteira + Dialog de Saque com Slider
+# Plano: Corrigir Dialog de Saque conforme Referência HC Club
 
 ## Visão Geral
 
-Implementar o fluxo de saque seguindo fielmente a referência enviada, com:
-- Botão "Sacar" reposicionado (fora do card, alinhado à direita)
-- Dialog de saque com slider arrastável
-- Taxa de 4.99% e saque mínimo de R$100
-- Lógica de exibição: **Entradas = Bruto**, **Saídas/Pendentes = Líquido** (já com taxa descontada)
-- Campo de chave PIX (CPF) no perfil e no dialog
-
----
-
-## Regra de Negócio Principal
-
-| Tipo de Transação | Valor Exibido |
-|-------------------|---------------|
-| **Entrada** | Valor BRUTO (total recebido) |
-| **Saída (aprovado)** | Valor LÍQUIDO (já descontado 4.99%) |
-| **Saída (pendente)** | Valor LÍQUIDO (já descontado 4.99%) |
-
-**Exemplo:**
-- Usuário solicita saque de R$100,00
-- Taxa: R$100 × 4.99% = R$4,99
-- Valor líquido: R$95,01
-- No histórico de **Saídas** aparece: **R$95,01** (não R$100)
-
----
-
-## Arquivos a Criar/Modificar
-
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| `src/components/carteira/WalletBalanceCard.tsx` | **Modificar** | Botão "Sacar" fora do card, alinhado à direita |
-| `src/components/carteira/WithdrawDialog.tsx` | **Criar** | Dialog de saque com slider, input, taxa e PIX |
-| `src/components/carteira/types.ts` | **Modificar** | Adicionar campos para valor bruto/líquido |
-| `src/pages/Carteira.tsx` | **Modificar** | Integrar dialog + responsividade mobile |
-| `src/components/carteira/PixKeyCard.tsx` | **Criar** | Card para editar chave PIX no perfil |
-| `src/pages/Perfil.tsx` | **Modificar** | Adicionar seção de chave PIX |
-| `src/hooks/useMyProfile.ts` | **Modificar** | Incluir campo `pix_key` |
-| `src/lib/cpf.ts` | **Criar** | Formatação e validação de CPF |
-
-### Migração de Banco
-
-```sql
-ALTER TABLE profiles ADD COLUMN pix_key text;
-```
-
----
-
-## 1. Layout Corrigido (Conforme Referência)
+Refatorar o `WithdrawDialog` para seguir exatamente o layout da referência:
 
 ```text
 ┌─────────────────────────────────────────┐
-│  Bônus atual                       💳   │
-│  R$ 249,90                              │
-└─────────────────────────────────────────┘
-                      ┌────────────────┐
-                      │   Sacar ↗      │  ← Botão FORA do card
-                      └────────────────┘
-
-↔ Histórico de movimentações
-
- [Todos] [Entradas ↑] [Saídas ↓] [Pendente]
-
-┌─────────────────────────────────────────┐
-│ 08/12/2025 às 16:29            aprovado │
-│ Cred Gawa                  + R$ 30,00   │  ← BRUTO (entrada)
-└─────────────────────────────────────────┘
-┌─────────────────────────────────────────┐
-│ 08/12/2025 às 08:08            pendente │
-│ Saque PIX                  - R$ 95,01   │  ← LÍQUIDO (saída)
+│  Solicite o saque                   ✕   │
+│                                         │
+│          R$ 249,90                      │  ← Valor grande, centralizado
+│                                         │
+│     Qual valor deseja retirar?          │  ← Subtítulo
+│                                         │
+│  ●─────────────────────────────────○    │  ← Slider
+│                                         │
+│     Arraste para indicar o valor        │  ← Instrução abaixo do slider
+│                                         │
+│  ┌───────────────────────────────────┐  │
+│  │        Sacar R$ 249,90            │  │  ← Botão com valor dinâmico
+│  └───────────────────────────────────┘  │
+│                                         │
+│        Saque mínimo: R$ 100             │  ← Texto simples
+│                                         │
+│   Será aplicada uma taxa de 4,99%       │  ← Descrição da taxa
+│   sobre o valor do saque referente      │
+│   aos custos operacionais.              │
+│                                         │
 └─────────────────────────────────────────┘
 ```
+
+## Diferenças Identificadas
+
+| Atual | Referência |
+|-------|------------|
+| Título: "Solicitar Saque" | "Solicite o saque" |
+| Input editável do valor | Apenas exibe o valor selecionado |
+| Valores min/max abaixo do slider | "Arraste para indicar o valor" |
+| Box com informações de taxa | Texto simples abaixo do botão |
+| Botão: "Solicitar Saque" | "Sacar R$ X.XXX,XX" (valor dinâmico) |
+| Campo de PIX no dialog | Não aparece (solicitar apenas se necessário) |
+
+## Arquivo a Modificar
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `src/components/carteira/WithdrawDialog.tsx` | Refatorar layout completo |
 
 ---
 
-## 2. Dialog de Saque (Seguindo Referência)
+## Novo Layout do Componente
 
-```text
-┌──────────────────────────────────────────────┐
-│                     ✕                        │
-│           Solicitar Saque                    │
-│                                              │
-│  Saldo disponível: R$ 249,90                 │
-│                                              │
-│  Valor do saque:                             │
-│  ┌────────────────────────────────────┐      │
-│  │  R$ 100,00                         │      │
-│  └────────────────────────────────────┘      │
-│                                              │
-│  ●────────────────────────────────○          │
-│  R$ 100              (slider)     R$ 249    │
-│                                              │
-│  ┌────────────────────────────────────┐      │
-│  │ Saque mínimo: R$ 100,00            │      │
-│  │ Taxa de saque: 4.99%               │      │
-│  │ Valor líquido: R$ 95,01            │      │
-│  └────────────────────────────────────┘      │
-│                                              │
-│  Chave PIX (CPF):                            │
-│  ┌────────────────────────────────────┐      │
-│  │  123.456.789-00                    │      │
-│  └────────────────────────────────────┘      │
-│  ⓘ Usamos seu CPF como chave padrão          │
-│                                              │
-│  ┌────────────────────────────────────┐      │
-│  │         Solicitar Saque            │      │
-│  └────────────────────────────────────┘      │
-└──────────────────────────────────────────────┘
-```
+### Estrutura Simplificada
 
-### Comportamento do Slider
+1. **Título**: "Solicite o saque" (alinhado à esquerda)
+2. **Valor grande**: O valor selecionado (sincronizado com slider)
+3. **Pergunta**: "Qual valor deseja retirar?"
+4. **Slider**: De R$100 até o saldo disponível
+5. **Instrução**: "Arraste para indicar o valor"
+6. **Botão**: "Sacar R$ X.XXX,XX" (mostra o valor selecionado)
+7. **Info taxa**: "Saque mínimo: R$ 100"
+8. **Descrição**: "Será aplicada uma taxa de 4,99%..."
 
-- **Mínimo**: R$100 (saque mínimo)
-- **Máximo**: Saldo disponível do usuário
-- **Sincronizado** com o input numérico (editar um atualiza o outro)
-- **Cálculo em tempo real**: Taxa e valor líquido atualizados ao mover
+### Fluxo do PIX
 
----
-
-## 3. Seção PIX no Perfil
-
-Nova seção adicionada na página de Perfil:
-
-```text
-┌────────────────────────────────────────────┐
-│ Chave PIX para saques                      │
-│                                            │
-│ Sua chave PIX será usada para receber      │
-│ seus saques. Usamos CPF como padrão.       │
-│                                            │
-│ Chave PIX (CPF):                           │
-│ ┌────────────────────────────────────┐     │
-│ │  123.456.789-00                    │     │
-│ └────────────────────────────────────┘     │
-│                                            │
-│           [ Salvar chave PIX ]             │
-└────────────────────────────────────────────┘
-```
+Para manter a validação de PIX mas não poluir o dialog principal:
+- **Se o usuário já tem PIX cadastrado**: Usa automaticamente
+- **Se não tem PIX**: Após clicar "Sacar", abre uma etapa secundária para cadastrar o CPF
 
 ---
 
 ## Seção Técnica
 
-### Estrutura de Tipos Atualizada
-
-```typescript
-// types.ts
-export interface Transaction {
-  id: string;
-  date: string;
-  description: string;
-  type: TransactionType;
-  status: TransactionStatus;
-  amount: number;       // Valor exibido (bruto para entrada, líquido para saída)
-  grossAmount?: number; // Valor bruto original (para saídas, usado internamente)
-}
-```
-
-### Constantes de Negócio
-
-```typescript
-const WITHDRAW_FEE_RATE = 0.0499; // 4.99%
-const MIN_WITHDRAW = 100;         // R$100,00
-
-// Cálculo do valor líquido
-const netAmount = grossAmount * (1 - WITHDRAW_FEE_RATE);
-// Ex: 100 * 0.9501 = 95.01
-```
-
-### Funções de CPF
-
-```typescript
-// src/lib/cpf.ts
-export function formatCPF(value: string): string {
-  const digits = value.replace(/\D/g, "").slice(0, 11);
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
-  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
-  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
-}
-
-export function isValidCPF(cpf: string): boolean {
-  const digits = cpf.replace(/\D/g, "");
-  if (digits.length !== 11 || /^(\d)\1+$/.test(digits)) return false;
-  // Validação dos dígitos verificadores...
-}
-```
-
-### WithdrawDialog Props
-
-```typescript
-interface WithdrawDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  balance: number;
-  pixKey: string | null;
-  onSubmit: (amount: number, netAmount: number, pixKey: string) => void;
-}
-```
-
-### Responsividade Mobile
+### Código Refatorado
 
 ```tsx
-// Carteira.tsx - Container
-<main className="invictus-page mx-auto w-full max-w-md px-4 py-6 sm:px-6">
+export function WithdrawDialog({
+  open,
+  onOpenChange,
+  balance,
+  pixKey,
+  onSubmit,
+}: WithdrawDialogProps) {
+  const [amount, setAmount] = useState(balance);
+  const [step, setStep] = useState<"amount" | "pix">("amount");
+  const [localPixKey, setLocalPixKey] = useState(pixKey ?? "");
+  const [pixError, setPixError] = useState<string | null>(null);
 
-// WalletBalanceCard - Layout com botão fora
-<div className="flex flex-col gap-4">
-  <div className="invictus-surface rounded-2xl p-5">
-    {/* Card do saldo */}
-  </div>
-  <div className="flex justify-end">
-    <Button variant="goldOutline" onClick={onOpenWithdraw}>
-      Sacar <ExternalLink />
-    </Button>
-  </div>
-</div>
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (open) {
+      setAmount(Math.max(MIN_WITHDRAW, balance));
+      setStep("amount");
+      setLocalPixKey(pixKey ?? "");
+      setPixError(null);
+    }
+  }, [open, pixKey, balance]);
 
-// Dialog - Slider touch-friendly
-<Slider 
-  className="touch-manipulation" 
-  min={100} 
-  max={balance} 
-  step={0.01}
-/>
+  const netAmount = useMemo(() => calculateNetAmount(amount), [amount]);
+
+  const formatCurrency = (value: number) =>
+    value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const handleSliderChange = (values: number[]) => {
+    setAmount(values[0]);
+  };
+
+  const handleNext = () => {
+    if (!pixKey && !isValidCPF(localPixKey)) {
+      setStep("pix");
+      return;
+    }
+    const key = pixKey || localPixKey.replace(/\D/g, "");
+    onSubmit(amount, netAmount, key);
+  };
+
+  const canWithdraw = balance >= MIN_WITHDRAW;
+
+  // Step 1: Amount selection (layout da referência)
+  if (step === "amount") {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-left text-lg font-medium">
+              Solicite o saque
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {!canWithdraw ? (
+              <div className="text-center py-8">
+                <p className="text-sm text-destructive">
+                  Saldo insuficiente para saque.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Large Amount Display */}
+                <div className="text-center py-4">
+                  <p className="text-4xl font-bold text-foreground">
+                    {formatCurrency(amount)}
+                  </p>
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    Qual valor deseja retirar?
+                  </p>
+                </div>
+
+                {/* Slider */}
+                <div className="space-y-3 px-2">
+                  <Slider
+                    value={[amount]}
+                    onValueChange={handleSliderChange}
+                    min={MIN_WITHDRAW}
+                    max={balance}
+                    step={1}
+                    className="touch-manipulation"
+                  />
+                  <p className="text-center text-xs text-muted-foreground">
+                    Arraste para indicar o valor
+                  </p>
+                </div>
+
+                {/* Submit Button with dynamic value */}
+                <Button
+                  className="w-full h-12 text-base font-semibold"
+                  onClick={handleNext}
+                >
+                  Sacar {formatCurrency(amount)}
+                </Button>
+
+                {/* Fee Info (simple text) */}
+                <div className="text-center space-y-2">
+                  <p className="text-sm font-medium text-foreground">
+                    Saque mínimo: {formatCurrency(MIN_WITHDRAW)}
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Será aplicada uma taxa de 4,99% sobre o valor do saque 
+                    referente aos custos operacionais.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Step 2: PIX key input (only if not registered)
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-left text-lg font-medium">
+            Informe sua chave PIX
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6 py-4">
+          <p className="text-sm text-muted-foreground">
+            Para receber seu saque de {formatCurrency(netAmount)}, 
+            precisamos da sua chave PIX (CPF).
+          </p>
+
+          <div className="space-y-2">
+            <Label htmlFor="pix-key">Chave PIX (CPF)</Label>
+            <Input
+              id="pix-key"
+              type="text"
+              inputMode="numeric"
+              placeholder="000.000.000-00"
+              value={localPixKey}
+              onChange={(e) => {
+                setLocalPixKey(formatCPF(e.target.value));
+                setPixError(null);
+              }}
+              className={pixError ? "border-destructive" : ""}
+            />
+            {pixError && (
+              <p className="text-xs text-destructive">{pixError}</p>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setStep("amount")}
+            >
+              Voltar
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={() => {
+                if (!isValidCPF(localPixKey)) {
+                  setPixError("CPF inválido");
+                  return;
+                }
+                onSubmit(amount, netAmount, localPixKey.replace(/\D/g, ""));
+              }}
+            >
+              Confirmar Saque
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 ```
 
-### Mock Data Atualizado
+### Estilização do Slider
 
-```typescript
-// Saídas agora mostram o valor LÍQUIDO
-const mockTransactions: Transaction[] = [
-  { id: "1", date: "2025-12-08T16:29:00", description: "Cred Gawa", type: "entrada", status: "aprovado", amount: 30.0 },
-  { id: "2", date: "2025-12-08T08:08:00", description: "Saque PIX", type: "saida", status: "pendente", amount: 95.01, grossAmount: 100 },
-  { id: "3", date: "2025-12-05T10:15:00", description: "Saque PIX", type: "saida", status: "aprovado", amount: 47.51, grossAmount: 50 },
-];
-```
+O slider na referência tem uma cor sólida (roxo no HC Club, usaremos o gold/primary da Invictus). O slider atual já usa a cor `--primary`, então estará correto.
 
-### Hook useMyProfile Atualizado
+### Inicialização do Valor
 
-```typescript
-export type MyProfile = {
-  first_name: string | null;
-  last_name: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
-  pix_key: string | null; // NOVO
-};
-
-// Query:
-.select("first_name, last_name, display_name, avatar_url, pix_key")
-```
-
----
-
-## Fluxo do Usuário
-
-1. Usuário acessa `/carteira`
-2. Vê o saldo e histórico de transações
-3. Clica em "Sacar"
-4. Dialog abre com slider (mínimo R$100, máximo = saldo)
-5. Move slider ou digita valor
-6. Vê taxa (4.99%) e valor líquido em tempo real
-7. Se não tem PIX cadastrado, insere CPF
-8. Clica "Solicitar Saque"
-9. Transação aparece no histórico como **pendente** com **valor líquido**
-10. Após aprovação, status muda para **aprovado**
+Na referência, o slider começa no **máximo** (saldo total). Atualizaremos o `useState` e `useEffect` para inicializar com `balance` em vez de `MIN_WITHDRAW`.
 
 ---
 
 ## Resultado Esperado
 
-- Layout idêntico à referência enviada
-- Botão "Sacar" posicionado corretamente (fora do card)
-- Responsivo para mobile/tablet/desktop
-- Slider funcional e sincronizado com input
-- Cálculo correto de taxa e valor líquido
-- Histórico exibe valores conforme a regra (bruto/líquido)
-- Chave PIX gerenciável no perfil
+- Dialog idêntico ao da referência HC Club
+- Valor grande e centralizado no topo
+- Slider com instrução "Arraste para indicar o valor"
+- Botão dinâmico "Sacar R$ X.XXX,XX"
+- Informações de taxa e mínimo abaixo do botão
+- Fluxo de PIX em etapa separada (apenas se necessário)
+- Layout limpo e mobile-friendly

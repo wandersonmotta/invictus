@@ -32,7 +32,7 @@
      avatar: brunoImg,
      initials: "BF",
      quote:
-      "Entrei cético, achando que seria mais um grupo. Me enganei. A disciplina aqui é diferente — quem não acompanha, sai.",
+       "Entrei cético, achando que seria mais um grupo. Me enganei. A disciplina aqui é diferente, quem não acompanha, sai.",
    },
    {
     name: "Lucas P.",

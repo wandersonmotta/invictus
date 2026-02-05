@@ -218,6 +218,42 @@ All colors MUST be HSL.
       0 0 40px -28px hsl(var(--primary) / 0.55);
   }
 
+  /* Active frame: contorno dourado SEMPRE ligado (para item ativo/atual) */
+  .invictus-active-frame {
+    position: relative;
+    box-shadow:
+      /* gold contour */
+      0 0 0 2px hsl(var(--gold-hot) / 0.88),
+      /* inner warm edge */
+      0 0 0 1px hsl(var(--gold-soft) / 0.22) inset,
+      /* subtle depth */
+      0 18px 60px -28px hsl(var(--foreground) / 0.28),
+      /* gold glow */
+      0 0 90px -42px hsl(var(--gold-hot) / 0.45);
+  }
+
+  .invictus-active-frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    padding: 2px;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--gold-soft) / 0.10),
+      hsl(var(--gold-hot) / 0.60) 35%,
+      hsl(var(--gold-soft) / 0.20) 70%,
+      hsl(var(--gold-hot) / 0.50)
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.95;
+  }
+
   /* Auth-only: extra premium glass + bold gold frame (doesn't affect rest of app) */
   .invictus-auth-surface {
     position: relative;

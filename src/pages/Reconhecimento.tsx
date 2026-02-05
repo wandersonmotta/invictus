@@ -3,6 +3,9 @@ import { RecognitionCard } from "@/components/reconhecimento/RecognitionCard";
 import { recognitionLevels } from "@/components/reconhecimento/recognitionLevels";
 
 export default function Reconhecimento() {
+  // Mock: current level index (0 = Bronze, will be replaced with real data later)
+  const currentLevelIndex = 0;
+
   return (
     <div className="flex flex-col gap-8 pb-24">
       {/* Header */}
@@ -11,7 +14,7 @@ export default function Reconhecimento() {
           <GoldHoverText>Reconhecimento</GoldHoverText>
         </h1>
         <p className="text-sm text-muted-foreground">
-          O sucesso é construído passo a passo.
+          Bora para o próximo nível!
         </p>
       </header>
 
@@ -22,8 +25,14 @@ export default function Reconhecimento() {
         {/* Horizontal scroll container */}
         <div className="-mx-4 px-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 scrollbar-hide">
           <div className="flex gap-4 min-w-max pb-3">
-            {recognitionLevels.map((level) => (
-              <RecognitionCard key={level.id} level={level} />
+            {recognitionLevels.map((level, index) => (
+              <RecognitionCard
+                key={level.id}
+                level={level}
+                isCurrentLevel={index === currentLevelIndex}
+                isAchieved={index < currentLevelIndex}
+                isFuture={index > currentLevelIndex}
+              />
             ))}
           </div>
         </div>

@@ -868,6 +868,7 @@ export type Database = {
           location_lat: number | null
           location_lng: number | null
           location_updated_at: string | null
+          pix_key: string | null
           postal_code: string | null
           profile_visibility: Database["public"]["Enums"]["profile_visibility"]
           region: string | null
@@ -892,6 +893,7 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           location_updated_at?: string | null
+          pix_key?: string | null
           postal_code?: string | null
           profile_visibility?: Database["public"]["Enums"]["profile_visibility"]
           region?: string | null
@@ -916,6 +918,7 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           location_updated_at?: string | null
+          pix_key?: string | null
           postal_code?: string | null
           profile_visibility?: Database["public"]["Enums"]["profile_visibility"]
           region?: string | null

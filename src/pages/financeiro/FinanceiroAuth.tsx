@@ -61,12 +61,12 @@
  
    return (
      <div
-       className="relative flex min-h-screen items-center justify-center bg-cover bg-center p-4"
+        className="relative flex min-h-screen items-center justify-center overflow-y-auto bg-cover bg-center p-4 py-8"
        style={{ backgroundImage: "url('/images/invictus-auth-bg.jpg')" }}
      >
        <div className="absolute inset-0 bg-black/70" />
  
-       <div className="invictus-auth-frame relative z-10 w-full max-w-md rounded-xl border border-[hsl(var(--gold))]/40 bg-black/60 p-8 backdrop-blur-md">
+        <div className="invictus-auth-frame relative z-10 my-auto w-full max-w-md rounded-xl border border-[hsl(var(--gold))]/40 bg-black/60 p-8 backdrop-blur-md">
          <div className="mb-8 flex flex-col items-center gap-3">
            <img src={invictusLogo} alt="Invictus" className="h-16" />
            <span className="text-sm uppercase tracking-[0.25em] text-[hsl(var(--gold))]">

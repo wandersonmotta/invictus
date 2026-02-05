@@ -1,6 +1,7 @@
  import { ReactNode } from "react";
  import { Navigate } from "react-router-dom";
  import { useIsFinanceiro } from "@/hooks/useIsFinanceiro";
+import { isLovableHost } from "@/lib/appOrigin";
  
  interface RequireFinanceiroProps {
    children: ReactNode;
@@ -22,7 +23,12 @@
    }
  
    if (!isFinanceiro) {
-     return <Navigate to="/auth" replace />;
+    // In Lovable preview, redirect to /financeiro/auth
+    // In production subdomain, redirect to /auth (root of financeiro. subdomain)
+    const loginPath = isLovableHost(window.location.hostname)
+      ? "/financeiro/auth"
+      : "/auth";
+    return <Navigate to={loginPath} replace />;
    }
  
    return <>{children}</>;

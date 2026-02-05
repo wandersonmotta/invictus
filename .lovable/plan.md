@@ -1,182 +1,129 @@
 
 
-## Plano: Correção do Layout Mobile - Cards Compactos e Responsivos
+## Plano: Fixar Top Bar Durante Scroll Horizontal dos Cards
 
-O problema identificado: no mobile, os cards estão ocupando 100% da largura da tela (`w-full`) combinado com aspect ratio 4:5, criando cards gigantes que tomam quase toda a altura da tela.
+### Problema Identificado
+
+O container dos cards no desktop usa:
+```css
+-mx-4 px-4 overflow-x-auto
+```
+
+Esse `-mx-4` faz o container "vazar" para fora do seu pai, criando um scroll horizontal que afeta a visualização do header. O header está `sticky top-0`, que funciona para scroll **vertical**, mas o scroll horizontal do container filho está causando o deslocamento visual.
 
 ---
 
-### Problema Visual Atual
+### Causa Técnica
 
 ```text
-Mobile (390x844):
-+------------------------+
-| Header                 |
-+------------------------+
-|                        |
-|   [Card Bronze         |
-|    ocupando            |
-|    praticamente        |
-|    toda a tela]        |
-|                        |
-|                        |
-+------------------------+
-| Nav                    |
-+------------------------+
+┌──────────────────────────────────────────────┐
+│ SidebarInset (main)                          │
+│ ┌──────────────────────────────────────────┐ │
+│ │ Header (sticky top-0)                    │ │ ← Sticky no eixo Y
+│ └──────────────────────────────────────────┘ │
+│ ┌──────────────────────────────────────────┐ │
+│ │ Content div                              │ │
+│ │ ┌────────────────────────────────────────┼─┼──► Cards com -mx-4
+│ │ │ Cards container (overflow-x-auto)      │ │    vazando para fora
+│ │ └────────────────────────────────────────┼─┘
+│ └──────────────────────────────────────────┘ │
+└──────────────────────────────────────────────┘
 ```
+
+Quando o usuário faz scroll horizontal nos cards, o container pai também pode ser afetado devido ao "vazamento" do `-mx-4`.
 
 ---
 
-### Solução: Cards Horizontais Compactos
+### Solução
 
-Em vez de cards verticais gigantes, vou usar um **layout horizontal compacto** no mobile:
+Remover o `-mx-4` do container de scroll horizontal e usar uma abordagem que não vaze para fora do container:
 
-```text
-Mobile (390x844):
-+------------------------+
-| Header                 |
-+------------------------+
-| +--------------------+ |
-| | [Img] Bronze       | |  <- Card horizontal
-| |       100 pts      | |
-| +--------------------+ |
-| +--------------------+ |
-| | [Img] Silver       | |
-| |       500 pts      | |
-| +--------------------+ |
-| +--------------------+ |
-| | [Img] Gold         | |
-| |       1.000 pts    | |
-| +--------------------+ |
-| ... mais cards ...     |
-+------------------------+
+**Arquivo:** `src/pages/Reconhecimento.tsx`
+
+**Antes:**
+```tsx
+<div className="-mx-4 px-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 scrollbar-hide">
 ```
 
----
-
-### Arquivos a Modificar
-
-#### 1. `src/components/reconhecimento/RecognitionCard.tsx`
-
-**Mudanças principais:**
-
-1. Adicionar prop `compact` para layout horizontal compacto
-2. No modo compacto:
-   - Layout flex horizontal (imagem à esquerda, conteúdo à direita)
-   - Imagem com tamanho fixo (80x100px aproximadamente)
-   - Altura controlada do card
-
-```typescript
-interface RecognitionCardProps {
-  level: RecognitionLevel;
-  isCurrentLevel?: boolean;
-  isAchieved?: boolean;
-  isFuture?: boolean;
-  /** Compact horizontal layout for mobile */
-  compact?: boolean;
-}
+**Depois:**
+```tsx
+<div className="overflow-x-auto snap-x snap-mandatory scrollbar-hide -mr-4 pr-4">
 ```
 
-**Estrutura do card compacto:**
+Ou, melhor ainda, encapsular os cards em um container que tenha `overflow-x-auto` sem usar margens negativas:
 
 ```tsx
-{compact ? (
-  // Layout horizontal compacto
-  <article className="flex gap-3 w-full h-[100px] rounded-xl ...">
-    {/* Imagem pequena à esquerda */}
-    <div className="w-20 h-full shrink-0 rounded-l-xl overflow-hidden">
-      <img ... />
+<div className="w-full overflow-hidden">
+  <div className="overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-3">
+    <div className="flex gap-6 min-w-max pl-0 pr-4">
+      {/* Cards */}
     </div>
-    
-    {/* Conteúdo à direita */}
-    <div className="flex-1 py-2 pr-3">
-      <h3>Member Bronze</h3>
-      <p>Adicione 3 pessoas</p>
-      <Badge>100 pts</Badge>
-    </div>
-  </article>
-) : (
-  // Layout vertical original para desktop
-  <article className="w-[clamp(200px,50vw,280px)] ...">
-    ...
-  </article>
-)}
-```
-
-#### 2. `src/pages/Reconhecimento.tsx`
-
-**Mudanças:**
-
-Passar `compact={true}` para cards no mobile em vez de `fullWidth`:
-
-```typescript
-{isMobileOrTablet ? (
-  <div className="flex flex-col gap-3">
-    {recognitionLevels.map((level, index) => (
-      <RecognitionCard
-        key={level.id}
-        level={level}
-        isCurrentLevel={index === currentLevelIndex}
-        isAchieved={index < currentLevelIndex}
-        isFuture={index > currentLevelIndex}
-        compact  // <-- Layout horizontal compacto
-      />
-    ))}
   </div>
-) : (
-  // Desktop mantém horizontal scroll com cards verticais grandes
-  ...
-)}
+</div>
 ```
 
 ---
 
-### Especificações do Card Compacto
+### Mudanças Específicas
 
-| Elemento | Valor |
-|----------|-------|
-| Altura total | 100px |
-| Largura imagem | 80px (aspect 4:5 respeitado) |
-| Gap | 12px (gap-3) |
-| Padding conteúdo | py-2 pr-3 |
-| Fonte título | text-sm font-semibold |
-| Fonte descrição | text-xs text-muted-foreground |
-| Badge | text-[10px] |
+#### `src/pages/Reconhecimento.tsx`
 
----
+Linha 43-44, trocar:
 
-### Destaque do Nível Atual (Compacto)
+```tsx
+{/* Desktop: Horizontal scroll container with larger cards */}
+<div className="-mx-4 px-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 scrollbar-hide">
+  <div className="flex gap-6 min-w-max pb-3">
+```
 
-No modo compacto, a borda dourada vai envolver todo o card horizontal:
+Por:
 
-```text
-+----[DOURADO]-------------+
-| [Img] Bronze   SEU NÍVEL |
-|       100 pts            |
-+---------------------------+
+```tsx
+{/* Desktop: Horizontal scroll container with larger cards */}
+<div className="w-full overflow-hidden">
+  <div className="overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-3">
+    <div className="flex gap-6 min-w-max pr-4">
+```
+
+E fechar corretamente:
+
+```tsx
+    </div>
+  </div>
+</div>
 ```
 
 ---
 
 ### Resultado Esperado
 
-1. **Mobile/Tablet**: Cards horizontais compactos (~100px altura cada)
-   - Todos os 6 níveis visíveis com scroll mínimo
-   - Imagem da placa visível à esquerda
-   - Informações legíveis à direita
-   - Nível atual com destaque dourado
+```text
+┌──────────────────────────────────────────────┐
+│ SidebarInset (main)                          │
+│ ┌──────────────────────────────────────────┐ │
+│ │ Header (sticky top-0) - FIXO             │ │ ← Não se move mais
+│ └──────────────────────────────────────────┘ │
+│ ┌──────────────────────────────────────────┐ │
+│ │ Content div                              │ │
+│ │ ┌──────────────────────────────────────┐ │ │
+│ │ │ overflow-hidden wrapper              │ │ │
+│ │ │ ┌──────────────────────────────────┐ │ │ │
+│ │ │ │ Cards (overflow-x-auto) ──────►  │ │ │ │ ← Scroll contido
+│ │ │ └──────────────────────────────────┘ │ │ │
+│ │ └──────────────────────────────────────┘ │ │
+│ └──────────────────────────────────────────┘ │
+└──────────────────────────────────────────────┘
+```
 
-2. **Desktop**: Mantém layout atual com scroll horizontal e cards verticais grandes
-
-3. **Responsivo**: Transição suave entre layouts sem quebras
+1. **Top bar permanece fixo** durante scroll horizontal dos cards
+2. **Cards ainda têm scroll horizontal** no desktop
+3. **Layout mobile não é afetado** (já usa scroll vertical)
 
 ---
 
-### Resumo de Arquivos
+### Arquivo a Modificar
 
 ```text
-Modificar:
-- src/components/reconhecimento/RecognitionCard.tsx (adicionar modo compact)
-- src/pages/Reconhecimento.tsx (usar compact no mobile)
+src/pages/Reconhecimento.tsx
 ```
 

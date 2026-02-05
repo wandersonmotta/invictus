@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useLocation } from "react-router-dom";
 
 import { AppSidebar } from "@/components/AppSidebar";
 import { GoldHoverText } from "@/components/GoldHoverText";
@@ -12,6 +13,10 @@ import logo from "@/assets/invictus-logo.png";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const isMobileOrTablet = useIsMobileOrTablet();
+  const { pathname } = useLocation();
+
+  // Rotas que devem ocupar 100% da altura sem scroll vertical no desktop
+  const isFullHeightRoute = pathname === "/reconhecimento";
 
   return (
     <SidebarProvider toggleable={true} mobileMode="sheet">
@@ -49,8 +54,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          {/* Main content area - scrollable */}
-          <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-5 lg:p-6 animate-fade-in ${isMobileOrTablet ? "pb-24" : ""}`}>
+          {/* Main content area - scrollable (or fixed height for specific routes on desktop) */}
+          <div
+            className={`flex-1 overflow-x-hidden animate-fade-in ${
+              isMobileOrTablet
+                ? "overflow-y-auto p-4 sm:p-5 pb-24"
+                : isFullHeightRoute
+                  ? "overflow-y-hidden p-4 lg:p-5"
+                  : "overflow-y-auto p-4 sm:p-5 lg:p-6"
+            }`}
+          >
             {children}
           </div>
         </SidebarInset>

@@ -43,6 +43,7 @@ function FeedPostCardInner({
   const lastTapRef = React.useRef<number>(0);
   const singleTapTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const didDoubleTapRef = React.useRef(false);
+  const touchStartRef = React.useRef<{ x: number; y: number } | null>(null);
   const isMobile = useIsMobile();
 
   const isMyPost = user?.id === post.author_user_id;
@@ -125,6 +126,34 @@ function FeedPostCardInner({
       }
     };
   }, []);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (touch) {
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault(); // Prevent ghost click
+
+    const touch = e.changedTouches[0];
+    if (!touch || !touchStartRef.current) {
+      touchStartRef.current = null;
+      return;
+    }
+
+    const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
+    const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
+    touchStartRef.current = null;
+
+    // If finger moved more than 10px, it's a scroll, not a tap
+    if (deltaX > 10 || deltaY > 10) {
+      return;
+    }
+
+    handleInteraction();
+  };
 
   const primary = post.media_urls[0];
   const authorHref = post.author_username
@@ -245,11 +274,8 @@ function FeedPostCardInner({
             role="button"
             tabIndex={0}
             onClick={!isMobile ? handleInteraction : undefined}
-            onTouchEnd={isMobile ? (e) => {
-              // Prevent ghost click
-              e.preventDefault();
-              handleInteraction();
-            } : undefined}
+          onTouchStart={isMobile ? handleTouchStart : undefined}
+          onTouchEnd={isMobile ? handleTouchEnd : undefined}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 handleSingleTap();

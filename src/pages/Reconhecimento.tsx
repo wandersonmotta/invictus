@@ -40,17 +40,19 @@ export default function Reconhecimento() {
           </div>
         ) : (
           /* Desktop: Horizontal scroll container with larger cards */
-          <div className="-mx-4 px-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 scrollbar-hide">
-            <div className="flex gap-6 min-w-max pb-3">
-              {recognitionLevels.map((level, index) => (
-                <RecognitionCard
-                  key={level.id}
-                  level={level}
-                  isCurrentLevel={index === currentLevelIndex}
-                  isAchieved={index < currentLevelIndex}
-                  isFuture={index > currentLevelIndex}
-                />
-              ))}
+          <div className="w-full overflow-hidden">
+            <div className="overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-3">
+              <div className="flex gap-6 min-w-max pr-4">
+                {recognitionLevels.map((level, index) => (
+                  <RecognitionCard
+                    key={level.id}
+                    level={level}
+                    isCurrentLevel={index === currentLevelIndex}
+                    isAchieved={index < currentLevelIndex}
+                    isFuture={index > currentLevelIndex}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         )}

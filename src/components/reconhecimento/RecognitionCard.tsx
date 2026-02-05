@@ -27,10 +27,10 @@ export function RecognitionCard({
         "rounded-xl",
         "overflow-visible",
         "transition-all duration-300",
-        // Full width for mobile, fixed width for desktop
         fullWidth ? "w-full max-w-[320px] mx-auto" : "w-[clamp(200px,50vw,280px)]",
         !fullWidth && "md:hover:scale-[1.03] md:hover:shadow-[0_0_24px_hsl(var(--primary)/0.25)]",
-        isCurrentLevel && "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-[0_0_20px_hsl(var(--primary)/0.4)]",
+        // Always-on gold contour for the current level
+        isCurrentLevel && "invictus-active-frame",
         isFuture && "opacity-60"
       )}
     >

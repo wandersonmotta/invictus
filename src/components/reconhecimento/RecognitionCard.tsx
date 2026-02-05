@@ -8,6 +8,8 @@ interface RecognitionCardProps {
   isCurrentLevel?: boolean;
   isAchieved?: boolean;
   isFuture?: boolean;
+  /** Full width for mobile vertical layout */
+  fullWidth?: boolean;
 }
 
 export function RecognitionCard({
@@ -15,14 +17,18 @@ export function RecognitionCard({
   isCurrentLevel = false,
   isAchieved = false,
   isFuture = false,
+  fullWidth = false,
 }: RecognitionCardProps) {
   return (
     <article
       className={cn(
         "group flex-shrink-0 snap-start",
-        "w-[clamp(140px,42vw,188px)]",
+        // Desktop: larger cards; Mobile with fullWidth: 100%
+        fullWidth ? "w-full" : "w-[clamp(200px,50vw,280px)]",
         "invictus-surface invictus-frame",
-        "rounded-xl overflow-hidden",
+        "rounded-xl",
+        // Keep overflow visible so ring isn't clipped
+        "overflow-visible",
         "transition-all duration-300",
         "md:hover:scale-[1.03] md:hover:shadow-[0_0_24px_hsl(var(--primary)/0.25)]",
         // Current level: gold ring highlight
@@ -31,11 +37,12 @@ export function RecognitionCard({
         isFuture && "opacity-60"
       )}
     >
-      {/* Award Image / Placeholder */}
+      {/* Award Image / Placeholder - overflow hidden only here */}
       <div
         className={cn(
           "relative aspect-[4/5] w-full",
           "flex items-center justify-center",
+          "overflow-hidden rounded-t-xl",
           // Gradient placeholder when no image
           !level.imageUrl && `bg-gradient-to-br ${level.gradient}`
         )}
@@ -51,7 +58,7 @@ export function RecognitionCard({
           <>
             {/* Trophy Icon Placeholder */}
             <Trophy
-              className="h-14 w-14 text-white/80 drop-shadow-lg"
+              className="h-16 w-16 text-white/80 drop-shadow-lg"
               strokeWidth={1.5}
             />
             {/* Metallic Overlay */}
@@ -62,7 +69,7 @@ export function RecognitionCard({
         {/* Achieved checkmark */}
         {isAchieved && (
           <div className="absolute top-2 right-2 bg-emerald-600 rounded-full p-1 shadow-lg">
-            <Check className="h-3 w-3 text-white" strokeWidth={3} />
+            <Check className="h-4 w-4 text-white" strokeWidth={3} />
           </div>
         )}
 
@@ -71,7 +78,7 @@ export function RecognitionCard({
           <div className="absolute top-2 left-2">
             <Badge
               variant="default"
-              className="text-[9px] font-bold px-1.5 py-0.5 bg-primary text-primary-foreground shadow-lg"
+              className="text-[10px] font-bold px-2 py-0.5 bg-primary text-primary-foreground shadow-lg"
             >
               SEU NÍVEL
             </Badge>
@@ -80,17 +87,17 @@ export function RecognitionCard({
       </div>
 
       {/* Card Content */}
-      <div className="p-3 space-y-1.5">
-        <h3 className="text-sm font-semibold text-foreground leading-tight truncate">
+      <div className="p-4 space-y-2 rounded-b-xl bg-background/80">
+        <h3 className="text-base font-semibold text-foreground leading-tight truncate">
           {level.name}
         </h3>
-        <p className="text-xs text-muted-foreground leading-snug line-clamp-2">
+        <p className="text-sm text-muted-foreground leading-snug line-clamp-2">
           {level.description}
         </p>
         <div className="flex items-center justify-between pt-1">
           <Badge
             variant="secondary"
-            className="text-[10px] font-medium px-2 py-0.5"
+            className="text-xs font-medium px-2.5 py-0.5"
           >
             Ganha: {level.points.toLocaleString("pt-BR")} pts
           </Badge>

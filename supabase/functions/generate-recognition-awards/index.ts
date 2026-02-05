@@ -20,6 +20,7 @@ const LEVEL_CONFIGS: LevelConfig[] = [
   { id: "gold", name: "GOLD", color: "yellow/gold", stripe: "gold" },
   { id: "black", name: "BLACK", color: "dark smoke", stripe: "black" },
   { id: "elite", name: "ELITE", color: "gold with rainbow reflections", stripe: "gold" },
+  { id: "diamond", name: "DIAMOND", color: "translucent cyan/blue crystal with prismatic diamond-like reflections", stripe: "cyan" },
 ];
 
 function buildPrompt(level: LevelConfig): string {
@@ -56,12 +57,12 @@ serve(async (req) => {
     const { level: levelId } = await req.json();
     
     const levelConfig = LEVEL_CONFIGS.find((l) => l.id === levelId);
-    if (!levelConfig) {
-      return new Response(
-        JSON.stringify({ error: "Invalid level. Use: bronze, silver, gold, black, elite" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+  if (!levelConfig) {
+    return new Response(
+      JSON.stringify({ error: "Invalid level. Use: bronze, silver, gold, black, elite, diamond" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 
     console.log(`Generating award image for level: ${levelConfig.name}`);
 

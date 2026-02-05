@@ -1,10 +1,12 @@
 import { GoldHoverText } from "@/components/GoldHoverText";
 import { RecognitionCard } from "@/components/reconhecimento/RecognitionCard";
 import { recognitionLevels } from "@/components/reconhecimento/recognitionLevels";
+import { useIsMobileOrTablet } from "@/hooks/use-mobile";
 
 export default function Reconhecimento() {
   // Mock: current level index (0 = Bronze, will be replaced with real data later)
   const currentLevelIndex = 0;
+  const isMobileOrTablet = useIsMobileOrTablet();
 
   return (
     <div className="flex flex-col gap-8 pb-24">
@@ -18,13 +20,13 @@ export default function Reconhecimento() {
         </p>
       </header>
 
-      {/* Awards Carousel */}
+      {/* Awards Section */}
       <section className="space-y-4">
         <h2 className="text-base font-semibold text-foreground">Premiações</h2>
 
-        {/* Horizontal scroll container */}
-        <div className="-mx-4 px-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 scrollbar-hide">
-          <div className="flex gap-4 min-w-max pb-3">
+        {isMobileOrTablet ? (
+          /* Mobile/Tablet: Vertical layout with full-width cards */
+          <div className="flex flex-col gap-4">
             {recognitionLevels.map((level, index) => (
               <RecognitionCard
                 key={level.id}
@@ -32,10 +34,26 @@ export default function Reconhecimento() {
                 isCurrentLevel={index === currentLevelIndex}
                 isAchieved={index < currentLevelIndex}
                 isFuture={index > currentLevelIndex}
+                fullWidth
               />
             ))}
           </div>
-        </div>
+        ) : (
+          /* Desktop: Horizontal scroll container with larger cards */
+          <div className="-mx-4 px-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 scrollbar-hide">
+            <div className="flex gap-6 min-w-max pb-3">
+              {recognitionLevels.map((level, index) => (
+                <RecognitionCard
+                  key={level.id}
+                  level={level}
+                  isCurrentLevel={index === currentLevelIndex}
+                  isAchieved={index < currentLevelIndex}
+                  isFuture={index > currentLevelIndex}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

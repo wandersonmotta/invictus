@@ -12,6 +12,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { AudioPlayer } from "./AudioPlayer";
+
+export type MessageAttachment = {
+  id: string;
+  storage_path: string;
+  content_type: string | null;
+  file_name: string | null;
+  size_bytes: number | null;
+};
 
 export type MessageRow = {
   id: string;
@@ -21,15 +30,17 @@ export type MessageRow = {
   edited_at?: string | null;
   deleted_at?: string | null;
   deleted_for?: string[] | null;
+  attachments?: MessageAttachment[];
 };
 
 interface MessageBubbleProps {
   message: MessageRow;
   meId: string;
   onUpdated: () => void;
+  conversationId: string;
 }
 
-export function MessageBubble({ message, meId, onUpdated }: MessageBubbleProps) {
+export function MessageBubble({ message, meId, onUpdated, conversationId }: MessageBubbleProps) {
   const { toast } = useToast();
   const [editing, setEditing] = React.useState(false);
   const [editText, setEditText] = React.useState(message.body ?? "");
@@ -38,6 +49,7 @@ export function MessageBubble({ message, meId, onUpdated }: MessageBubbleProps) 
   const mine = message.sender_id === meId;
   const isDeleted = !!message.deleted_at;
   const isDeletedForMe = message.deleted_for?.includes(meId);
+  const attachments = message.attachments ?? [];
 
   // Não renderiza se foi excluída para mim
   if (isDeletedForMe) return null;
@@ -51,6 +63,21 @@ export function MessageBubble({ message, meId, onUpdated }: MessageBubbleProps) 
     } catch {
       return "";
     }
+  };
+
+  const getAttachmentUrl = (storagePath: string) => {
+    const { data } = supabase.storage
+      .from("dm-attachments")
+      .getPublicUrl(storagePath);
+    return data.publicUrl;
+  };
+
+  const isAudio = (contentType: string | null) => {
+    return contentType?.startsWith("audio/") || false;
+  };
+
+  const isImage = (contentType: string | null) => {
+    return contentType?.startsWith("image/") || false;
   };
 
   const handleEdit = async () => {
@@ -143,7 +170,53 @@ export function MessageBubble({ message, meId, onUpdated }: MessageBubbleProps) 
           </div>
         ) : (
           <>
-            <div>{message.body}</div>
+          {/* Attachments */}
+          {attachments.length > 0 && (
+            <div className="space-y-2 mb-1">
+              {attachments.map((att) => {
+                const url = getAttachmentUrl(att.storage_path);
+
+                if (isAudio(att.content_type)) {
+                  return (
+                    <AudioPlayer
+                      key={att.id}
+                      src={url}
+                      className="min-w-[200px]"
+                    />
+                  );
+                }
+
+                if (isImage(att.content_type)) {
+                  return (
+                    <img
+                      key={att.id}
+                      src={url}
+                      alt={att.file_name ?? "Imagem"}
+                      className="max-w-[200px] max-h-[200px] rounded-lg object-cover cursor-pointer"
+                      onClick={() => window.open(url, "_blank")}
+                    />
+                  );
+                }
+
+                // Other files (PDF, etc)
+                return (
+                  <a
+                    key={att.id}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-primary hover:underline"
+                  >
+                    📎 {att.file_name ?? "Arquivo"}
+                  </a>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Message body */}
+          {message.body && <div>{message.body}</div>}
+
             <div className="flex items-center gap-1 mt-1">
               <span className="text-[10px] text-muted-foreground">{formatTime(message.created_at)}</span>
               {message.edited_at && (

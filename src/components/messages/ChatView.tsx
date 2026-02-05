@@ -1,11 +1,15 @@
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, X, MoreVertical, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, X, MoreVertical, Trash2, Mic, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { MessageBubble, type MessageRow } from "./MessageBubble";
+import { AudioRecorder } from "./AudioRecorder";
+import { AttachmentPicker } from "./AttachmentPicker";
+import { AttachmentPreview, type AttachmentFile } from "./AttachmentPreview";
+import { rpcUntyped } from "@/lib/rpc";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +47,10 @@ export function ChatView({
   const [accepting, setAccepting] = React.useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
+  const [isRecording, setIsRecording] = React.useState(false);
+  const [attachments, setAttachments] = React.useState<AttachmentFile[]>([]);
+  const [audioBlob, setAudioBlob] = React.useState<Blob | null>(null);
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
   const membershipQuery = useQuery({
     queryKey: ["my_membership", conversationId],
@@ -63,14 +71,35 @@ export function ChatView({
   const messagesQuery = useQuery({
     queryKey: ["messages", conversationId],
     queryFn: async () => {
+      // Fetch messages with their attachments
       const { data, error } = await supabase
         .from("messages")
-        .select("id, sender_id, body, created_at, edited_at, deleted_at, deleted_for")
+        .select(`
+          id, 
+          sender_id, 
+          body, 
+          created_at, 
+          edited_at, 
+          deleted_at, 
+          deleted_for,
+          message_attachments (
+            id,
+            storage_path,
+            content_type,
+            file_name,
+            size_bytes
+          )
+        `)
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true })
         .limit(200);
       if (error) throw error;
-      return (data ?? []) as MessageRow[];
+      
+      // Transform to match MessageRow type
+      return (data ?? []).map((m: any) => ({
+        ...m,
+        attachments: m.message_attachments ?? [],
+      })) as MessageRow[];
     },
     staleTime: 1_000,
   });
@@ -107,6 +136,44 @@ export function ChatView({
     };
   }, [conversationId, qc]);
 
+  // Scroll to bottom when messages change
+  React.useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [displayMessages]);
+
+  const handleFilesSelected = (files: File[]) => {
+    const newAttachments: AttachmentFile[] = files.map((file) => ({
+      file,
+      previewUrl: file.type.startsWith("image/")
+        ? URL.createObjectURL(file)
+        : undefined,
+    }));
+    setAttachments((prev) => [...prev, ...newAttachments]);
+  };
+
+  const handleRemoveAttachment = (index: number) => {
+    setAttachments((prev) => {
+      const att = prev[index];
+      if (att.previewUrl) {
+        URL.revokeObjectURL(att.previewUrl);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const handleRemoveAudio = () => {
+    setAudioBlob(null);
+  };
+
+  const handleRecordingComplete = (blob: Blob) => {
+    setAudioBlob(blob);
+    setIsRecording(false);
+  };
+
+  const handleCancelRecording = () => {
+    setIsRecording(false);
+  };
+
   const isRequest = membershipQuery.data?.folder === "requests" && !membershipQuery.data?.accepted_at;
 
   const accept = async () => {
@@ -126,20 +193,82 @@ export function ChatView({
     onAccepted?.();
   };
 
+  const uploadAttachment = async (
+    messageId: string,
+    file: File
+  ): Promise<boolean> => {
+    const path = `${conversationId}/${messageId}/${Date.now()}_${file.name}`;
+    const { error: uploadError } = await supabase.storage
+      .from("dm-attachments")
+      .upload(path, file);
+
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      return false;
+    }
+
+    // Insert metadata
+    const { error: metaError } = await supabase
+      .from("message_attachments")
+      .insert({
+        message_id: messageId,
+        storage_path: path,
+        content_type: file.type,
+        file_name: file.name,
+        size_bytes: file.size,
+      });
+
+    if (metaError) {
+      console.error("Metadata error:", metaError);
+      return false;
+    }
+
+    return true;
+  };
+
   const send = async () => {
-    const body = text.trim();
-    if (!body) return;
+    const body = text.trim() || null;
+    const hasContent = body || attachments.length > 0 || audioBlob;
+
+    if (!hasContent) return;
+
     setSending(true);
-    const { error } = await supabase.rpc("send_message", {
+
+    // Use the new RPC that allows null body
+    const { data: messageId, error } = await rpcUntyped<string>(
+      "send_message_with_attachments",
+      {
       p_conversation_id: conversationId,
       p_body: body,
-    });
-    setSending(false);
+      }
+    );
+
     if (error) {
-      toast({ title: "Falha ao enviar", description: error.message });
+      setSending(false);
+      toast({ title: "Falha ao enviar", description: String(error.message || error) });
       return;
     }
+
+    // Upload attachments
+    for (const att of attachments) {
+      await uploadAttachment(messageId, att.file);
+    }
+
+    // Upload audio if present
+    if (audioBlob) {
+      const ext = audioBlob.type.includes("webm") ? "webm" : "mp4";
+      const audioFile = new File([audioBlob], `audio_${Date.now()}.${ext}`, {
+        type: audioBlob.type,
+      });
+      await uploadAttachment(messageId, audioFile);
+    }
+
+    // Clear state
     setText("");
+    setAttachments([]);
+    setAudioBlob(null);
+    setSending(false);
+
     qc.invalidateQueries({ queryKey: ["messages", conversationId] });
     qc.invalidateQueries({ queryKey: ["threads"] });
   };
@@ -227,33 +356,83 @@ export function ChatView({
           <div className="text-sm text-muted-foreground">Carregando mensagens…</div>
         ) : displayMessages.length ? (
           displayMessages.map((m) => (
-            <MessageBubble key={m.id} message={m} meId={meId} onUpdated={handleMessagesUpdated} />
+            <MessageBubble
+              key={m.id}
+              message={m}
+              meId={meId}
+              onUpdated={handleMessagesUpdated}
+              conversationId={conversationId}
+            />
           ))
         ) : (
           <div className="text-sm text-muted-foreground">Ainda sem mensagens.</div>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
+      {/* Attachment Preview */}
+      {(attachments.length > 0 || audioBlob) && (
+        <AttachmentPreview
+          attachments={attachments}
+          audioBlob={audioBlob}
+          onRemoveAttachment={handleRemoveAttachment}
+          onRemoveAudio={handleRemoveAudio}
+        />
+      )}
+
+      {/* Input Area */}
       <div className="border-t border-border/60 p-3 sm:p-4">
-        <form
-          className="flex items-center gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void send();
-          }}
-        >
-          <Input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={isRequest ? "Aceite para responder" : "Mensagem"}
-            disabled={sending || isRequest}
+        {isRecording ? (
+          <AudioRecorder
+            onRecordingComplete={handleRecordingComplete}
+            onCancel={handleCancelRecording}
           />
-          <Button type="submit" className="h-10" disabled={sending || isRequest || !text.trim()}>
-            Enviar
-          </Button>
-        </form>
-        <div className="mt-2 text-xs text-muted-foreground">Anexos (upload) entra na próxima etapa.</div>
+        ) : (
+          <form
+            className="flex items-center gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void send();
+            }}
+          >
+            <AttachmentPicker
+              onFilesSelected={handleFilesSelected}
+              disabled={sending || isRequest}
+            />
+
+            <Input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={isRequest ? "Aceite para responder" : "Mensagem"}
+              disabled={sending || isRequest}
+              className="flex-1"
+            />
+
+            {text.trim() || attachments.length > 0 || audioBlob ? (
+              <Button
+                type="submit"
+                size="icon"
+                className="h-10 w-10"
+                disabled={sending || isRequest}
+              >
+                <Send className="h-5 w-5" />
+                <span className="sr-only">Enviar</span>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10"
+                disabled={sending || isRequest}
+                onClick={() => setIsRecording(true)}
+              >
+                <Mic className="h-5 w-5" />
+                <span className="sr-only">Gravar áudio</span>
+              </Button>
+            )}
+          </form>
+        )}
       </div>
 
       {/* Delete Conversation Dialog */}

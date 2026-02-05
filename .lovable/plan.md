@@ -1,132 +1,208 @@
 
 
-## Melhoria da Página de Busca - Estilo Instagram
+## Adicionar Opção de Excluir Postagem do Feed
+
+### Contexto Atual
+
+O sistema já possui:
+- RLS policy `Feed posts deletable` que permite o autor apagar seu próprio post:
+  ```sql
+  Using: is_approved() AND auth.uid() IS NOT NULL AND author_id = auth.uid()
+  ```
+- Cascade delete configurado: quando um `feed_post` é apagado, automaticamente remove `feed_post_media`, `feed_post_likes` e `feed_post_comments`
+- Não existe função RPC nem interface para exclusão de posts
 
 ### Objetivo
-Transformar a busca para funcionar como o Instagram:
-- Buscar por **nome** (ex: "Thiago Silva") OU por **@username**
-- Retornar **múltiplos resultados** (lista)
-- Exibir cada resultado como: foto circular + nome + @arroba
+
+Permitir que o autor exclua sua publicação (como no Instagram):
+- Excluir do feed = exclui do perfil também
+- Opção acessível no modal de visualização do post
+- Confirmação antes de excluir
+- Feedback visual após exclusão
 
 ---
 
-### Mudanças Planejadas
+## Arquitetura da Solução
 
-#### 1. Nova função SQL: `search_members`
+### 1. Criar função RPC `delete_feed_post`
 
-Criar uma função de busca mais flexível que:
-- Busca por nome (display_name) OU username
-- Retorna múltiplos resultados (até 30)
-- Exclui perfis sem nome/username válidos (sem "Membro fantasma")
-- Respeita visibilidade do perfil (members/mutuals)
+Função para exclusão segura do post com verificação de autoria:
 
-```text
-search_members(p_search text, p_limit int DEFAULT 30)
-→ user_id, display_name, username, avatar_url
+```sql
+CREATE OR REPLACE FUNCTION public.delete_feed_post(p_post_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  v_author uuid;
+  v_deleted boolean := false;
+BEGIN
+  -- Verificar autenticação
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+  
+  -- Verificar aprovação
+  IF NOT public.is_approved() THEN
+    RAISE EXCEPTION 'Not approved';
+  END IF;
+  
+  -- Verificar que é o autor
+  SELECT author_id INTO v_author
+  FROM public.feed_posts
+  WHERE id = p_post_id;
+  
+  IF v_author IS NULL THEN
+    RAISE EXCEPTION 'Post not found';
+  END IF;
+  
+  IF v_author <> auth.uid() THEN
+    RAISE EXCEPTION 'Not the author';
+  END IF;
+  
+  -- Apagar o post (cascade cuida do resto)
+  DELETE FROM public.feed_posts WHERE id = p_post_id;
+  
+  RETURN true;
+END;
+$$;
 ```
 
-A busca vai funcionar assim:
-- "Thiago" → encontra todos com "Thiago" no nome
-- "Thiago Silva" → encontra todos com "Thiago Silva" no nome
-- "@thiago" → encontra todos com @thiago... no username
+### 2. Atualizar `PostCommentsPanel.tsx`
 
-#### 2. Atualizar a página `/buscar` (Buscar.tsx)
+Adicionar botão de "Excluir publicação" no painel lateral quando o usuário é o autor:
 
-**Layout atual:**
-- Input de busca + botão "Buscar"
-- Exibe UM resultado detalhado (foto, nome, @, cidade, botões de ação)
+- Mostrar botão com ícone de lixeira
+- Ao clicar, abrir AlertDialog de confirmação
+- Após confirmar, chamar RPC e fechar modal
+- Invalidar queries do feed e perfil
 
-**Novo layout (estilo Instagram):**
+### 3. Atualizar `FeedPostViewerDialog.tsx`
 
-```text
-┌─────────────────────────────────────────┐
-│ 🔍 Buscar                               │
-│ Encontre membros pelo nome ou @         │
-├─────────────────────────────────────────┤
-│ [________________] [Buscar] [Limpar]    │
-│  "Thiago Silva"                         │
-├─────────────────────────────────────────┤
-│  ┌────┐                                 │
-│  │ 😊 │  Thiago Silva                   │
-│  └────┘  @thiago.silva                  │
-│  ─────────────────────────────────────  │
-│  ┌────┐                                 │
-│  │ 😊 │  Thiago Oliveira                │
-│  └────┘  @thiago.oliveira               │
-│  ─────────────────────────────────────  │
-│  ┌────┐                                 │
-│  │ 😊 │  Thiago Santos                  │
-│  └────┘  @thiago.santos                 │
-└─────────────────────────────────────────┘
+Passar `authorUserId` para o `PostCommentsPanel` para detectar se é o autor:
+
+```tsx
+<PostCommentsPanel
+  postId={post.post_id}
+  authorUserId={post.author_user_id}  // ← Novo prop
+  ...
+/>
 ```
 
-**Comportamento:**
-- Ao digitar e clicar "Buscar", exibe lista de resultados
-- Cada item é clicável → navega para `/membro/:username`
-- Sem botões inline (Seguir, Mensagem) na lista — isso fica no perfil
-- Lista com scroll se houver muitos resultados (max-height)
+### 4. Callback de exclusão
 
-**Alternativa de UX** (mais fluida):
-- Busca "live" conforme digita (com debounce de 300ms)
-- Sem botão "Buscar" explícito
-- Similar ao Instagram onde os resultados aparecem enquanto você digita
+Adicionar callback `onPostDeleted` para fechar o modal e atualizar a lista:
+
+```tsx
+// No FeedPostCard e Membro.tsx
+onPostDeleted={() => {
+  setViewerOpen(false);
+  // Lista será atualizada via invalidateQueries
+}}
+```
 
 ---
 
-### Arquivos a Modificar
+## Interface Visual
+
+No `PostCommentsPanel`, quando o usuário é o autor:
+
+```text
+┌─────────────────────────────────────┐
+│  [Avatar]  Thiago Silva             │
+│            @thiago.silva            │
+├─────────────────────────────────────┤
+│  [Curtir (5)]          [🗑️ Excluir] │  ← Botão de excluir
+├─────────────────────────────────────┤
+│  Comentários...                     │
+└─────────────────────────────────────┘
+```
+
+AlertDialog de confirmação:
+
+```text
+┌─────────────────────────────────────┐
+│  Excluir publicação?                │
+│                                     │
+│  Esta ação não pode ser desfeita.   │
+│  Sua publicação será removida do    │
+│  feed e do seu perfil.              │
+│                                     │
+│  [Cancelar]    [Excluir]            │
+└─────────────────────────────────────┘
+```
+
+---
+
+## Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| Nova migration SQL | Criar função `search_members` |
-| `src/pages/Buscar.tsx` | Refatorar para lista de resultados estilo Instagram |
+| Nova migration SQL | Criar função `delete_feed_post` |
+| `src/components/feed/PostCommentsPanel.tsx` | Adicionar botão de excluir e AlertDialog |
+| `src/components/feed/FeedPostViewerDialog.tsx` | Passar `authorUserId` e `onPostDeleted` |
+| `src/components/feed/FeedPostCard.tsx` | Passar `onPostDeleted` callback |
+| `src/pages/Membro.tsx` | Passar `onPostDeleted` para fechar modal e atualizar lista |
 
 ---
 
-### Detalhes Técnicos
+## Fluxo de Exclusão
 
-#### Função SQL `search_members`
-
-```sql
-CREATE OR REPLACE FUNCTION public.search_members(
-  p_search text DEFAULT ''::text,
-  p_limit integer DEFAULT 30
-)
-RETURNS TABLE(
-  user_id uuid,
-  display_name text,
-  username text,
-  avatar_url text
-)
--- Busca por display_name OU username
--- Respeita profile_visibility
--- Exclui perfis sem nome/username
+```text
+1. Usuário abre sua publicação (no Feed ou Perfil)
+2. Vê botão "Excluir" no painel lateral
+3. Clica em "Excluir"
+4. AlertDialog aparece: "Excluir publicação?"
+5. Usuário confirma
+6. RPC `delete_feed_post` é chamado
+7. Post é removido do banco (cascade apaga mídia, likes, comentários)
+8. Modal fecha
+9. Lista do feed/perfil é atualizada (invalidateQueries)
+10. Toast: "Publicação excluída"
 ```
 
-#### Componente de Item de Resultado
+---
+
+## Detalhes Técnicos
+
+### Verificação de autoria no frontend
 
 ```tsx
-// Cada resultado na lista
-<button
-  onClick={() => navigate(`/membro/${username.replace(/^@/, "")}`)}
-  className="flex w-full items-center gap-3 p-3 hover:bg-muted/20"
->
-  <img src={avatar_url} className="h-12 w-12 rounded-full" />
-  <div>
-    <div className="font-medium">{display_name}</div>
-    <div className="text-muted-foreground text-sm">{username}</div>
-  </div>
-</button>
+// PostCommentsPanel.tsx
+const isAuthor = myUserId && authorUserId && myUserId === authorUserId;
+
+{isAuthor && (
+  <Button 
+    variant="ghost" 
+    size="sm"
+    className="text-destructive hover:text-destructive"
+    onClick={() => setConfirmDeleteOpen(true)}
+  >
+    <Trash2 className="h-4 w-4 mr-1" />
+    Excluir
+  </Button>
+)}
 ```
 
----
+### Mutation de exclusão
 
-### Resumo Visual
-
-| Estado | Exibição |
-|--------|----------|
-| Inicial | "Digite um nome ou @ para buscar" |
-| Digitando/Buscando | "Buscando…" |
-| Com resultados | Lista de perfis (foto + nome + @) |
-| Sem resultados | "Nenhum membro encontrado" |
-| Erro | "Não foi possível buscar" |
+```tsx
+const deletePostMutation = useMutation({
+  mutationFn: async () => {
+    const { error } = await supabase.rpc("delete_feed_post", { p_post_id: postId });
+    if (error) throw error;
+  },
+  onSuccess: async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["feed_posts"] }),
+      qc.invalidateQueries({ queryKey: ["profile_feed"], exact: false }),
+      qc.invalidateQueries({ queryKey: ["my-profile-feed"], exact: false }),
+    ]);
+    toast({ title: "Publicação excluída" });
+    onPostDeleted?.();
+  },
+});
+```
 

@@ -6,11 +6,11 @@
  import { WalletBalanceCard } from "@/components/carteira/WalletBalanceCard";
  import { TransactionHistory } from "@/components/carteira/TransactionHistory";
  import { WithdrawDialog } from "@/components/carteira/WithdrawDialog";
- import type { Transaction } from "@/components/carteira/types";
- import { calculateNetAmount } from "@/components/carteira/types";
+import type { Transaction } from "@/components/carteira/types";
+import { MIN_WITHDRAW } from "@/components/carteira/types";
  
  // Mock data for initial implementation (saídas mostram valor LÍQUIDO)
- const mockTransactions: Transaction[] = [
+const initialMockTransactions: Transaction[] = [
    { id: "1", date: "2025-12-08T16:29:00", description: "Cred Gawa", type: "entrada", status: "aprovado", amount: 30.0 },
    { id: "2", date: "2025-12-08T15:43:00", description: "Cred Gawa", type: "entrada", status: "aprovado", amount: 60.0 },
    { id: "3", date: "2025-12-08T13:56:00", description: "Cred Gawa", type: "entrada", status: "aprovado", amount: 60.0 },
@@ -26,17 +26,34 @@
    const { user } = useAuth();
    const { data: profile } = useMyProfile(user?.id);
    const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [transactions, setTransactions] = useState<Transaction[]>(initialMockTransactions);
  
    const displayName =
      profile?.display_name ||
      [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") ||
      "Usuário";
  
+  const canWithdraw = mockBalance >= MIN_WITHDRAW;
+
    const handleWithdrawSubmit = (grossAmount: number, netAmount: number, pixKey: string) => {
-     // TODO: Implement actual withdrawal API call
+    // Criar nova transação pendente
+    const newTransaction: Transaction = {
+      id: crypto.randomUUID(),
+      date: new Date().toISOString(),
+      description: "Saque PIX",
+      type: "saida",
+      status: "pendente",
+      amount: netAmount,
+      grossAmount: grossAmount,
+    };
+
+    // Adicionar ao topo da lista
+    setTransactions((prev) => [newTransaction, ...prev]);
+
      toast.success("Saque solicitado!", {
-       description: `Valor líquido: R$ ${netAmount.toFixed(2).replace(".", ",")} será enviado para o CPF ${pixKey.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.***.***-$4")}`,
+      description: `Valor líquido: R$ ${netAmount.toFixed(2).replace(".", ",")}`,
      });
+
      setWithdrawOpen(false);
    };
  
@@ -49,10 +66,14 @@
        </header>
  
        {/* Balance Card */}
-       <WalletBalanceCard balance={mockBalance} onWithdraw={() => setWithdrawOpen(true)} />
+      <WalletBalanceCard 
+        balance={mockBalance} 
+        canWithdraw={canWithdraw}
+        onWithdraw={() => setWithdrawOpen(true)} 
+      />
  
        {/* Transaction History */}
-       <TransactionHistory transactions={mockTransactions} />
+      <TransactionHistory transactions={transactions} />
        
        {/* Withdraw Dialog */}
        <WithdrawDialog

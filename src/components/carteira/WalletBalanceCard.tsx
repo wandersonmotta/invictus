@@ -4,10 +4,11 @@
  
  interface WalletBalanceCardProps {
    balance: number;
+  canWithdraw: boolean;
    onWithdraw?: () => void;
  }
  
- export function WalletBalanceCard({ balance, onWithdraw }: WalletBalanceCardProps) {
+export function WalletBalanceCard({ balance, canWithdraw, onWithdraw }: WalletBalanceCardProps) {
    const formattedBalance = balance.toLocaleString("pt-BR", {
      style: "currency",
      currency: "BRL",
@@ -40,6 +41,7 @@
            variant="goldOutline"
            className="gap-2"
            onClick={onWithdraw}
+          disabled={!canWithdraw}
          >
            Sacar
            <ExternalLink className="size-4" />

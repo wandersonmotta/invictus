@@ -1,177 +1,282 @@
 
-# Plano: Criar Página de Carteira
+# Plano: Refatorar Carteira + Dialog de Saque com Slider
 
 ## Visão Geral
 
-Criar a página de Carteira seguindo o design da referência HC Club, adaptado para a identidade visual dark premium da Invictus. A página exibirá o saldo de bônus do usuário, botão de saque, e histórico de movimentações com filtros.
+Implementar o fluxo de saque seguindo fielmente a referência enviada, com:
+- Botão "Sacar" reposicionado (fora do card, alinhado à direita)
+- Dialog de saque com slider arrastável
+- Taxa de 4.99% e saque mínimo de R$100
+- Lógica de exibição: **Entradas = Bruto**, **Saídas/Pendentes = Líquido** (já com taxa descontada)
+- Campo de chave PIX (CPF) no perfil e no dialog
 
-## Elementos do Design (Referência)
+---
 
-Baseado na imagem de referência:
+## Regra de Negócio Principal
 
-```text
-┌──────────────────────────────────────────────┐
-│ Olá, [Nome do Usuário]                       │
-├──────────────────────────────────────────────┤
-│ ┌────────────────────────────────────────┐   │
-│ │ Bônus atual                        💳  │   │
-│ │ R$ 249,90                              │   │
-│ └────────────────────────────────────────┘   │
-│                                              │
-│           ┌──────────────────┐               │
-│           │   Sacar ↗        │               │
-│           └──────────────────┘               │
-│                                              │
-│ ↔ Histórico de movimentações                 │
-│                                              │
-│  [Entradas ↑] [Saídas ↓] [Pendente 🕐]       │
-│                                              │
-│ ┌────────────────────────────────────────┐   │
-│ │ 08/12/2025 às 16:29          aprovado  │   │
-│ │ Cred Gawa                    R$ 30,00  │   │
-│ └────────────────────────────────────────┘   │
-│ ┌────────────────────────────────────────┐   │
-│ │ 08/12/2025 às 15:43          aprovado  │   │
-│ │ Cred Gawa                    R$ 60,00  │   │
-│ └────────────────────────────────────────┘   │
-│ ...                                          │
-└──────────────────────────────────────────────┘
-```
+| Tipo de Transação | Valor Exibido |
+|-------------------|---------------|
+| **Entrada** | Valor BRUTO (total recebido) |
+| **Saída (aprovado)** | Valor LÍQUIDO (já descontado 4.99%) |
+| **Saída (pendente)** | Valor LÍQUIDO (já descontado 4.99%) |
+
+**Exemplo:**
+- Usuário solicita saque de R$100,00
+- Taxa: R$100 × 4.99% = R$4,99
+- Valor líquido: R$95,01
+- No histórico de **Saídas** aparece: **R$95,01** (não R$100)
+
+---
 
 ## Arquivos a Criar/Modificar
 
 | Arquivo | Ação | Descrição |
 |---------|------|-----------|
-| `src/pages/Carteira.tsx` | **Criar** | Página principal da carteira |
-| `src/components/carteira/WalletBalanceCard.tsx` | **Criar** | Card do saldo atual com botão de sacar |
-| `src/components/carteira/TransactionHistory.tsx` | **Criar** | Histórico de movimentações com filtros |
-| `src/components/carteira/TransactionRow.tsx` | **Criar** | Linha individual de transação |
-| `src/routing/HostRouter.tsx` | **Modificar** | Adicionar rota `/carteira` |
-| `src/App.tsx` | **Modificar** | Adicionar preloader da página |
-| `src/components/AppSidebar.tsx` | **Modificar** | Remover `placeholder: true` do item Carteira |
-| `src/components/mobile/MobileMenuSheet.tsx` | **Modificar** | Remover `placeholder: true` do item Carteira |
-| `src/components/mobile/MobileBottomNav.tsx` | **Modificar** | Atualizar para navegar para `/carteira` |
+| `src/components/carteira/WalletBalanceCard.tsx` | **Modificar** | Botão "Sacar" fora do card, alinhado à direita |
+| `src/components/carteira/WithdrawDialog.tsx` | **Criar** | Dialog de saque com slider, input, taxa e PIX |
+| `src/components/carteira/types.ts` | **Modificar** | Adicionar campos para valor bruto/líquido |
+| `src/pages/Carteira.tsx` | **Modificar** | Integrar dialog + responsividade mobile |
+| `src/components/carteira/PixKeyCard.tsx` | **Criar** | Card para editar chave PIX no perfil |
+| `src/pages/Perfil.tsx` | **Modificar** | Adicionar seção de chave PIX |
+| `src/hooks/useMyProfile.ts` | **Modificar** | Incluir campo `pix_key` |
+| `src/lib/cpf.ts` | **Criar** | Formatação e validação de CPF |
 
-## Estrutura do Componente
+### Migração de Banco
 
-### 1. Carteira.tsx (Página Principal)
-
-```tsx
-// Layout mobile-first com header e seções
-<main className="invictus-page">
-  <header className="invictus-page-header">
-    <p className="text-muted-foreground">Olá,</p>
-    <h1 className="invictus-h1">{displayName}</h1>
-  </header>
-
-  <WalletBalanceCard balance={249.90} />
-  
-  <TransactionHistory transactions={mockTransactions} />
-</main>
+```sql
+ALTER TABLE profiles ADD COLUMN pix_key text;
 ```
 
-### 2. WalletBalanceCard.tsx
+---
 
-Card dark premium com:
-- Ícone de carteira/cartão no canto superior direito
-- Label "Bônus atual" em texto muted
-- Valor grande e destacado (R$ X,XX)
-- Botão "Sacar" abaixo do card (estilo outline com ícone)
+## 1. Layout Corrigido (Conforme Referência)
 
-### 3. TransactionHistory.tsx
+```text
+┌─────────────────────────────────────────┐
+│  Bônus atual                       💳   │
+│  R$ 249,90                              │
+└─────────────────────────────────────────┘
+                      ┌────────────────┐
+                      │   Sacar ↗      │  ← Botão FORA do card
+                      └────────────────┘
 
-- Título "Histórico de movimentações" com ícone
-- Filtros em chips/toggle: "Entradas", "Saídas", "Pendente"
-- Lista de TransactionRow
+↔ Histórico de movimentações
 
-### 4. TransactionRow.tsx
+ [Todos] [Entradas ↑] [Saídas ↓] [Pendente]
 
-Cada linha mostra:
-- Data e hora (ex: "08/12/2025 às 16:29")
-- Descrição da transação (ex: "Cred Gawa")
-- Status (aprovado, pendente, rejeitado)
-- Valor formatado em reais
-
-## Dados Mock (Fase Inicial)
-
-Por enquanto, a página usará dados mockados para demonstrar o layout:
-
-```tsx
-const mockTransactions = [
-  { id: "1", date: "2025-12-08T16:29:00", description: "Cred Gawa", type: "entrada", status: "aprovado", amount: 30.00 },
-  { id: "2", date: "2025-12-08T15:43:00", description: "Cred Gawa", type: "entrada", status: "aprovado", amount: 60.00 },
-  { id: "3", date: "2025-12-08T13:56:00", description: "Cred Gawa", type: "entrada", status: "aprovado", amount: 60.00 },
-  { id: "4", date: "2025-12-08T08:08:00", description: "Saque PIX", type: "saida", status: "pendente", amount: 100.00 },
-  { id: "5", date: "2025-12-06T13:31:00", description: "Comissão Direto", type: "entrada", status: "aprovado", amount: 45.00 },
-];
+┌─────────────────────────────────────────┐
+│ 08/12/2025 às 16:29            aprovado │
+│ Cred Gawa                  + R$ 30,00   │  ← BRUTO (entrada)
+└─────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│ 08/12/2025 às 08:08            pendente │
+│ Saque PIX                  - R$ 95,01   │  ← LÍQUIDO (saída)
+└─────────────────────────────────────────┘
 ```
 
-## Estilização
+---
 
-- Usar classes `invictus-surface` e `invictus-frame` para cards
-- Card do saldo: background mais escuro/destacado (similar ao da referência)
-- Cores: 
-  - Verde para entradas/aprovado
-  - Vermelho para saídas
-  - Amarelo/âmbar para pendente
-- Tipografia consistente com o resto do app
+## 2. Dialog de Saque (Seguindo Referência)
 
-## Responsividade
+```text
+┌──────────────────────────────────────────────┐
+│                     ✕                        │
+│           Solicitar Saque                    │
+│                                              │
+│  Saldo disponível: R$ 249,90                 │
+│                                              │
+│  Valor do saque:                             │
+│  ┌────────────────────────────────────┐      │
+│  │  R$ 100,00                         │      │
+│  └────────────────────────────────────┘      │
+│                                              │
+│  ●────────────────────────────────○          │
+│  R$ 100              (slider)     R$ 249    │
+│                                              │
+│  ┌────────────────────────────────────┐      │
+│  │ Saque mínimo: R$ 100,00            │      │
+│  │ Taxa de saque: 4.99%               │      │
+│  │ Valor líquido: R$ 95,01            │      │
+│  └────────────────────────────────────┘      │
+│                                              │
+│  Chave PIX (CPF):                            │
+│  ┌────────────────────────────────────┐      │
+│  │  123.456.789-00                    │      │
+│  └────────────────────────────────────┘      │
+│  ⓘ Usamos seu CPF como chave padrão          │
+│                                              │
+│  ┌────────────────────────────────────┐      │
+│  │         Solicitar Saque            │      │
+│  └────────────────────────────────────┘      │
+└──────────────────────────────────────────────┘
+```
 
-- Layout single-column funciona bem em todas as telas
-- Em desktop, limitar largura máxima (`max-w-md` ou `max-w-lg`)
-- Centralizar conteúdo em telas maiores
+### Comportamento do Slider
 
-## Próximos Passos (Futuro)
+- **Mínimo**: R$100 (saque mínimo)
+- **Máximo**: Saldo disponível do usuário
+- **Sincronizado** com o input numérico (editar um atualiza o outro)
+- **Cálculo em tempo real**: Taxa e valor líquido atualizados ao mover
 
-1. Criar tabela `wallet_transactions` no banco de dados
-2. Integrar com dados reais via Supabase
-3. Implementar funcionalidade de saque real
-4. Adicionar notificações de novas transações
+---
+
+## 3. Seção PIX no Perfil
+
+Nova seção adicionada na página de Perfil:
+
+```text
+┌────────────────────────────────────────────┐
+│ Chave PIX para saques                      │
+│                                            │
+│ Sua chave PIX será usada para receber      │
+│ seus saques. Usamos CPF como padrão.       │
+│                                            │
+│ Chave PIX (CPF):                           │
+│ ┌────────────────────────────────────┐     │
+│ │  123.456.789-00                    │     │
+│ └────────────────────────────────────┘     │
+│                                            │
+│           [ Salvar chave PIX ]             │
+└────────────────────────────────────────────┘
+```
+
+---
 
 ## Seção Técnica
 
-### Rota no HostRouter
+### Estrutura de Tipos Atualizada
 
-```tsx
-const Carteira = React.lazy(() => import("@/pages/Carteira"));
-
-// Dentro das Routes (em ambos os blocos)
-<Route
-  path="/carteira"
-  element={
-    <RequireAuth>
-      <AppLayout>
-        <Carteira />
-      </AppLayout>
-    </RequireAuth>
-  }
-/>
-```
-
-### Atualização do Bottom Nav
-
-```tsx
-// Em MobileBottomNav.tsx
-const navItems: NavItem[] = [
-  { id: "inicio", label: "Início", icon: Home, action: "navigate", url: "/app" },
-  { id: "carteira", label: "Carteira", icon: Wallet, action: "navigate", url: "/carteira" }, // Atualizado
-  // ...
-];
-```
-
-### Tipo Transaction
-
-```tsx
-type TransactionType = "entrada" | "saida";
-type TransactionStatus = "aprovado" | "pendente" | "rejeitado";
-
-interface Transaction {
+```typescript
+// types.ts
+export interface Transaction {
   id: string;
   date: string;
   description: string;
   type: TransactionType;
   status: TransactionStatus;
-  amount: number;
+  amount: number;       // Valor exibido (bruto para entrada, líquido para saída)
+  grossAmount?: number; // Valor bruto original (para saídas, usado internamente)
 }
 ```
+
+### Constantes de Negócio
+
+```typescript
+const WITHDRAW_FEE_RATE = 0.0499; // 4.99%
+const MIN_WITHDRAW = 100;         // R$100,00
+
+// Cálculo do valor líquido
+const netAmount = grossAmount * (1 - WITHDRAW_FEE_RATE);
+// Ex: 100 * 0.9501 = 95.01
+```
+
+### Funções de CPF
+
+```typescript
+// src/lib/cpf.ts
+export function formatCPF(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+export function isValidCPF(cpf: string): boolean {
+  const digits = cpf.replace(/\D/g, "");
+  if (digits.length !== 11 || /^(\d)\1+$/.test(digits)) return false;
+  // Validação dos dígitos verificadores...
+}
+```
+
+### WithdrawDialog Props
+
+```typescript
+interface WithdrawDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  balance: number;
+  pixKey: string | null;
+  onSubmit: (amount: number, netAmount: number, pixKey: string) => void;
+}
+```
+
+### Responsividade Mobile
+
+```tsx
+// Carteira.tsx - Container
+<main className="invictus-page mx-auto w-full max-w-md px-4 py-6 sm:px-6">
+
+// WalletBalanceCard - Layout com botão fora
+<div className="flex flex-col gap-4">
+  <div className="invictus-surface rounded-2xl p-5">
+    {/* Card do saldo */}
+  </div>
+  <div className="flex justify-end">
+    <Button variant="goldOutline" onClick={onOpenWithdraw}>
+      Sacar <ExternalLink />
+    </Button>
+  </div>
+</div>
+
+// Dialog - Slider touch-friendly
+<Slider 
+  className="touch-manipulation" 
+  min={100} 
+  max={balance} 
+  step={0.01}
+/>
+```
+
+### Mock Data Atualizado
+
+```typescript
+// Saídas agora mostram o valor LÍQUIDO
+const mockTransactions: Transaction[] = [
+  { id: "1", date: "2025-12-08T16:29:00", description: "Cred Gawa", type: "entrada", status: "aprovado", amount: 30.0 },
+  { id: "2", date: "2025-12-08T08:08:00", description: "Saque PIX", type: "saida", status: "pendente", amount: 95.01, grossAmount: 100 },
+  { id: "3", date: "2025-12-05T10:15:00", description: "Saque PIX", type: "saida", status: "aprovado", amount: 47.51, grossAmount: 50 },
+];
+```
+
+### Hook useMyProfile Atualizado
+
+```typescript
+export type MyProfile = {
+  first_name: string | null;
+  last_name: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  pix_key: string | null; // NOVO
+};
+
+// Query:
+.select("first_name, last_name, display_name, avatar_url, pix_key")
+```
+
+---
+
+## Fluxo do Usuário
+
+1. Usuário acessa `/carteira`
+2. Vê o saldo e histórico de transações
+3. Clica em "Sacar"
+4. Dialog abre com slider (mínimo R$100, máximo = saldo)
+5. Move slider ou digita valor
+6. Vê taxa (4.99%) e valor líquido em tempo real
+7. Se não tem PIX cadastrado, insere CPF
+8. Clica "Solicitar Saque"
+9. Transação aparece no histórico como **pendente** com **valor líquido**
+10. Após aprovação, status muda para **aprovado**
+
+---
+
+## Resultado Esperado
+
+- Layout idêntico à referência enviada
+- Botão "Sacar" posicionado corretamente (fora do card)
+- Responsivo para mobile/tablet/desktop
+- Slider funcional e sincronizado com input
+- Cálculo correto de taxa e valor líquido
+- Histórico exibe valores conforme a regra (bruto/líquido)
+- Chave PIX gerenciável no perfil

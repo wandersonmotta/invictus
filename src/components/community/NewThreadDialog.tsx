@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
 
 type Props = {
   channelId: string | null;
@@ -30,6 +31,12 @@ export function NewThreadDialog({ channelId, onCreated }: Props) {
       });
       if (error) throw error;
       return data as string;
+    },
+    onError: (err: any) => {
+      const msg = err?.message?.includes("inadequad")
+        ? "O título ou mensagem contém palavras não permitidas."
+        : "Não foi possível criar o tema.";
+      toast({ title: "Erro", description: msg, variant: "destructive" });
     },
     onSuccess: async (threadId) => {
       await qc.invalidateQueries({ queryKey: ["community", "threads"] });

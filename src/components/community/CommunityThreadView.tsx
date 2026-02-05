@@ -26,6 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 
 type Props = {
   threadId: string;
@@ -177,6 +178,12 @@ export function CommunityThreadView({ threadId, onBack }: Props) {
       const { data, error } = await supabase.rpc("create_community_post", { p_thread_id: threadId, p_body: body });
       if (error) throw error;
       return data as string; // post_id
+    },
+    onError: (err: any) => {
+      const msg = err?.message?.includes("inadequado")
+        ? "Sua mensagem contém palavras não permitidas."
+        : "Não foi possível enviar a mensagem.";
+      toast({ title: "Erro", description: msg, variant: "destructive" });
     },
     onSuccess: async (postId) => {
       // upload anexos (se houver)
@@ -342,6 +349,12 @@ function PostItem({
     mutationFn: async () => {
       const { error } = await supabase.rpc("edit_community_post", { p_post_id: post.post_id, p_body: draft });
       if (error) throw error;
+    },
+    onError: (err: any) => {
+      const msg = err?.message?.includes("inadequado")
+        ? "Sua mensagem contém palavras não permitidas."
+        : "Não foi possível salvar a edição.";
+      toast({ title: "Erro", description: msg, variant: "destructive" });
     },
     onSuccess: async () => {
       setEditing(false);

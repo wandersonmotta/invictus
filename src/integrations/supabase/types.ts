@@ -160,6 +160,30 @@ export type Database = {
         }
         Relationships: []
       }
+      blocked_words: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          id: string
+          word: string
+        }
+        Insert: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          id?: string
+          word: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          id?: string
+          word?: string
+        }
+        Relationships: []
+      }
       community_channels: {
         Row: {
           created_at: string
@@ -1132,6 +1156,7 @@ export type Database = {
       can_view_author: { Args: { p_author_id: string }; Returns: boolean }
       can_view_feed_media: { Args: { p_object_name: string }; Returns: boolean }
       can_view_post: { Args: { p_post_id: string }; Returns: boolean }
+      contains_profanity: { Args: { p_text: string }; Returns: boolean }
       count_unread_notifications: { Args: never; Returns: number }
       create_community_post: {
         Args: { p_body: string; p_thread_id: string }

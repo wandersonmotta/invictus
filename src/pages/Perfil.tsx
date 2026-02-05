@@ -4,9 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { ChangePasswordCard } from "@/components/profile/ChangePasswordCard";
+ import { PixKeyCard } from "@/components/carteira/PixKeyCard";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MyProfilePreview } from "@/components/profile/MyProfilePreview";
+ import { useMyProfile } from "@/hooks/useMyProfile";
+ import { useQueryClient } from "@tanstack/react-query";
+
 export default function Perfil() {
   const {
     user,
@@ -15,6 +19,9 @@ export default function Perfil() {
   const [showEmail, setShowEmail] = useState(false);
   const [tab, setTab] = useState("edit");
   const [refreshKey, setRefreshKey] = useState(0);
+   const { data: profile } = useMyProfile(user?.id);
+   const queryClient = useQueryClient();
+
   const maskedEmail = useMemo(() => {
     const email = user?.email ?? "";
     const [local, domain] = email.split("@");
@@ -22,6 +29,11 @@ export default function Perfil() {
     const safeLocal = local.length <= 2 ? `${local[0] ?? ""}*` : `${local.slice(0, 2)}***`;
     return `${safeLocal}@${domain}`;
   }, [user?.email]);
+
+   const handlePixKeyUpdate = () => {
+     queryClient.invalidateQueries({ queryKey: ["my-profile", user?.id] });
+   };
+
   return <main className="invictus-page">
       <header className="invictus-page-header">
         <h1 className="invictus-h1">Perfil</h1>
@@ -38,6 +50,15 @@ export default function Perfil() {
 
         <TabsContent value="edit" className="mt-4 space-y-6">
           {user?.id ? <ProfileForm userId={user.id} onSaved={() => setRefreshKey(v => v + 1)} /> : null}
+
+           {/* PIX Key Section */}
+           {user?.id ? (
+             <PixKeyCard
+               userId={user.id}
+               currentPixKey={profile?.pix_key ?? null}
+               onUpdate={handlePixKeyUpdate}
+             />
+           ) : null}
 
           <section className="invictus-surface invictus-frame border-border/70 rounded-xl p-4 sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

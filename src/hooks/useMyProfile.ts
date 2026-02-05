@@ -7,6 +7,7 @@ export type MyProfile = {
   last_name: string | null;
   display_name: string | null;
   avatar_url: string | null;
+   pix_key: string | null;
 };
 
 export function useMyProfile(userId: string | null | undefined) {
@@ -18,7 +19,7 @@ export function useMyProfile(userId: string | null | undefined) {
       if (!userId) return null;
       const { data, error } = await supabase
         .from("profiles")
-        .select("first_name, last_name, display_name, avatar_url")
+         .select("first_name, last_name, display_name, avatar_url, pix_key")
         .eq("user_id", userId)
         .maybeSingle();
 

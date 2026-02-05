@@ -14,7 +14,7 @@
    });
  
    return (
-     <div className="flex flex-col items-center gap-4">
+     <div className="flex flex-col gap-4">
        {/* Balance Card */}
        <div
          className={cn(
@@ -34,15 +34,17 @@
          </div>
        </div>
  
-       {/* Withdraw Button */}
-       <Button
-         variant="goldOutline"
-         className="gap-2"
-         onClick={onWithdraw}
-       >
-         Sacar
-         <ExternalLink className="size-4" />
-       </Button>
+       {/* Withdraw Button - Aligned right */}
+       <div className="flex justify-end">
+         <Button
+           variant="goldOutline"
+           className="gap-2"
+           onClick={onWithdraw}
+         >
+           Sacar
+           <ExternalLink className="size-4" />
+         </Button>
+       </div>
      </div>
    );
  }

@@ -9,7 +9,7 @@ export default function Reconhecimento() {
   const isMobileOrTablet = useIsMobileOrTablet();
 
   return (
-    <div className="flex flex-col gap-8 pb-24 overflow-x-hidden">
+    <div className={`flex flex-col gap-8 overflow-x-hidden ${isMobileOrTablet ? "pb-24" : ""}`}>
       {/* Header */}
       <header className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">

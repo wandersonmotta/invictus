@@ -12,6 +12,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { RequireAuth } from "@/auth/RequireAuth";
 import { RequireAdmin } from "@/auth/RequireAdmin";
 import { RequireFinanceiro } from "@/auth/RequireFinanceiro";
+ import { RequireFinanceiroAuth } from "@/auth/RequireFinanceiroAuth";
 import { FinanceiroLayout } from "@/components/financeiro/FinanceiroLayout";
 
 const Home = React.lazy(() => import("@/pages/Home"));
@@ -56,25 +57,25 @@ export function HostRouter() {
         <Route
           path="/financeiro/dashboard"
           element={
-            <RequireAuth>
+           <RequireFinanceiroAuth>
               <RequireFinanceiro>
                 <FinanceiroLayout>
                   <FinanceiroDashboard />
                 </FinanceiroLayout>
               </RequireFinanceiro>
-            </RequireAuth>
+           </RequireFinanceiroAuth>
           }
         />
         <Route
           path="/financeiro/auditoria/:withdrawalId"
           element={
-            <RequireAuth>
+           <RequireFinanceiroAuth>
               <RequireFinanceiro>
                 <FinanceiroLayout>
                   <AuditoriaDetalhe />
                 </FinanceiroLayout>
               </RequireFinanceiro>
-            </RequireAuth>
+           </RequireFinanceiroAuth>
           }
         />
 
@@ -264,25 +265,25 @@ export function HostRouter() {
         <Route
           path="/dashboard"
           element={
-            <RequireAuth>
+           <RequireFinanceiroAuth>
               <RequireFinanceiro>
                 <FinanceiroLayout>
                   <FinanceiroDashboard />
                 </FinanceiroLayout>
               </RequireFinanceiro>
-            </RequireAuth>
+           </RequireFinanceiroAuth>
           }
         />
         <Route
           path="/auditoria/:withdrawalId"
           element={
-            <RequireAuth>
+           <RequireFinanceiroAuth>
               <RequireFinanceiro>
                 <FinanceiroLayout>
                   <AuditoriaDetalhe />
                 </FinanceiroLayout>
               </RequireFinanceiro>
-            </RequireAuth>
+           </RequireFinanceiroAuth>
           }
         />
         <Route path="*" element={<NotFound />} />

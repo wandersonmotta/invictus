@@ -63,4 +63,14 @@ export const recognitionLevels: RecognitionLevel[] = [
     accent: "bg-gradient-to-r from-yellow-400 to-amber-500",
     imageUrl: "https://wotwxzolgnsmzjpposua.supabase.co/storage/v1/object/public/recognition-awards/elite-award.png",
   },
+  {
+    id: "diamond",
+    name: "Member Diamond",
+    description: "Acumule R$ 1 milhão em resultados",
+    requirement: "R$ 1 milhão",
+    points: 12000,
+    gradient: "from-cyan-300 via-blue-200 to-cyan-400",
+    accent: "bg-cyan-400",
+    imageUrl: "https://wotwxzolgnsmzjpposua.supabase.co/storage/v1/object/public/recognition-awards/diamond-award.png",
+  },
 ];

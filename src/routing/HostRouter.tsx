@@ -30,6 +30,7 @@ const Membro = React.lazy(() => import("@/pages/Membro"));
 const Leads = React.lazy(() => import("@/pages/Leads"));
 const LeadsConexoes = React.lazy(() => import("@/pages/LeadsConexoes"));
  const Carteira = React.lazy(() => import("@/pages/Carteira"));
+const Reconhecimento = React.lazy(() => import("@/pages/Reconhecimento"));
 
 // Financeiro pages
 const FinanceiroAuth = React.lazy(() => import("@/pages/financeiro/FinanceiroAuth"));
@@ -254,6 +255,16 @@ export function HostRouter() {
              </RequireAuth>
            }
          />
+        <Route
+          path="/reconhecimento"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Reconhecimento />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
         <Route
           path="/admin"
           element={
@@ -497,7 +508,17 @@ export function HostRouter() {
                </AppLayout>
              </RequireAuth>
            }
-         />
+           />
+        <Route
+          path="/reconhecimento"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Reconhecimento />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
       <Route
         path="/admin"
         element={

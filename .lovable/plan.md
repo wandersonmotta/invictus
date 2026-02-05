@@ -1,124 +1,156 @@
 
-## Plano de Correção: Painel Financeiro
+## Plano de Correcao: Layout Mobile do Financeiro
 
 ### Problemas Identificados
 
-1. **Erro 404 ao clicar em "Histórico" e "Relatórios"**
-   - A sidebar aponta para `/financeiro/historico` e `/financeiro/relatorios`
-   - Essas rotas **não existem** no `HostRouter.tsx`
-   - Apenas existem: `/financeiro/auth`, `/financeiro/dashboard` e `/financeiro/auditoria/:withdrawalId`
+1. **Toggle de tema no header mobile esta quebrando o layout**
+   - Os 3 botoes de tema (Sistema/Claro/Escuro) + botao Sair nao cabem no header
+   - Resultado: texto "FINANCEIRO" fica cortado (como mostra a screenshot)
+   - O toggle foi colocado no lugar errado
 
-2. **Logo "INVICTUS" cortado na sidebar**
-   - O logo é uma imagem com a palavra completa "INVICTUS"
-   - O container do header tem apenas `h-16` e `justify-center`
-   - O logo com `h-8` + texto "FINANCEIRO" não cabem bem lado a lado, causando corte no "I" inicial
-
-3. **Navegação de volta do `AuditoriaDetalhe.tsx` incorreta**
-   - Após aprovar/rejeitar, o código navega para `/dashboard` fixo
-   - No preview Lovable, deveria ser `/financeiro/dashboard`
+2. **Nao usa o padrao de navegacao mobile/tablet do app**
+   - O app principal usa: header simples + barra inferior flutuante + menu drawer
+   - O financeiro esta usando: header com navegacao inline (sem barra inferior)
+   - Precisa seguir o mesmo padrao para consistencia
 
 ---
 
 ### Solucao Proposta
 
-#### 1. Criar as paginas que faltam
+#### Arquitetura Final (igual ao app principal)
 
-Criar duas novas paginas placeholder:
-
-**`src/pages/financeiro/FinanceiroHistorico.tsx`**
-- Pagina de historico de auditorias (aprovados + rejeitados)
-- Por enquanto, um placeholder com mensagem "Em breve"
-
-**`src/pages/financeiro/FinanceiroRelatorios.tsx`**
-- Pagina de relatorios financeiros
-- Por enquanto, um placeholder com mensagem "Em breve"
-
-#### 2. Adicionar as rotas no HostRouter
-
-No bloco Lovable (preview):
 ```text
-/financeiro/historico -> FinanceiroHistorico
-/financeiro/relatorios -> FinanceiroRelatorios
+Desktop (>= 1024px):
++----------------+---------------------------+
+|    Sidebar     |       Conteudo            |
+| - Logo         |                           |
+| - Nav items    |                           |
+| - Toggle tema  |                           |
+| - Sair         |                           |
++----------------+---------------------------+
+
+Mobile/Tablet (< 1024px):
++---------------------------------------+
+|  Logo + FINANCEIRO        | UserMenu  |  <- Header simples
++---------------------------------------+
+|                                       |
+|            Conteudo                   |
+|                                       |
++---------------------------------------+
+| Auditoria | Historico | Relatorios | Menu |  <- Barra inferior flutuante
++---------------------------------------+
 ```
-
-No bloco financeiro subdomain (producao):
-```text
-/historico -> FinanceiroHistorico
-/relatorios -> FinanceiroRelatorios
-```
-
-#### 3. Corrigir o layout da sidebar e header mobile
-
-**Arquivo: `src/components/financeiro/FinanceiroLayout.tsx`**
-
-Problemas a corrigir:
-- Logo cortado: o container precisa de mais espaco horizontal
-- Texto "FINANCEIRO" muito grande/largo em telas menores
-
-Ajustes:
-- Trocar `justify-center` por `justify-start` com padding lateral
-- Reduzir o tracking do texto "FINANCEIRO" 
-- Adicionar `shrink-0` no logo para nao comprimir
-- Garantir que o container tem `min-w-0` e `overflow-hidden` se necessario
-- No header mobile, aplicar os mesmos ajustes
-
-#### 4. Corrigir navegacao do AuditoriaDetalhe
-
-**Arquivo: `src/pages/financeiro/AuditoriaDetalhe.tsx`**
-
-- Adicionar deteccao de ambiente (preview vs producao)
-- Corrigir `navigate("/dashboard")` para usar o basePath correto
-- Linhas afetadas: 131, 160, 176, 196
 
 ---
 
-### Detalhes Tecnicos
+### Arquivos a Criar
+
+#### 1. `src/components/financeiro/FinanceiroBottomNav.tsx`
+
+Novo componente baseado no `MobileBottomNav`:
+- Itens: Fila de Auditoria, Historico, Relatorios, Menu
+- Usa o hook `useIsMobileOrTablet` para aparecer apenas em < 1024px
+- Abre o sheet do menu ao clicar em "Menu"
+
+#### 2. `src/components/financeiro/FinanceiroMenuSheet.tsx`
+
+Novo componente baseado no `MobileMenuSheet`:
+- Cabecalho com avatar do usuario (financeiro nao precisa perfil completo, pode ser simplificado)
+- Navegacao: Fila de Auditoria, Historico, Relatorios
+- Toggle de tema (igual ao UserMenu do app)
+- Botao Sair
+- Estilo glass premium com as classes invictus existentes
+
+---
+
+### Arquivos a Modificar
+
+#### 3. `src/components/financeiro/FinanceiroLayout.tsx`
+
+Mudancas:
+
+**Header Mobile (simplificar):**
+- Remover o toggle de tema do header
+- Remover o botao de logout do header
+- Manter apenas: Logo + "FINANCEIRO" + UserMenu simples (avatar + dropdown com tema + sair)
+
+**Sidebar Desktop:**
+- Manter como esta (toggle de tema + botao Sair na parte inferior)
+
+**Estrutura:**
+- Adicionar o `FinanceiroBottomNav` no final
+- Adicionar padding inferior no mobile para nao cobrir conteudo
+
+---
+
+### Detalhes de Implementacao
+
+#### FinanceiroBottomNav.tsx
 
 ```text
-Novos arquivos:
-- src/pages/financeiro/FinanceiroHistorico.tsx
-- src/pages/financeiro/FinanceiroRelatorios.tsx
-
-Arquivos a editar:
-- src/routing/HostRouter.tsx (adicionar rotas)
-- src/components/financeiro/FinanceiroLayout.tsx (corrigir layout)
-- src/pages/financeiro/AuditoriaDetalhe.tsx (corrigir navegacao)
+Items da barra:
+1. Auditoria (icone: ListChecks) -> /financeiro/dashboard
+2. Historico (icone: FileText) -> /financeiro/historico
+3. Relatorios (icone: BarChart3) -> /financeiro/relatorios
+4. Menu (icone: Menu) -> abre FinanceiroMenuSheet
 ```
 
-#### Layout Corrigido (FinanceiroLayout.tsx)
+#### FinanceiroMenuSheet.tsx
 
-Header da sidebar:
 ```text
-<div className="flex h-16 items-center gap-2 border-b border-border px-4">
-  <img src={invictusLogo} alt="Invictus" className="h-6 shrink-0" />
-  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-    Financeiro
-  </span>
-</div>
+Secoes:
+- Header com avatar simplificado
+- Navegacao (3 itens)
+- Separador
+- Toggle de tema (Sistema/Claro/Escuro)
+- Separador
+- Botao Sair
 ```
 
-Principais mudancas:
-- Logo menor: `h-6` (era `h-8`)
-- Tracking reduzido: `tracking-wide` (era `tracking-wider`)
-- Texto menor: `text-xs` (era `text-sm`)
-- Flex com gap ao inves de margin: `gap-2` (era `ml-2`)
-- Logo nao encolhe: `shrink-0`
+#### FinanceiroLayout.tsx - Header Mobile
+
+```text
+Antes (problematico):
+| Logo FINANCEIRO | [Sistema][Claro][Escuro] [Sair] |
+
+Depois (limpo):
+| Logo FINANCEIRO | [Avatar dropdown] |
+```
+
+O dropdown do avatar contera:
+- Toggle de tema
+- Botao Sair
+
+---
+
+### Estilizacao
+
+Reutilizar as classes CSS existentes:
+- `invictus-mobile-nav` (barra inferior flutuante)
+- `invictus-mobile-nav-item` (itens da barra)
+- `invictus-mobile-menu-sheet` (sheet de menu)
+- `invictus-mobile-menu-item` (itens do menu)
+- `invictus-topbar-menu-glass` (dropdown premium)
 
 ---
 
 ### Resultado Esperado
 
-1. Clicar em "Historico" abre pagina de historico (sem 404)
-2. Clicar em "Relatorios" abre pagina de relatorios (sem 404)
-3. Logo "INVICTUS" aparece completo na sidebar
-4. Layout funciona tanto em desktop quanto em mobile/tablet
-5. Navegacao de volta da auditoria funciona corretamente
+1. Header mobile limpo: apenas logo + texto + menu do usuario
+2. Barra inferior flutuante com navegacao rapida (Auditoria/Historico/Relatorios/Menu)
+3. Menu drawer com todas as opcoes + toggle de tema + logout
+4. Consistencia visual com o app principal
+5. Layout desktop permanece igual (sidebar com toggle + sair)
 
 ---
 
-### Proximos Passos (apos implementacao)
+### Resumo de Arquivos
 
-1. Testar todas as rotas do financeiro no preview
-2. Testar o fluxo completo de auditoria (abrir item, aprovar/rejeitar, voltar)
-3. Testar layout em diferentes tamanhos de tela
-4. Implementar conteudo real nas paginas de Historico e Relatorios (futuramente)
+```text
+Criar:
+- src/components/financeiro/FinanceiroBottomNav.tsx
+- src/components/financeiro/FinanceiroMenuSheet.tsx
+
+Editar:
+- src/components/financeiro/FinanceiroLayout.tsx
+```

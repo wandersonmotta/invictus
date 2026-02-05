@@ -1,5 +1,5 @@
  import { useState } from "react";
- import { useNavigate } from "react-router-dom";
+ import { useNavigate, useLocation } from "react-router-dom";
  import { supabase } from "@/integrations/supabase/client";
  import { rpcUntyped } from "@/lib/rpc";
  import { Button } from "@/components/ui/button";
@@ -7,10 +7,12 @@
  import { Label } from "@/components/ui/label";
  import { toast } from "@/hooks/use-toast";
  import invictusLogo from "@/assets/INVICTUS-GOLD_1.png";
+ import { isLovableHost } from "@/lib/appOrigin";
  import "@/styles/invictus-auth.css";
  
  export default function FinanceiroAuth() {
    const navigate = useNavigate();
+   const location = useLocation();
    const [email, setEmail] = useState("");
    const [password, setPassword] = useState("");
    const [loading, setLoading] = useState(false);
@@ -47,7 +49,12 @@
          return;
        }
  
-       navigate("/dashboard");
+       // Context-aware redirect: preview uses /financeiro/dashboard, subdomain uses /dashboard
+       const from = (location.state as any)?.from;
+       const defaultPath = isLovableHost(window.location.hostname)
+         ? "/financeiro/dashboard"
+         : "/dashboard";
+       navigate(typeof from === "string" && from ? from : defaultPath, { replace: true });
      } catch (err: any) {
        toast({
          variant: "destructive",
@@ -61,12 +68,12 @@
  
    return (
      <div
-        className="relative flex min-h-screen items-center justify-center overflow-y-auto bg-cover bg-center p-4 py-8"
+        className="relative flex min-h-screen items-center justify-center overflow-y-auto bg-cover bg-center p-4"
        style={{ backgroundImage: "url('/images/invictus-auth-bg.jpg')" }}
      >
        <div className="absolute inset-0 bg-black/70" />
  
-        <div className="invictus-auth-frame relative z-10 my-auto w-full max-w-md rounded-xl border border-[hsl(var(--gold))]/40 bg-black/60 p-8 backdrop-blur-md">
+        <div className="invictus-auth-frame relative z-10 my-4 w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl border border-[hsl(var(--gold))]/40 bg-black/60 p-8 backdrop-blur-md">
          <div className="mb-8 flex flex-col items-center gap-3">
            <img src={invictusLogo} alt="Invictus" className="h-16" />
            <span className="text-sm uppercase tracking-[0.25em] text-[hsl(var(--gold))]">
@@ -105,13 +112,15 @@
              />
            </div>
  
-           <Button
-             type="submit"
-             disabled={loading}
-             className="w-full bg-[hsl(var(--gold))] text-black hover:bg-[hsl(var(--gold))]/90"
-           >
-             {loading ? "Entrando..." : "Entrar"}
-           </Button>
+           <div className="pb-2">
+             <Button
+               type="submit"
+               disabled={loading}
+               className="w-full bg-[hsl(var(--gold))] text-black hover:bg-[hsl(var(--gold))]/90"
+             >
+               {loading ? "Entrando..." : "Entrar"}
+             </Button>
+           </div>
          </form>
        </div>
      </div>

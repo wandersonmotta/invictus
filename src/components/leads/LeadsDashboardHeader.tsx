@@ -29,7 +29,7 @@ export function LeadsDashboardHeader({
           {/* Meta Logo */}
           <div className="flex items-center gap-1">
             <span className="text-lg font-bold" style={{ color: "#1877F2" }}>∞</span>
-            <span className="hidden sm:inline font-semibold text-sm text-foreground">Meta</span>
+            <span className="font-semibold text-xs sm:text-sm text-foreground">Meta</span>
           </div>
           
           {/* Google Ads Logo */}
@@ -40,7 +40,7 @@ export function LeadsDashboardHeader({
               <path fill="#34A853" d="M9 8.96l5.5-9.53a3 3 0 0 1 4.1 1.1l-5.5 9.53L9 8.96Z"/>
               <circle fill="#EA4335" cx="6" cy="18" r="3"/>
             </svg>
-            <span className="hidden sm:inline font-semibold text-sm text-foreground">Google Ads</span>
+            <span className="font-semibold text-xs sm:text-sm text-foreground">Google Ads</span>
           </div>
           
           {/* Analytics Logo */}
@@ -50,7 +50,7 @@ export function LeadsDashboardHeader({
               <path fill="#E37400" d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12h4c0-3.31 2.69-6 6-6s6 2.69 6 6h4Z"/>
               <circle fill="#F9AB00" cx="12" cy="12" r="4"/>
             </svg>
-            <span className="hidden sm:inline font-semibold text-sm text-foreground">Analytics</span>
+            <span className="font-semibold text-xs sm:text-sm text-foreground">Analytics</span>
           </div>
         </div>
 

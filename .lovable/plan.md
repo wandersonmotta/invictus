@@ -1,210 +1,187 @@
 
 
-## Plano: Placas de Acrilico 3D Invictus + Selecao de Nivel
+## Plano: Member Diamond + Cards Maiores + Layout Mobile Vertical
 
-Vou implementar placas de acrilico 3D geradas por IA e a indicacao visual do nivel atual do usuario, seguindo exatamente o padrao das referencias enviadas.
-
----
-
-### Visao Geral
-
-```text
-+-----------------------------------------------+
-|  RECONHECIMENTO                               |
-|  Bora para o proximo nivel!                   |
-+-----------------------------------------------+
-|                                               |
-|  [Bronze]  [Silver]  [Gold]  [Black]  [Elite] |
-|   ATUAL     proximo   futuro  futuro   futuro |
-|  --------                                     |
-|  borda gold                                   |
-+-----------------------------------------------+
-```
+Vou implementar as melhorias solicitadas na pagina de Reconhecimento.
 
 ---
 
-### Requisitos por Nivel (Atualizados)
+### Resumo das Alteracoes
 
-| Nivel | Nome | Requisito | Pontos |
-|-------|------|-----------|--------|
-| 1 | Member Bronze | Adicione 3 pessoas | 100 |
-| 2 | Member Silver | Acumule R$ 10 mil em resultados | 500 |
-| 3 | Member Gold | Acumule R$ 50 mil em resultados | 1.000 |
-| 4 | Member Black | Acumule R$ 100 mil em resultados | 2.500 |
-| 5 | Member Elite | Acumule R$ 500 mil em resultados | 5.000 |
-
----
-
-### Geracao das Placas 3D com IA
-
-Vou criar uma Edge Function que usa **Lovable AI (google/gemini-2.5-flash-image)** para gerar imagens das placas:
-
-**Prompt para cada placa:**
-```text
-Photorealistic 3D acrylic award trophy on dark gradient background.
-Silver metallic rectangular frame with rounded corners and polished chrome border.
-Inside: [COR] translucent crystal gem with faceted cuts catching light.
-Diagonal [COR] accent stripe across the frame.
-Top shows "INVICTUS" text in gold metallic letters.
-Bottom shows "MEMBER [NIVEL]" text.
-Professional product photography, studio lighting, soft reflections.
-Clean minimal composition. Premium luxury business award style.
-High detail, 4K quality.
-```
-
-**Cores por nivel:**
-- Bronze: Amber/copper crystal + amber stripe
-- Silver: Clear/white crystal + silver stripe
-- Gold: Yellow/gold crystal + gold stripe
-- Black: Dark smoke crystal + black stripe
-- Elite: Gold crystal with rainbow reflections + gold stripe
-
----
-
-### Arquivos a Criar
-
-#### 1. `supabase/functions/generate-recognition-awards/index.ts`
-
-Edge Function para gerar as imagens das placas:
-- Recebe o nivel como parametro
-- Chama Lovable AI com o prompt especifico
-- Faz upload da imagem base64 para Supabase Storage
-- Retorna URL publica da imagem
-
-#### 2. Bucket de Storage `recognition-awards`
-
-Criar bucket publico para armazenar as imagens geradas.
+1. **Novo nivel Member Diamond** - R$ 1 milhao em resultados, 12.000 pontos
+2. **Cards maiores** - Aumentar tamanho para melhor visualizacao das placas
+3. **Correcao do efeito hover** - Borda dourada nao vai mais sumir no topo
+4. **Layout mobile/tablet vertical** - Scroll de cima para baixo em vez de horizontal
 
 ---
 
 ### Arquivos a Modificar
 
-#### 3. `src/components/reconhecimento/recognitionLevels.ts`
+#### 1. `src/components/reconhecimento/recognitionLevels.ts`
 
-Atualizar interface e dados:
+Adicionar novo nivel Diamond:
 
-```typescript
-export interface RecognitionLevel {
-  id: string;
-  name: string;
-  description: string;      // Requisito completo
-  requirement: string;      // Texto destacado (ex: "3 pessoas")
-  points: number;
-  gradient: string;
-  accent: string;
-  imageUrl?: string;        // URL da placa gerada
-}
-
-// Atualizar Bronze:
+```text
 {
-  id: "bronze",
-  name: "Member Bronze",
-  description: "Adicione 3 pessoas",
-  requirement: "3 pessoas",
-  points: 100,
-  ...
+  id: "diamond",
+  name: "Member Diamond",
+  description: "Acumule R$ 1 milhao em resultados",
+  requirement: "R$ 1 milhao",
+  points: 12000,
+  gradient: "from-cyan-300 via-blue-200 to-cyan-400",
+  accent: "bg-cyan-400",
+  imageUrl: undefined  // Sera gerado depois
 }
 ```
 
-#### 4. `src/components/reconhecimento/RecognitionCard.tsx`
+#### 2. `src/components/reconhecimento/RecognitionCard.tsx`
 
-Redesenhar card para seguir referencia:
+**Aumentar tamanho do card:**
+- Desktop: de `clamp(140px,42vw,188px)` para `clamp(200px,50vw,280px)`
+- Aspect ratio maior para destacar a placa
+
+**Corrigir efeito hover da borda dourada:**
+- Problema atual: `overflow-hidden` esta cortando a borda (ring)
+- Solucao: Remover `overflow-hidden` do container principal e aplicar apenas na area da imagem
+- Ajustar `ring-offset` para nao ser cortado
 
 ```text
-+----------------------------+
-|                            |
-|    [Imagem da Placa        |
-|     de Acrilico 3D]        |
-|                            |
-+----------------------------+
-|  Member Gold               |
-|  Acumule 50 mil em         |
-|  resultados                |
-+----------------------------+
-|  Ganha: 1.000 pts.         |
-+----------------------------+
+// Antes (problema)
+className="... overflow-hidden ..."
+isCurrentLevel && "ring-2 ring-primary ring-offset-2 ..."
+
+// Depois (corrigido)
+className="... overflow-visible ..."
+// Overflow hidden apenas no container da imagem
 ```
 
-Adicionar props:
-- `isCurrentLevel: boolean` - destacar com borda dourada
-- `isAchieved: boolean` - mostrar check de conquistado
-- `isFuture: boolean` - aplicar opacidade reduzida
+#### 3. `src/pages/Reconhecimento.tsx`
 
-Visual do nivel atual:
-- Borda dourada brilhante (`ring-2 ring-primary`)
-- Badge "Seu nivel" ou indicador visual
+**Layout responsivo diferenciado:**
+- Desktop (lg+): Manter scroll horizontal com cards maiores
+- Mobile/Tablet (<1024px): Grid vertical (coluna unica) com scroll vertical natural
 
-#### 5. `src/pages/Reconhecimento.tsx`
+```text
+// Mobile/Tablet (< lg)
++---------------------------+
+|  [Bronze - ATUAL]         |  <- Borda dourada
+|  -------------------------+
+|  [Silver]                 |
+|  -------------------------+
+|  [Gold]                   |
+|  -------------------------+
+|  [Black]                  |
+|  -------------------------+
+|  [Elite]                  |
+|  -------------------------+
+|  [Diamond]                |
++---------------------------+
 
-Atualizar pagina:
-- Subtitulo: "Bora para o proximo nivel!"
-- Logica para determinar nivel atual (mock inicial, depois integracao real)
-- Passar props de estado para cada card:
+// Desktop (lg+)
+[Bronze] [Silver] [Gold] [Black] [Elite] [Diamond] ->
+         <- Scroll horizontal
+```
+
+**Implementacao:**
 
 ```typescript
-// Mock inicial - depois vira dados reais
-const currentLevelIndex = 0; // Bronze
+import { useIsMobileOrTablet } from "@/hooks/use-mobile";
 
-{recognitionLevels.map((level, index) => (
-  <RecognitionCard
-    key={level.id}
-    level={level}
-    isCurrentLevel={index === currentLevelIndex}
-    isAchieved={index < currentLevelIndex}
-    isFuture={index > currentLevelIndex}
-  />
-))}
+// ...
+
+const isMobileOrTablet = useIsMobileOrTablet();
+
+{isMobileOrTablet ? (
+  // Layout vertical para mobile/tablet
+  <div className="flex flex-col gap-4">
+    {recognitionLevels.map(...)}
+  </div>
+) : (
+  // Layout horizontal para desktop
+  <div className="-mx-4 px-4 overflow-x-auto snap-x ...">
+    <div className="flex gap-6 min-w-max pb-3">
+      {recognitionLevels.map(...)}
+    </div>
+  </div>
+)}
 ```
 
 ---
 
-### Fluxo de Geracao de Imagens
+### Correcao Detalhada do Efeito Hover
+
+O problema ocorre porque:
+1. `overflow-hidden` no card corta o `ring` (borda externa)
+2. O `ring-offset` precisa de espaco fora do elemento
+
+**Solucao:**
+1. Usar `overflow-visible` no container do card
+2. Aplicar `overflow-hidden` apenas no `div` da imagem (para conter a imagem)
+3. Adicionar `rounded-xl` no container da imagem tambem
+
+```tsx
+<article className="... overflow-visible rounded-xl">
+  {/* Imagem com overflow hidden separado */}
+  <div className="relative aspect-[4/5] w-full overflow-hidden rounded-t-xl">
+    <img ... />
+  </div>
+  
+  {/* Conteudo */}
+  <div className="p-4 ...">
+    ...
+  </div>
+</article>
+```
+
+---
+
+### Tamanhos Ajustados
+
+| Elemento | Atual | Novo |
+|----------|-------|------|
+| Largura card desktop | 140-188px | 200-280px |
+| Largura card mobile | 140-188px | 100% (full width) |
+| Gap entre cards | 4 (16px) | 6 (24px) desktop, 4 mobile |
+| Aspect ratio | 4/5 | Manter 4/5 |
+| Padding conteudo | p-3 | p-4 |
+| Fonte titulo | text-sm | text-base |
+| Fonte descricao | text-xs | text-sm |
+
+---
+
+### Geracao da Placa Diamond
+
+Depois de implementar as alteracoes, vou chamar a Edge Function para gerar a placa Diamond:
 
 ```text
-1. Admin acessa pagina de geracao (ou roda manualmente)
-2. Edge Function chama Lovable AI para cada nivel
-3. Imagem base64 retornada
-4. Upload para Storage bucket "recognition-awards"
-5. URL salva em tabela ou hardcoded inicialmente
-6. RecognitionCard exibe imagem da placa
+POST /generate-recognition-awards
+{ "level": "diamond" }
 ```
 
----
-
-### Estados Visuais dos Cards
-
-| Estado | Visual | Descricao |
-|--------|--------|-----------|
-| Conquistado | Opacity normal + check verde | Niveis ja atingidos |
-| Atual | Borda dourada + badge "Seu nivel" | Nivel onde o usuario esta |
-| Proximo | Opacity normal | Proximo nivel a conquistar |
-| Futuro | Opacity 60% | Niveis distantes |
+Prompt da IA para Diamond:
+- Cristal translucido azul-cyan com reflexos prismaticos
+- Faixa diagonal cyan/azul clara
+- Visual "diamante" com brilho intenso
 
 ---
 
 ### Resumo de Arquivos
 
 ```text
-Criar:
-- supabase/functions/generate-recognition-awards/index.ts
-
 Modificar:
-- src/components/reconhecimento/recognitionLevels.ts
-- src/components/reconhecimento/RecognitionCard.tsx
-- src/pages/Reconhecimento.tsx
-
-Criar bucket:
-- recognition-awards (publico)
+- src/components/reconhecimento/recognitionLevels.ts (adicionar Diamond)
+- src/components/reconhecimento/RecognitionCard.tsx (cards maiores + fix hover)
+- src/pages/Reconhecimento.tsx (layout responsivo vertical/horizontal)
 ```
 
 ---
 
 ### Resultado Esperado
 
-1. Placas de acrilico 3D com visual premium Invictus
-2. Cristais coloridos translucidos em cada placa
-3. Requisito do Bronze atualizado: "Adicione 3 pessoas"
-4. Card do nivel atual destacado com borda dourada
-5. Niveis futuros com opacidade reduzida
-6. Layout identico as referencias enviadas
+1. Novo nivel Member Diamond com requisito de R$ 1 milhao
+2. Cards visivelmente maiores mostrando melhor as placas 3D
+3. Borda dourada do nivel atual visivel em todos os lados (sem corte)
+4. Mobile/tablet com layout vertical (scroll natural de cima para baixo)
+5. Desktop com layout horizontal (deslizar para os lados)
+6. Nivel atual sempre destacado com borda dourada em ambos os layouts
 

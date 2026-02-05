@@ -1,4 +1,4 @@
-import { LogOut, Moon, Sun } from "lucide-react";
+import { LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { useAuth } from "@/auth/AuthProvider";
@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 function initials(first?: string | null, last?: string | null) {
   const a = (first ?? "").trim()[0] ?? "";
@@ -24,11 +25,7 @@ function initials(first?: string | null, last?: string | null) {
 export function UserMenu() {
   const { user, signOut } = useAuth();
   const { data: profile } = useMyProfile(user?.id ?? null);
-  const { resolvedTheme, setTheme } = useTheme();
-
-  const toggleTheme = () => {
-    setTheme(resolvedTheme === "dark" ? "light" : "dark");
-  };
+  const { theme, setTheme } = useTheme();
 
   const fullName = `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim();
   // Nunca mostrar "Perfil". Se estiver carregando/incompleto, fica neutro.
@@ -77,20 +74,40 @@ export function UserMenu() {
         align="end"
         className="invictus-topbar-menu-glass z-50 min-w-52 p-1"
       >
-        {/* Toggle de tema */}
-        <DropdownMenuItem
-          onClick={toggleTheme}
-          className="group gap-2 cursor-pointer rounded-md focus:bg-[hsl(var(--foreground)_/_0.06)] focus:text-foreground data-[highlighted]:bg-[hsl(var(--foreground)_/_0.05)] data-[highlighted]:text-foreground"
-        >
-          {resolvedTheme === "dark" ? (
-            <Sun className="h-4 w-4 text-[hsl(var(--gold-hot)_/_0.92)] transition group-hover:[filter:drop-shadow(0_0_12px_hsl(var(--gold-hot)_/_0.28))]" />
-          ) : (
-            <Moon className="h-4 w-4 text-[hsl(var(--gold-hot)_/_0.92)] transition group-hover:[filter:drop-shadow(0_0_12px_hsl(var(--gold-hot)_/_0.28))]" />
-          )}
-          <GoldHoverText className="text-sm font-medium">
-            {resolvedTheme === "dark" ? "Modo Claro" : "Modo Escuro"}
-          </GoldHoverText>
-        </DropdownMenuItem>
+        {/* Toggle de tema com 3 opções */}
+        <div className="px-2 py-1.5">
+          <ToggleGroup
+            type="single"
+            value={theme}
+            onValueChange={(value) => value && setTheme(value)}
+            className="w-full justify-start gap-1"
+          >
+            <ToggleGroupItem
+              value="system"
+              aria-label="Padrão do sistema"
+              className="flex-1 gap-1.5 px-2 py-1.5 text-xs data-[state=on]:bg-[hsl(var(--gold-hot)_/_0.15)] data-[state=on]:text-[hsl(var(--gold-hot))] hover:bg-[hsl(var(--foreground)_/_0.06)]"
+            >
+              <Monitor className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Sistema</span>
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="light"
+              aria-label="Modo claro"
+              className="flex-1 gap-1.5 px-2 py-1.5 text-xs data-[state=on]:bg-[hsl(var(--gold-hot)_/_0.15)] data-[state=on]:text-[hsl(var(--gold-hot))] hover:bg-[hsl(var(--foreground)_/_0.06)]"
+            >
+              <Sun className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Claro</span>
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="dark"
+              aria-label="Modo escuro"
+              className="flex-1 gap-1.5 px-2 py-1.5 text-xs data-[state=on]:bg-[hsl(var(--gold-hot)_/_0.15)] data-[state=on]:text-[hsl(var(--gold-hot))] hover:bg-[hsl(var(--foreground)_/_0.06)]"
+            >
+              <Moon className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Escuro</span>
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
 
         <DropdownMenuSeparator className="bg-border/50" />
 

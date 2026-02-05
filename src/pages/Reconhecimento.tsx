@@ -9,9 +9,13 @@ export default function Reconhecimento() {
   const isMobileOrTablet = useIsMobileOrTablet();
 
   return (
-    <div className={`flex flex-col gap-6 overflow-x-hidden ${isMobileOrTablet ? "pb-24" : "h-full"}`}>
+    <div
+      className={`flex flex-col overflow-x-hidden ${
+        isMobileOrTablet ? "gap-6 pb-24" : "h-full gap-4"
+      }`}
+    >
       {/* Header */}
-      <header className="space-y-1 shrink-0">
+      <header className={`shrink-0 ${isMobileOrTablet ? "space-y-1" : "space-y-0.5"}`}>
         <h1 className="text-2xl font-bold tracking-tight">
           <GoldHoverText>Reconhecimento</GoldHoverText>
         </h1>
@@ -21,7 +25,13 @@ export default function Reconhecimento() {
       </header>
 
       {/* Awards Section */}
-      <section className={`space-y-4 ${isMobileOrTablet ? "" : "flex-1 min-h-0 flex flex-col"}`}>
+      <section
+        className={
+          isMobileOrTablet
+            ? "space-y-4"
+            : "flex-1 min-h-0 flex flex-col space-y-3"
+        }
+      >
         <h2 className="text-base font-semibold text-foreground shrink-0">Premiações</h2>
 
         {isMobileOrTablet ? (
@@ -39,10 +49,10 @@ export default function Reconhecimento() {
             ))}
           </div>
         ) : (
-          /* Desktop: Horizontal scroll container with larger cards - fills available height */
+          /* Desktop: Horizontal scroll container - fills available height, no pb */
           <div className="flex-1 min-h-0 overflow-hidden">
-            <div className="h-full overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-3">
-              <div className="flex gap-6 min-w-max pr-4">
+            <div className="h-full overflow-x-auto snap-x snap-mandatory scrollbar-hide">
+              <div className="flex gap-6 min-w-max pr-4 h-full">
                 {recognitionLevels.map((level, index) => (
                   <RecognitionCard
                     key={level.id}

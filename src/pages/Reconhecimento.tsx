@@ -9,10 +9,10 @@ export default function Reconhecimento() {
   const isMobileOrTablet = useIsMobileOrTablet();
 
   return (
-    <div className={`flex flex-col h-full overflow-x-hidden ${isMobileOrTablet ? "gap-6 pb-24" : "gap-3"}`}>
-      {/* Header - compact on desktop */}
-      <header className={isMobileOrTablet ? "space-y-1" : "space-y-0.5"}>
-        <h1 className={`font-bold tracking-tight ${isMobileOrTablet ? "text-2xl" : "text-xl"}`}>
+    <div className={`flex flex-col gap-6 overflow-x-hidden ${isMobileOrTablet ? "pb-24" : ""}`}>
+      {/* Header */}
+      <header className="space-y-1">
+        <h1 className="text-2xl font-bold tracking-tight">
           <GoldHoverText>Reconhecimento</GoldHoverText>
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -21,8 +21,8 @@ export default function Reconhecimento() {
       </header>
 
       {/* Awards Section */}
-      <section className={`flex-1 flex flex-col min-h-0 ${isMobileOrTablet ? "space-y-4" : "space-y-2"}`}>
-        <h2 className="text-base font-semibold text-foreground shrink-0">Premiações</h2>
+      <section className="space-y-4">
+        <h2 className="text-base font-semibold text-foreground">Premiações</h2>
 
         {isMobileOrTablet ? (
           /* Mobile/Tablet: One card at a time, vertical scroll */
@@ -39,10 +39,10 @@ export default function Reconhecimento() {
             ))}
           </div>
         ) : (
-          /* Desktop: Horizontal scroll container with compact cards - fit in viewport */
-          <div className="flex-1 min-h-0 flex items-start">
-            <div className="overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 w-full">
-              <div className="flex gap-4 min-w-max pr-4">
+          /* Desktop: Horizontal scroll container with larger cards */
+          <div className="w-full overflow-hidden">
+            <div className="overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-3">
+              <div className="flex gap-6 min-w-max pr-4">
                 {recognitionLevels.map((level, index) => (
                   <RecognitionCard
                     key={level.id}
@@ -50,7 +50,6 @@ export default function Reconhecimento() {
                     isCurrentLevel={index === currentLevelIndex}
                     isAchieved={index < currentLevelIndex}
                     isFuture={index > currentLevelIndex}
-                    compact
                   />
                 ))}
               </div>

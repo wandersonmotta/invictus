@@ -21,6 +21,7 @@ type Props = {
   initialFocus?: "comment" | "none";
   onPostLikeChange?: (next: { likeCount: number; likedByMe: boolean }) => void;
   onCommentCountChange?: (delta: number) => void;
+  onPostDeleted?: () => void;
 };
 
 export function FeedPostViewerDialog({
@@ -30,6 +31,7 @@ export function FeedPostViewerDialog({
   initialFocus = "none",
   onPostLikeChange,
   onCommentCountChange,
+  onPostDeleted,
 }: Props) {
   const primary = post.media_urls?.[0];
   const isVideo = Boolean(primary?.contentType?.startsWith("video/"));
@@ -108,6 +110,7 @@ export function FeedPostViewerDialog({
 
           <PostCommentsPanel
             postId={post.post_id}
+            authorUserId={post.author_user_id}
             author={{
               displayName: post.author_display_name,
               username: post.author_username,
@@ -120,6 +123,10 @@ export function FeedPostViewerDialog({
             autoFocusComposer={initialFocus === "comment"}
             onPostLikeChange={onPostLikeChange}
             onCommentCountChange={onCommentCountChange}
+            onPostDeleted={() => {
+              onOpenChange(false);
+              onPostDeleted?.();
+            }}
           />
         </div>
       </DialogContent>

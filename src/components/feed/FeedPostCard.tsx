@@ -12,6 +12,7 @@ import { FeedPostViewerDialog, type FeedPostWithUrls } from "@/components/feed/F
 
 function FeedPostCardInner({
   post,
+  onPostDeleted,
 }: {
   post: FeedPost & {
     media_urls: {
@@ -21,6 +22,7 @@ function FeedPostCardInner({
       trimEndSeconds?: number | null;
     }[];
   };
+  onPostDeleted?: () => void;
 }) {
   const qc = useQueryClient();
   const [viewerOpen, setViewerOpen] = React.useState(false);
@@ -222,6 +224,7 @@ function FeedPostCardInner({
           onOpenChange={setViewerOpen}
           post={post as unknown as FeedPostWithUrls}
           initialFocus={initialFocus}
+          onPostDeleted={onPostDeleted}
         />
       </CardContent>
     </Card>

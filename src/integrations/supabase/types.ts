@@ -1156,6 +1156,7 @@ export type Database = {
             Returns: string
           }
       delete_community_post: { Args: { p_post_id: string }; Returns: string }
+      delete_feed_post: { Args: { p_post_id: string }; Returns: boolean }
       delete_feed_post_comment: {
         Args: { p_comment_id: string }
         Returns: boolean

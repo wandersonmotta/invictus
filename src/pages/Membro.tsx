@@ -273,7 +273,7 @@ export default function Membro() {
                     </div>
                   </div>
 
-                  <PostCommentsPanel postId={selectedPost.post_id} author={{
+                  <PostCommentsPanel postId={selectedPost.post_id} authorUserId={p.user_id} author={{
               displayName: p.display_name,
               username: p.username,
               avatarUrl: p.avatar_url
@@ -284,7 +284,10 @@ export default function Membro() {
             } : prev)} onCommentCountChange={delta => setSelectedPost(prev => prev ? {
               ...prev,
               comment_count: Math.max(0, prev.comment_count + delta)
-            } : prev)} />
+            } : prev)} onPostDeleted={() => {
+              setViewerOpen(false);
+              postsQuery.refetch();
+            }} />
                 </div> : null}
             </DialogContent>
           </Dialog>

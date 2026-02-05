@@ -42,6 +42,7 @@ function FeedPostCardInner({
   const [showHeart, setShowHeart] = React.useState(false);
   const lastTapRef = React.useRef<number>(0);
   const singleTapTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didDoubleTapRef = React.useRef(false);
   const isMobile = useIsMobile();
 
   const isMyPost = user?.id === post.author_user_id;
@@ -71,14 +72,22 @@ function FeedPostCardInner({
   });
 
   const triggerLikeAnimation = () => {
+    didDoubleTapRef.current = true;
     if (!post.liked_by_me) {
       likeMutation.mutate();
     }
     setShowHeart(true);
-    setTimeout(() => setShowHeart(false), 800);
+    setTimeout(() => {
+      setShowHeart(false);
+      didDoubleTapRef.current = false;
+    }, 800);
   };
 
   const handleSingleTap = () => {
+    // Prevent opening if we just did a double-tap
+    if (didDoubleTapRef.current) {
+      return;
+    }
     setInitialFocus("none");
     setViewerOpen(true);
   };
@@ -97,14 +106,15 @@ function FeedPostCardInner({
       // Double tap detected
       triggerLikeAnimation();
       lastTapRef.current = 0;
-    } else {
-      lastTapRef.current = now;
-      // Set timeout for single tap action
-      singleTapTimeoutRef.current = setTimeout(() => {
-        handleSingleTap();
-        singleTapTimeoutRef.current = null;
-      }, DOUBLE_TAP_DELAY);
+      return; // Exit early, don't set any timeout
     }
+    
+    lastTapRef.current = now;
+    // Set timeout for single tap action
+    singleTapTimeoutRef.current = setTimeout(() => {
+      singleTapTimeoutRef.current = null;
+      handleSingleTap();
+    }, DOUBLE_TAP_DELAY);
   };
 
   // Cleanup timeout on unmount

@@ -42,7 +42,7 @@
          </div>
  
          {/* Right: Status + Amount */}
-         <div className="flex flex-col items-end gap-0.5">
+          <div className="flex shrink-0 flex-col items-end gap-0.5">
            <span className={cn("text-xs font-medium", statusStyles[status])}>
              {status}
            </span>

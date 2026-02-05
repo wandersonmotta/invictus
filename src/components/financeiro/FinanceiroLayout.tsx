@@ -5,6 +5,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
  import { LogOut, FileText, ListChecks, BarChart3 } from "lucide-react";
  import invictusLogo from "@/assets/INVICTUS-GOLD_1.png";
 import { cn } from "@/lib/utils";
+ import { isLovableHost } from "@/lib/appOrigin";
  
  interface FinanceiroLayoutProps {
    children: ReactNode;
@@ -14,9 +15,7 @@ import { cn } from "@/lib/utils";
    const navigate = useNavigate();
   const location = useLocation();
 
-  // Detect if we're on preview (lovable) or production
-  const isPreview = window.location.hostname.endsWith(".lovable.app") || window.location.hostname.endsWith(".lovableproject.com");
-  const basePath = isPreview ? "/financeiro" : "";
+  const basePath = isLovableHost(window.location.hostname) ? "/financeiro" : "";
  
    const handleLogout = async () => {
      await supabase.auth.signOut();
@@ -27,9 +26,9 @@ import { cn } from "@/lib/utils";
      <div className="flex min-h-screen bg-background">
        {/* Sidebar */}
        <aside className="hidden w-64 flex-col border-r border-border bg-card md:flex">
-         <div className="flex h-16 items-center justify-center border-b border-border px-4">
-           <img src={invictusLogo} alt="Invictus" className="h-8" />
-           <span className="ml-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+         <div className="flex h-16 items-center gap-2 border-b border-border px-4">
+           <img src={invictusLogo} alt="Invictus" className="h-6 shrink-0" />
+           <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
              Financeiro
            </span>
          </div>
@@ -64,7 +63,7 @@ import { cn } from "@/lib/utils";
          {/* Mobile header */}
          <header className="flex h-16 items-center justify-between border-b border-border px-4 md:hidden">
            <div className="flex items-center gap-2">
-             <img src={invictusLogo} alt="Invictus" className="h-6" />
+             <img src={invictusLogo} alt="Invictus" className="h-5 shrink-0" />
              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                Financeiro
              </span>

@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Heart, MessageCircle, MoreHorizontal, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +38,8 @@ function FeedPostCardInner({
   const [viewerOpen, setViewerOpen] = React.useState(false);
   const [initialFocus, setInitialFocus] = React.useState<"comment" | "none">("none");
   const [deleting, setDeleting] = React.useState(false);
+  const [showHeart, setShowHeart] = React.useState(false);
+  const lastTapRef = React.useRef<number>(0);
 
   const isMyPost = user?.id === post.author_user_id;
 
@@ -63,6 +66,24 @@ function FeedPostCardInner({
       await qc.invalidateQueries({ queryKey: ["feed_posts"] });
     },
   });
+
+  const handleDoubleTap = () => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+      // Double tap detected
+      if (!post.liked_by_me) {
+        likeMutation.mutate();
+      }
+      // Show heart animation
+      setShowHeart(true);
+      setTimeout(() => setShowHeart(false), 800);
+      lastTapRef.current = 0;
+    } else {
+      lastTapRef.current = now;
+    }
+  };
 
   const primary = post.media_urls[0];
   const authorHref = post.author_username
@@ -181,11 +202,13 @@ function FeedPostCardInner({
         {primary ? (
           <button
             type="button"
-            onClick={() => {
-              setInitialFocus("none");
-              setViewerOpen(true);
+            onClick={(e) => {
+              handleDoubleTap();
             }}
-            className="block w-full bg-muted"
+            onDoubleClick={(e) => {
+              e.preventDefault();
+            }}
+            className="relative block w-full bg-muted select-none"
             aria-label="Abrir publicação"
           >
             <div className="max-h-[70svh] w-full overflow-hidden">
@@ -206,6 +229,24 @@ function FeedPostCardInner({
                   loading="lazy"
                 />
               )}
+            </div>
+
+            {/* Floating heart animation */}
+            <div
+              className={cn(
+                "pointer-events-none absolute inset-0 flex items-center justify-center transition-all duration-300",
+                showHeart ? "opacity-100 scale-100" : "opacity-0 scale-50"
+              )}
+            >
+              <Heart
+                className={cn(
+                  "h-24 w-24 text-white drop-shadow-lg transition-transform",
+                  showHeart ? "fill-white animate-pulse" : ""
+                )}
+                style={{
+                  filter: "drop-shadow(0 0 10px rgba(0,0,0,0.5))",
+                }}
+              />
             </div>
           </button>
         ) : null}

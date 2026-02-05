@@ -474,4 +474,13 @@ All colors MUST be HSL.
   .invictus-lead {
     @apply text-sm leading-relaxed text-muted-foreground;
   }
+
+  /* Hide scrollbar utility */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari, Opera */
+  }
 }

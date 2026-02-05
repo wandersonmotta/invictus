@@ -21,6 +21,11 @@ export function isAppHost(hostname: string) {
   return isCustomDomain(hostname) && hostname.startsWith("app.");
 }
 
+export function isFinanceiroHost(hostname: string) {
+  // Only consider `financeiro.` as a split-domain in custom domains.
+  return isCustomDomain(hostname) && hostname.startsWith("financeiro.");
+}
+
 export function getAppOrigin(hostname = window.location.hostname, protocol = window.location.protocol) {
   // Preview/staging: keep same origin.
   if (!isCustomDomain(hostname)) return window.location.origin;
@@ -31,6 +36,20 @@ export function getAppOrigin(hostname = window.location.hostname, protocol = win
   // Root may be www.; normalize to app.
   const base = hostname.startsWith("www.") ? hostname.slice(4) : hostname;
   return `${protocol}//app.${base}`;
+}
+
+export function getFinanceiroOrigin(hostname = window.location.hostname, protocol = window.location.protocol) {
+  // Preview/staging: keep same origin.
+  if (!isCustomDomain(hostname)) return window.location.origin;
+
+  // Already on financeiro.
+  if (hostname.startsWith("financeiro.")) return `${protocol}//${hostname}`;
+
+  // Root may be www. or app.; normalize to financeiro.
+  let base = hostname;
+  if (base.startsWith("www.")) base = base.slice(4);
+  if (base.startsWith("app.")) base = base.slice(4);
+  return `${protocol}//financeiro.${base}`;
 }
 
 export function buildAppUrlFromCurrentLocation(pathname: string) {

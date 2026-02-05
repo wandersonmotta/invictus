@@ -1,0 +1,119 @@
+ import { useState } from "react";
+ import { useNavigate } from "react-router-dom";
+ import { supabase } from "@/integrations/supabase/client";
+ import { rpcUntyped } from "@/lib/rpc";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { toast } from "@/hooks/use-toast";
+ import invictusLogo from "@/assets/INVICTUS-GOLD_1.png";
+ import "@/styles/invictus-auth.css";
+ 
+ export default function FinanceiroAuth() {
+   const navigate = useNavigate();
+   const [email, setEmail] = useState("");
+   const [password, setPassword] = useState("");
+   const [loading, setLoading] = useState(false);
+ 
+   const handleLogin = async (e: React.FormEvent) => {
+     e.preventDefault();
+     setLoading(true);
+ 
+     try {
+       const { data, error } = await supabase.auth.signInWithPassword({
+         email,
+         password,
+       });
+ 
+       if (error) throw error;
+ 
+       // Verify financeiro role
+       const { data: hasRole, error: roleError } = await rpcUntyped<boolean>(
+         "has_role",
+         {
+           _user_id: data.user.id,
+           _role: "financeiro",
+         }
+       );
+ 
+       if (roleError || !hasRole) {
+         await supabase.auth.signOut();
+         toast({
+           variant: "destructive",
+           title: "Acesso negado",
+           description: "Você não tem permissão para acessar o sistema financeiro.",
+         });
+         setLoading(false);
+         return;
+       }
+ 
+       navigate("/dashboard");
+     } catch (err: any) {
+       toast({
+         variant: "destructive",
+         title: "Erro ao entrar",
+         description: err.message || "Verifique suas credenciais.",
+       });
+     } finally {
+       setLoading(false);
+     }
+   };
+ 
+   return (
+     <div
+       className="relative flex min-h-screen items-center justify-center bg-cover bg-center p-4"
+       style={{ backgroundImage: "url('/images/invictus-auth-bg.jpg')" }}
+     >
+       <div className="absolute inset-0 bg-black/70" />
+ 
+       <div className="invictus-auth-frame relative z-10 w-full max-w-md rounded-xl border border-[hsl(var(--gold))]/40 bg-black/60 p-8 backdrop-blur-md">
+         <div className="mb-8 flex flex-col items-center gap-3">
+           <img src={invictusLogo} alt="Invictus" className="h-16" />
+           <span className="text-sm uppercase tracking-[0.25em] text-[hsl(var(--gold))]">
+             Acesso Financeiro
+           </span>
+         </div>
+ 
+         <form onSubmit={handleLogin} className="space-y-5">
+           <div className="space-y-2">
+             <Label htmlFor="email" className="text-muted-foreground">
+               E-mail
+             </Label>
+             <Input
+               id="email"
+               type="email"
+               value={email}
+               onChange={(e) => setEmail(e.target.value)}
+               placeholder="seu@email.com"
+               required
+               className="border-border bg-background/50"
+             />
+           </div>
+ 
+           <div className="space-y-2">
+             <Label htmlFor="password" className="text-muted-foreground">
+               Senha
+             </Label>
+             <Input
+               id="password"
+               type="password"
+               value={password}
+               onChange={(e) => setPassword(e.target.value)}
+               placeholder="••••••••"
+               required
+               className="border-border bg-background/50"
+             />
+           </div>
+ 
+           <Button
+             type="submit"
+             disabled={loading}
+             className="w-full bg-[hsl(var(--gold))] text-black hover:bg-[hsl(var(--gold))]/90"
+           >
+             {loading ? "Entrando..." : "Entrar"}
+           </Button>
+         </form>
+       </div>
+     </div>
+   );
+ }

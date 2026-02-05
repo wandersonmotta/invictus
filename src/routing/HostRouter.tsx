@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
-import { isAppHost as isAppHostFn, isLovableHost } from "@/lib/appOrigin";
+import { isAppHost as isAppHostFn, isLovableHost, isFinanceiroHost as isFinanceiroHostFn } from "@/lib/appOrigin";
 
 import { RedirectToApp } from "@/routing/RedirectToApp";
 
@@ -11,6 +11,8 @@ import ResetPasswordPage from "@/pages/ResetPassword";
 import { AppLayout } from "@/components/AppLayout";
 import { RequireAuth } from "@/auth/RequireAuth";
 import { RequireAdmin } from "@/auth/RequireAdmin";
+import { RequireFinanceiro } from "@/auth/RequireFinanceiro";
+import { FinanceiroLayout } from "@/components/financeiro/FinanceiroLayout";
 
 const Home = React.lazy(() => import("@/pages/Home"));
 const Index = React.lazy(() => import("@/pages/Index"));
@@ -28,9 +30,15 @@ const Leads = React.lazy(() => import("@/pages/Leads"));
 const LeadsConexoes = React.lazy(() => import("@/pages/LeadsConexoes"));
  const Carteira = React.lazy(() => import("@/pages/Carteira"));
 
+// Financeiro pages
+const FinanceiroAuth = React.lazy(() => import("@/pages/financeiro/FinanceiroAuth"));
+const FinanceiroDashboard = React.lazy(() => import("@/pages/financeiro/FinanceiroDashboard"));
+const AuditoriaDetalhe = React.lazy(() => import("@/pages/financeiro/AuditoriaDetalhe"));
+
 export function HostRouter() {
   const hostname = window.location.hostname;
   const isAppHost = isAppHostFn(hostname);
+  const isFinanceiroHost = isFinanceiroHostFn(hostname);
   const lovable = isLovableHost(hostname);
 
   // In *.lovable.app (preview/staging/published default domains) we DO NOT split by subdomain,
@@ -41,6 +49,35 @@ export function HostRouter() {
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        
+        {/* Financeiro routes for preview/staging */}
+        <Route path="/financeiro" element={<Navigate to="/financeiro/dashboard" replace />} />
+        <Route path="/financeiro/auth" element={<FinanceiroAuth />} />
+        <Route
+          path="/financeiro/dashboard"
+          element={
+            <RequireAuth>
+              <RequireFinanceiro>
+                <FinanceiroLayout>
+                  <FinanceiroDashboard />
+                </FinanceiroLayout>
+              </RequireFinanceiro>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/financeiro/auditoria/:withdrawalId"
+          element={
+            <RequireAuth>
+              <RequireFinanceiro>
+                <FinanceiroLayout>
+                  <AuditoriaDetalhe />
+                </FinanceiroLayout>
+              </RequireFinanceiro>
+            </RequireAuth>
+          }
+        />
+
         <Route
           path="/aguardando-aprovacao"
           element={
@@ -209,11 +246,46 @@ export function HostRouter() {
   }
 
   // Root domain: only Landing. Anything else -> app subdomain (preserving path).
-  if (!isAppHost) {
+  if (!isAppHost && !isFinanceiroHost) {
     return (
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="*" element={<RedirectToApp />} />
+      </Routes>
+    );
+  }
+
+  // Financeiro subdomain: isolated back office for financial team
+  if (isFinanceiroHost) {
+    return (
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/auth" element={<FinanceiroAuth />} />
+        <Route
+          path="/dashboard"
+          element={
+            <RequireAuth>
+              <RequireFinanceiro>
+                <FinanceiroLayout>
+                  <FinanceiroDashboard />
+                </FinanceiroLayout>
+              </RequireFinanceiro>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/auditoria/:withdrawalId"
+          element={
+            <RequireAuth>
+              <RequireFinanceiro>
+                <FinanceiroLayout>
+                  <AuditoriaDetalhe />
+                </FinanceiroLayout>
+              </RequireFinanceiro>
+            </RequireAuth>
+          }
+        />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     );
   }

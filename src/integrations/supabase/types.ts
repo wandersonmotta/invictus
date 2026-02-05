@@ -184,6 +184,50 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_sources: {
+        Row: {
+          commission_rate: number
+          created_at: string
+          id: string
+          level: number
+          product_name: string
+          product_sku: string | null
+          referral_user_id: string | null
+          sale_amount: number
+          transaction_id: string
+        }
+        Insert: {
+          commission_rate: number
+          created_at?: string
+          id?: string
+          level?: number
+          product_name: string
+          product_sku?: string | null
+          referral_user_id?: string | null
+          sale_amount: number
+          transaction_id: string
+        }
+        Update: {
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          level?: number
+          product_name?: string
+          product_sku?: string | null
+          referral_user_id?: string | null
+          sale_amount?: number
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_sources_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "wallet_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       community_channels: {
         Row: {
           created_at: string
@@ -1057,6 +1101,125 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          metadata: Json | null
+          source_id: string | null
+          source_type: string
+          type: Database["public"]["Enums"]["wallet_transaction_type"]
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          id?: string
+          metadata?: Json | null
+          source_id?: string | null
+          source_type: string
+          type: Database["public"]["Enums"]["wallet_transaction_type"]
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          metadata?: Json | null
+          source_id?: string | null
+          source_type?: string
+          type?: Database["public"]["Enums"]["wallet_transaction_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      withdrawal_audits: {
+        Row: {
+          action: string
+          id: string
+          notes: string | null
+          performed_at: string
+          performed_by: string
+          snapshot: Json
+          withdrawal_id: string
+        }
+        Insert: {
+          action: string
+          id?: string
+          notes?: string | null
+          performed_at?: string
+          performed_by: string
+          snapshot?: Json
+          withdrawal_id: string
+        }
+        Update: {
+          action?: string
+          id?: string
+          notes?: string | null
+          performed_at?: string
+          performed_by?: string
+          snapshot?: Json
+          withdrawal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawal_audits_withdrawal_id_fkey"
+            columns: ["withdrawal_id"]
+            isOneToOne: false
+            referencedRelation: "withdrawal_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      withdrawal_requests: {
+        Row: {
+          fee_amount: number
+          gross_amount: number
+          id: string
+          net_amount: number
+          pix_key: string
+          rejection_reason: string | null
+          requested_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["withdrawal_status"]
+          transaction_id: string | null
+          user_id: string
+        }
+        Insert: {
+          fee_amount: number
+          gross_amount: number
+          id?: string
+          net_amount: number
+          pix_key: string
+          rejection_reason?: string | null
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["withdrawal_status"]
+          transaction_id?: string | null
+          user_id: string
+        }
+        Update: {
+          fee_amount?: number
+          gross_amount?: number
+          id?: string
+          net_amount?: number
+          pix_key?: string
+          rejection_reason?: string | null
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["withdrawal_status"]
+          transaction_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1156,6 +1319,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      approve_withdrawal: {
+        Args: { p_notes?: string; p_withdrawal_id: string }
+        Returns: boolean
+      }
       can_view_author: { Args: { p_author_id: string }; Returns: boolean }
       can_view_feed_media: { Args: { p_object_name: string }; Returns: boolean }
       can_view_post: { Args: { p_post_id: string }; Returns: boolean }
@@ -1183,6 +1350,10 @@ export type Database = {
             Args: { p_caption: string; p_media: Json; p_post_id: string }
             Returns: string
           }
+      create_withdrawal_request: {
+        Args: { p_gross_amount: number; p_pix_key: string }
+        Returns: string
+      }
       delete_community_post: { Args: { p_post_id: string }; Returns: string }
       delete_feed_post: { Args: { p_post_id: string }; Returns: boolean }
       delete_feed_post_comment: {
@@ -1273,6 +1444,7 @@ export type Database = {
           type: Database["public"]["Enums"]["conversation_type"]
         }[]
       }
+      get_my_wallet: { Args: never; Returns: Json }
       get_nearby_member_pins: {
         Args: {
           p_lat: number
@@ -1331,6 +1503,20 @@ export type Database = {
           username: string
         }[]
       }
+      get_user_balance: { Args: { p_user_id: string }; Returns: number }
+      get_user_financial_summary: {
+        Args: { p_user_id: string }
+        Returns: {
+          current_balance: number
+          pending_withdrawals: number
+          total_credits: number
+          total_debits: number
+        }[]
+      }
+      get_withdrawal_audit_details: {
+        Args: { p_withdrawal_id: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1343,6 +1529,7 @@ export type Database = {
         Returns: number
       }
       is_approved: { Args: never; Returns: boolean }
+      is_financeiro: { Args: never; Returns: boolean }
       is_mutual_follow: { Args: { a: string; b: string }; Returns: boolean }
       list_community_channels: {
         Args: never
@@ -1454,6 +1641,22 @@ export type Database = {
           type: string
         }[]
       }
+      list_pending_withdrawals: {
+        Args: { p_limit?: number }
+        Returns: {
+          avatar_url: string
+          current_balance: number
+          display_name: string
+          fee_amount: number
+          gross_amount: number
+          net_amount: number
+          pix_key: string
+          requested_at: string
+          user_id: string
+          username: string
+          withdrawal_id: string
+        }[]
+      }
       list_profile_feed_posts: {
         Args: { p_before?: string; p_limit?: number; p_user_id: string }
         Returns: {
@@ -1476,6 +1679,10 @@ export type Database = {
         }[]
       }
       mark_notifications_read: { Args: { p_before: string }; Returns: number }
+      reject_withdrawal: {
+        Args: { p_reason: string; p_withdrawal_id: string }
+        Returns: boolean
+      }
       remove_follower: { Args: { p_follower_id: string }; Returns: boolean }
       search_approved_members: {
         Args: { p_limit?: number; p_search?: string }
@@ -1534,6 +1741,8 @@ export type Database = {
       conversation_folder: "inbox" | "requests"
       conversation_type: "direct" | "group"
       profile_visibility: "members" | "mutuals" | "private"
+      wallet_transaction_type: "credit" | "debit"
+      withdrawal_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1666,6 +1875,8 @@ export const Constants = {
       conversation_folder: ["inbox", "requests"],
       conversation_type: ["direct", "group"],
       profile_visibility: ["members", "mutuals", "private"],
+      wallet_transaction_type: ["credit", "debit"],
+      withdrawal_status: ["pending", "approved", "rejected"],
     },
   },
 } as const

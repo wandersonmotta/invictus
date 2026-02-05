@@ -73,10 +73,10 @@
      >
        <div className="absolute inset-0 bg-black/70" />
  
-        <div className="invictus-auth-frame relative z-10 my-4 w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl border border-[hsl(var(--gold))]/40 bg-black/60 p-8 backdrop-blur-md">
+         <div className="invictus-auth-frame relative z-10 my-4 w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl border border-primary/40 bg-black/60 p-8 backdrop-blur-md">
          <div className="mb-8 flex flex-col items-center gap-3">
            <img src={invictusLogo} alt="Invictus" className="h-16" />
-           <span className="text-sm uppercase tracking-[0.25em] text-[hsl(var(--gold))]">
+            <span className="text-sm uppercase tracking-[0.25em] text-primary">
              Acesso Financeiro
            </span>
          </div>
@@ -116,7 +116,7 @@
              <Button
                type="submit"
                disabled={loading}
-               className="w-full bg-[hsl(var(--gold))] text-black hover:bg-[hsl(var(--gold))]/90"
+                className="w-full"
              >
                {loading ? "Entrando..." : "Entrar"}
              </Button>

@@ -47,11 +47,11 @@
  export function TestimonialsSection() {
    return (
      <SectionShell id="depoimentos" title="Quem Vive a Invictus">
-      <div className="invictus-stagger--lr grid gap-3 sm:gap-4 lg:gap-5 md:grid-cols-2 xl:grid-cols-4">
+      <div className="invictus-stagger--lr grid gap-3 sm:gap-4 lg:gap-5 md:auto-rows-fr md:grid-cols-2 xl:grid-cols-4">
          {testimonials.map((t, i) => (
            <article
              key={t.name}
-            className="invictus-landing-card invictus-landing-card--lift group relative flex min-h-[200px] flex-col gap-3 p-4 sm:min-h-[220px] sm:gap-4 sm:p-5 lg:p-6"
+            className="invictus-landing-card invictus-landing-card--lift group relative flex h-full flex-col justify-between gap-3 p-4 sm:gap-4 sm:p-5 lg:p-6"
              style={{ "--stagger-index": i } as React.CSSProperties}
            >
              {/* Quote icon */}
@@ -61,12 +61,12 @@
              />
  
              {/* Quote text */}
-             <blockquote className="flex-1 text-sm leading-relaxed text-muted-foreground sm:text-base">
+            <blockquote className="text-sm leading-relaxed text-muted-foreground sm:text-base">
                "{t.quote}"
              </blockquote>
  
              {/* Author */}
-             <footer className="flex items-center gap-3 border-t border-border/40 pt-4">
+            <footer className="mt-auto flex items-center gap-3 border-t border-border/40 pt-3 sm:pt-4">
                <Avatar className="size-10 ring-2 ring-primary/20">
                  <AvatarImage src={t.avatar} alt={t.name} />
                  <AvatarFallback className="bg-primary/10 text-xs font-medium text-primary">

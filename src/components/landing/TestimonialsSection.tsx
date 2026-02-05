@@ -11,7 +11,7 @@
  
  const testimonials = [
    {
-     name: "Ricardo M.",
+    name: "Ricardo M",
      role: "Empresário, SP",
      avatar: ricardoImg,
      initials: "RM",
@@ -19,7 +19,7 @@
        "A Invictus me tirou da zona de conforto. Em 6 meses, estruturei processos que adiava há anos. Aqui não tem espaço pra desculpa — só pra resultado.",
    },
    {
-     name: "Camila S.",
+    name: "Camila S",
      role: "Investidora, RJ",
      avatar: camilaImg,
      initials: "CS",
@@ -27,7 +27,7 @@
        "Nunca encontrei um ambiente assim. Pessoas sérias, com mentalidade de crescimento real. A cobrança incomoda, mas é ela que move.",
    },
    {
-     name: "Bruno F.",
+    name: "Bruno F",
      role: "Consultor, PR",
      avatar: brunoImg,
      initials: "BF",
@@ -35,7 +35,7 @@
        "Entrei cético, achando que seria mais um grupo. Me enganei. A disciplina aqui é diferente — quem não acompanha, sai. Simples assim.",
    },
    {
-     name: "Lucas P.",
+    name: "Lucas P",
      role: "Empreendedor, MG",
      avatar: lucasImg,
      initials: "LP",

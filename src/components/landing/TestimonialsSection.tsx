@@ -56,12 +56,12 @@
            >
              {/* Quote icon */}
              <Quote
-               className="absolute right-4 top-4 size-6 text-primary/30 transition-colors group-hover:text-primary/50"
+               className="absolute right-3 top-3 size-5 text-primary/30 transition-colors group-hover:text-primary/50 sm:right-4 sm:top-4 sm:size-6"
                aria-hidden="true"
              />
  
              {/* Quote text */}
-            <blockquote className="text-sm leading-relaxed text-muted-foreground sm:text-base">
+             <blockquote className="pr-6 text-sm leading-relaxed text-muted-foreground sm:pr-8 sm:text-base">
                "{t.quote}"
              </blockquote>
  

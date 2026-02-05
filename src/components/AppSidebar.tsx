@@ -66,7 +66,7 @@ const navSections: NavSection[] = [
     label: "Conta",
     items: [
       { title: "Perfil", url: "/perfil", icon: User },
-      { title: "Carteira", url: "/carteira", icon: Wallet, placeholder: true },
+       { title: "Carteira", url: "/carteira", icon: Wallet },
       { title: "Pontos", url: "/pontos", icon: Gift, placeholder: true },
       { title: "Suporte", url: "/suporte", icon: HelpCircle, placeholder: true },
     ],

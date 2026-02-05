@@ -26,6 +26,7 @@ const Feed = React.lazy(() => import("@/pages/Feed"));
 const Membro = React.lazy(() => import("@/pages/Membro"));
 const Leads = React.lazy(() => import("@/pages/Leads"));
 const LeadsConexoes = React.lazy(() => import("@/pages/LeadsConexoes"));
+ const Carteira = React.lazy(() => import("@/pages/Carteira"));
 
 export function HostRouter() {
   const hostname = window.location.hostname;
@@ -179,6 +180,16 @@ export function HostRouter() {
             </RequireAuth>
           }
         />
+         <Route
+           path="/carteira"
+           element={
+             <RequireAuth>
+               <AppLayout>
+                 <Carteira />
+               </AppLayout>
+             </RequireAuth>
+           }
+         />
         <Route
           path="/admin"
           element={
@@ -354,6 +365,16 @@ export function HostRouter() {
           </RequireAuth>
         }
       />
+         <Route
+           path="/carteira"
+           element={
+             <RequireAuth>
+               <AppLayout>
+                 <Carteira />
+               </AppLayout>
+             </RequireAuth>
+           }
+         />
       <Route
         path="/admin"
         element={

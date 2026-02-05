@@ -1,97 +1,78 @@
 
-Objetivo
-- Eliminar completamente a rolagem horizontal (rolar para a direita) no celular e tablet nas views:
-  - Meta Ads
-  - Google Ads
-- Manter a experiência “rica” no desktop, mas no mobile tudo deve caber na largura da tela.
 
-Diagnóstico (com base no código atual)
-- O componente `CampaignsTable` ainda força largura mínima (`min-w-[600px]`) e isso, mesmo com `overflow-x-auto`, costuma gerar sensação de “tela não responsiva” (e em alguns casos acaba criando overflow no layout pai).
-- Em mobile, tabelas densas são o principal motivo de overflow. Você confirmou que no mobile quer “Cards (sem rolagem)”.
+## Correção do Sistema de Mensagens (Direct)
 
-Mudanças que vou implementar (sem alterar o visual desktop)
+Vou resolver os 4 problemas que você identificou:
 
-1) CampaignsTable: criar layout “Cards” para mobile e manter tabela para md+
-Arquivos:
-- `src/components/leads/charts/CampaignsTable.tsx`
+### Problema 1: Membro fantasma "Membro" aparece na lista de seleção
 
-O que será feito:
-- Renderização condicional por breakpoint:
-  - Mobile (< md): lista de cards (um card por campanha), sem tabela e sem `min-width` forçando overflow.
-  - Desktop (md+): tabela como hoje (pode manter a versão atual com colunas completas).
-- Remover/evitar `min-w-[600px]` no layout mobile.
-- Conteúdo dos cards (mobile):
-  - Meta:
-    - Nome (com status)
-    - Investimento
-    - Custo por compra
-    - Compras
-  - Google Ads:
-    - Nome
-    - Investimento
-    - Custo por conversão
-    - Conversões
-    - Taxa de conversão (se existir)
-- Ajustar truncamento (`min-w-0`, `truncate`) para garantir que textos longos não empurrem a largura.
-- Manter o “efeito premium” (vidro fosco) nos cards e tipografia consistente com o dashboard.
+**Diagnóstico**: A função `search_approved_members` retorna TODOS os perfis aprovados, incluindo perfis sem nome preenchido (que aparecem como "Membro" por padrão). O perfil `cab4930c-f275-4079-a89f-b1e97a0a4898` no banco tem `display_name = null` e `username = null`.
 
-2) LeadsMetaView: garantir que nada “force” largura no mobile
-Arquivos:
-- `src/components/leads/views/LeadsMetaView.tsx`
+**Solução**: Modificar a função `search_approved_members` para excluir perfis que não têm nem `display_name` nem `username` preenchidos.
 
-O que será feito:
-- Trocar o uso de `CampaignsTable` para aproveitar automaticamente o novo modo “cards no mobile”.
-- Revisar containers de cards e grids para garantir `min-w-0` quando necessário (principalmente em blocos com texto + números).
-- Garantir que o bloco de legenda do gráfico não crie overflow (ex.: adicionar `flex-wrap` ou reduzir gaps em telas pequenas, se necessário).
+### Problema 2: Lista de "Nova mensagem" mostra qualquer membro (não só mútuos)
 
-3) LeadsGoogleAdsView + KeywordsTable: impedir overflow por cabeçalhos/colunas rígidas
-Arquivos:
-- `src/components/leads/views/LeadsGoogleAdsView.tsx`
-- `src/components/leads/charts/KeywordsTable.tsx`
+**Diagnóstico**: A função `search_approved_members` atualmente retorna qualquer membro aprovado, sem verificar se existe conexão mútua. Você quer que só apareçam pessoas que você segue E que te seguem.
 
-O que será feito:
-- `CampaignsTable` (Google Ads) vai passar a usar cards no mobile automaticamente após a mudança no componente.
-- `KeywordsTable`:
-  - Ajustar o cabeçalho (linha com “Cliques” e “Conversões”) para não depender de `gap-6` fixo em telas estreitas.
-  - Opção que vou aplicar: transformar o cabeçalho em um mini-grid responsivo (ou `flex-wrap`) e reduzir gaps no mobile.
-  - Garantir que keyword longa nunca estoure a largura: reforçar `min-w-0` no container do item + `truncate`.
+**Solução**: Criar uma nova função `search_mutual_connections` que filtra apenas conexões mútuas (seguem um ao outro) para usar no diálogo de Nova Mensagem.
 
-4) “Trava de segurança” contra overflow no container principal (somente se necessário)
-Arquivo:
-- `src/pages/Leads.tsx`
+### Problema 3: Histórico reaparece ao iniciar conversa com pessoa que já excluiu
 
-O que será feito (com cuidado):
-- Se após os ajustes ainda existir overflow horizontal, vou aplicar `overflow-x-hidden` no container de conteúdo (não no body inteiro) para impedir qualquer “vazamento” de largura.
-- Importante: só farei isso depois que os componentes estiverem realmente responsivos, para não “mascarar” problema cortando conteúdo.
+**Diagnóstico**: Quando você clica em "Nova mensagem" com a Joyce, a função `create_conversation` encontra a conversa existente (mesmo que você tenha marcado `hidden_at`) e retorna o ID dela. O problema é que:
+1. A conversa é "re-descoberta" (retorna ID existente)
+2. O `hidden_at` NÃO é limpo
+3. Mas as mensagens antigas continuam visíveis porque o chat carrega todas mensagens da conversa
 
-Como vou testar (de verdade) antes de te devolver
-Ambiente mobile (390x844):
-1) Abrir `/leads` no mobile.
-2) Trocar para “Meta Ads” (via dropdown do seletor mobile):
-   - Confirmar: não existe rolagem horizontal da página.
-   - Confirmar: seção “Campanhas” aparece em cards empilhados, legível.
-3) Trocar para “Google Ads”:
-   - Confirmar: não existe rolagem horizontal da página.
-   - Confirmar: “Palavras-chave” não estoura largura.
-   - Confirmar: “Campanhas” em cards, sem scroll lateral.
-4) Tablet (ex.: 768px de largura):
-   - Confirmar: layout fica em 2 colunas quando aplicável, sem overflow.
-5) Desktop:
-   - Confirmar: tabelas continuam em formato tabela com colunas completas.
+**Solução**:
+1. Modificar `create_conversation` para, ao re-descobrir conversa oculta, limpar o `hidden_at` (reativar a conversa)
+2. Quando a conversa é reativada, marcar todas as mensagens antigas como "excluídas para mim" automaticamente, para que você comece do zero (comportamento Instagram)
 
-Critérios de aceite (o que vai ficar “certo”)
-- No celular:
-  - Zero rolagem horizontal na página.
-  - Campanhas em cards (não tabela) para Meta e Google Ads.
-  - Textos longos truncam com reticências, sem estourar o layout.
-- No tablet:
-  - Layout fluido, sem precisar “arrastar para o lado”.
-- No desktop:
-  - Mantém o layout completo (tabela + colunas).
+### Problema 4: Mensagem "Excluir para todos" ainda mostra placeholder
 
-Arquivos envolvidos (previsto)
-- `src/components/leads/charts/CampaignsTable.tsx`
-- `src/components/leads/views/LeadsMetaView.tsx`
-- `src/components/leads/views/LeadsGoogleAdsView.tsx`
-- `src/components/leads/charts/KeywordsTable.tsx`
-- (opcional, só se necessário) `src/pages/Leads.tsx`
+**Diagnóstico**: Atualmente o `MessageBubble` mostra "Mensagem excluída" quando `deleted_at` está preenchido. Você quer que a mensagem suma completamente (como Instagram).
+
+**Solução**: Modificar o `MessageBubble.tsx` para retornar `null` quando `deleted_at` está preenchido, em vez de mostrar o placeholder.
+
+---
+
+## Arquivos a serem modificados
+
+### 1. Nova migration SQL
+
+Criar migration com:
+
+```text
+1. CREATE FUNCTION search_mutual_connections(p_search, p_limit)
+   - Retorna apenas conexões mútuas
+   - Exclui perfis sem nome E sem username
+
+2. UPDATE FUNCTION create_conversation()
+   - Ao encontrar conversa DM existente:
+     - Se hidden_at do usuário atual está preenchido:
+       - Limpar hidden_at (reativar conversa)
+       - Marcar TODAS mensagens antigas como deleted_for do usuário
+   - Isso faz com que ao reabrir, o histórico comece do zero
+```
+
+### 2. `src/components/messages/NewMessageDialog.tsx`
+
+- Trocar de `search_approved_members` para `search_mutual_connections`
+- Só conexões mútuas aparecem na lista de seleção
+
+### 3. `src/components/messages/MessageBubble.tsx`
+
+- Remover o bloco que mostra "Mensagem excluída"
+- Quando `deleted_at` está preenchido, retornar `null` (mensagem some completamente)
+
+---
+
+## Resumo das mudanças de comportamento
+
+| Cenário | Antes | Depois |
+|---------|-------|--------|
+| Quem aparece em "Nova mensagem" | Qualquer membro aprovado | Apenas conexões mútuas |
+| Perfis sem nome/username | Aparecem como "Membro" | Não aparecem |
+| Excluir conversa → reabrir | Histórico reaparece | Começa do zero |
+| "Excluir para todos" | Mostra "Mensagem excluída" | Some totalmente |
+| Outra pessoa envia msg após você excluir | Não reaparecia | Reaparece na caixa (hidden_at limpo) |
+

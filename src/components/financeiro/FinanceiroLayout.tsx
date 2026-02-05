@@ -30,9 +30,9 @@ import { cn } from "@/lib/utils";
      <div className="flex min-h-screen bg-background">
        {/* Sidebar */}
        <aside className="hidden w-64 flex-col border-r border-border bg-card lg:flex">
-         <div className="flex h-16 items-center gap-2 border-b border-border px-4">
-           <img src={invictusLogo} alt="Invictus" className="h-6 shrink-0" />
-           <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+         <div className="flex h-16 items-center gap-3 border-b border-border px-4">
+           <img src={invictusLogo} alt="Invictus" className="h-8 shrink-0" />
+           <span className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
              Financeiro
            </span>
          </div>

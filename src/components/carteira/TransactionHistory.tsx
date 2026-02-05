@@ -35,7 +35,7 @@
        </div>
  
        {/* Filters */}
-       <div className="flex flex-wrap gap-2">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
          {filters.map((filter) => {
            const isActive = activeFilter === filter.id;
            return (
@@ -43,13 +43,13 @@
                key={filter.id}
                onClick={() => setActiveFilter(filter.id)}
                className={cn(
-                 "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  "inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors",
                  isActive
                    ? "bg-primary text-primary-foreground"
                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                )}
              >
-               <filter.icon className="size-3.5" />
+                <filter.icon className="size-3" />
                {filter.label}
              </button>
            );

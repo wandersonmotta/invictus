@@ -1,8 +1,10 @@
  import { ReactNode } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useTheme } from "next-themes";
  import { supabase } from "@/integrations/supabase/client";
  import { Button } from "@/components/ui/button";
- import { LogOut, FileText, ListChecks, BarChart3 } from "lucide-react";
+import { LogOut, FileText, ListChecks, BarChart3, Monitor, Sun, Moon } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
  import invictusLogo from "@/assets/INVICTUS-GOLD_1.png";
 import { cn } from "@/lib/utils";
  import { isLovableHost } from "@/lib/appOrigin";
@@ -14,6 +16,7 @@ import { cn } from "@/lib/utils";
  export function FinanceiroLayout({ children }: FinanceiroLayoutProps) {
    const navigate = useNavigate();
   const location = useLocation();
+  const { theme, setTheme } = useTheme();
 
   const basePath = isLovableHost(window.location.hostname) ? "/financeiro" : "";
  
@@ -45,7 +48,39 @@ import { cn } from "@/lib/utils";
            </NavItem>
          </nav>
  
-         <div className="border-t border-border p-4">
+          <div className="border-t border-border p-4 space-y-4">
+            {/* Theme Toggle */}
+            <div className="px-1">
+              <ToggleGroup
+                type="single"
+                value={theme}
+                onValueChange={(value) => value && setTheme(value)}
+                className="w-full justify-start gap-1"
+              >
+                <ToggleGroupItem
+                  value="system"
+                  aria-label="Padrão do sistema"
+                  className="flex-1 gap-1 px-2 py-1.5 text-xs data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+                >
+                  <Monitor className="h-3.5 w-3.5" />
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="light"
+                  aria-label="Modo claro"
+                  className="flex-1 gap-1 px-2 py-1.5 text-xs data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+                >
+                  <Sun className="h-3.5 w-3.5" />
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="dark"
+                  aria-label="Modo escuro"
+                  className="flex-1 gap-1 px-2 py-1.5 text-xs data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+                >
+                  <Moon className="h-3.5 w-3.5" />
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+
            <Button
              variant="ghost"
              size="sm"
@@ -68,9 +103,40 @@ import { cn } from "@/lib/utils";
                Financeiro
              </span>
            </div>
-           <Button variant="ghost" size="icon" onClick={handleLogout}>
-             <LogOut className="h-4 w-4" />
-           </Button>
+            <div className="flex items-center gap-2">
+              {/* Mobile Theme Toggle */}
+              <ToggleGroup
+                type="single"
+                value={theme}
+                onValueChange={(value) => value && setTheme(value)}
+                className="gap-0.5"
+              >
+                <ToggleGroupItem
+                  value="system"
+                  aria-label="Padrão do sistema"
+                  className="h-8 w-8 p-0 data-[state=on]:bg-accent"
+                >
+                  <Monitor className="h-3.5 w-3.5" />
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="light"
+                  aria-label="Modo claro"
+                  className="h-8 w-8 p-0 data-[state=on]:bg-accent"
+                >
+                  <Sun className="h-3.5 w-3.5" />
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="dark"
+                  aria-label="Modo escuro"
+                  className="h-8 w-8 p-0 data-[state=on]:bg-accent"
+                >
+                  <Moon className="h-3.5 w-3.5" />
+                </ToggleGroupItem>
+              </ToggleGroup>
+              <Button variant="ghost" size="icon" onClick={handleLogout}>
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
          </header>
  
          <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>

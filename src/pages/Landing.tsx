@@ -2,6 +2,7 @@ import * as React from "react";
 
 import { LandingTopbar } from "@/components/landing/LandingTopbar";
 import { WaitlistHero } from "@/components/landing/WaitlistHero";
+import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
 import {
   FinalWarning,
   LeadershipAndRule,
@@ -36,6 +37,7 @@ export default function Landing() {
       <LeadershipAndRule />
       <FinalWarning />
       <WaitlistHero />
+      <TestimonialsSection />
       <LandingFooter />
     </main>
   );

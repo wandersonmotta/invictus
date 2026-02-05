@@ -240,8 +240,8 @@ function FeedPostCardInner({
             >
               <Heart
                 className={cn(
-                  "h-24 w-24 text-white drop-shadow-lg transition-transform",
-                  showHeart ? "fill-white animate-pulse" : ""
+                  "h-24 w-24 drop-shadow-lg transition-transform",
+                  showHeart ? "fill-[#fe3b59] text-[#fe3b59] animate-pulse" : "text-[#fe3b59]"
                 )}
                 style={{
                   filter: "drop-shadow(0 0 10px rgba(0,0,0,0.5))",

@@ -1530,7 +1530,7 @@ export type Database = {
     }
     Enums: {
       access_status: "pending" | "approved" | "rejected"
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "financeiro"
       conversation_folder: "inbox" | "requests"
       conversation_type: "direct" | "group"
       profile_visibility: "members" | "mutuals" | "private"
@@ -1662,7 +1662,7 @@ export const Constants = {
   public: {
     Enums: {
       access_status: ["pending", "approved", "rejected"],
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "financeiro"],
       conversation_folder: ["inbox", "requests"],
       conversation_type: ["direct", "group"],
       profile_visibility: ["members", "mutuals", "private"],

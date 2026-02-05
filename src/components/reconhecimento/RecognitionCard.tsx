@@ -8,7 +8,7 @@ interface RecognitionCardProps {
   isCurrentLevel?: boolean;
   isAchieved?: boolean;
   isFuture?: boolean;
-  /** Compact horizontal layout for mobile */
+  /** Compact vertical layout for mobile (smaller dimensions, same structure) */
   compact?: boolean;
 }
 
@@ -19,99 +19,29 @@ export function RecognitionCard({
   isFuture = false,
   compact = false,
 }: RecognitionCardProps) {
-  // Compact horizontal layout for mobile/tablet
-  if (compact) {
-    return (
-      <article
-        className={cn(
-          "flex gap-3 w-full h-[100px]",
-          "invictus-surface invictus-frame",
-          "rounded-xl overflow-visible",
-          "transition-all duration-300",
-          isCurrentLevel && "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-[0_0_16px_hsl(var(--primary)/0.4)]",
-          isFuture && "opacity-60"
-        )}
-      >
-        {/* Award Image - Left side */}
-        <div
-          className={cn(
-            "w-20 h-full shrink-0 rounded-l-xl overflow-hidden",
-            "flex items-center justify-center",
-            !level.imageUrl && `bg-gradient-to-br ${level.gradient}`
-          )}
-        >
-          {level.imageUrl ? (
-            <img
-              src={level.imageUrl}
-              alt={`Placa ${level.name}`}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <Trophy
-              className="h-8 w-8 text-white/80 drop-shadow-lg"
-              strokeWidth={1.5}
-            />
-          )}
-
-          {/* Achieved checkmark */}
-          {isAchieved && (
-            <div className="absolute top-1 right-1 bg-emerald-600 rounded-full p-0.5 shadow-lg">
-              <Check className="h-3 w-3 text-white" strokeWidth={3} />
-            </div>
-          )}
-        </div>
-
-        {/* Content - Right side */}
-        <div className="flex-1 flex flex-col justify-center py-2 pr-3 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-sm font-semibold text-foreground truncate">
-              {level.name}
-            </h3>
-            {isCurrentLevel && (
-              <Badge
-                variant="default"
-                className="text-[9px] font-bold px-1.5 py-0 bg-primary text-primary-foreground shrink-0"
-              >
-                ATUAL
-              </Badge>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground leading-snug line-clamp-2 mb-1.5">
-            {level.description}
-          </p>
-          <Badge
-            variant="secondary"
-            className="text-[10px] font-medium px-2 py-0.5 w-fit"
-          >
-            Ganha: {level.points.toLocaleString("pt-BR")} pts
-          </Badge>
-        </div>
-      </article>
-    );
-  }
-
-  // Full vertical layout for desktop
   return (
     <article
       className={cn(
         "group flex-shrink-0 snap-start",
-        "w-[clamp(200px,50vw,280px)]",
         "invictus-surface invictus-frame",
         "rounded-xl",
         "overflow-visible",
         "transition-all duration-300",
-        "md:hover:scale-[1.03] md:hover:shadow-[0_0_24px_hsl(var(--primary)/0.25)]",
+        // Compact: smaller fixed width for mobile grid
+        // Full: larger cards for desktop horizontal scroll
+        compact ? "w-[140px]" : "w-[clamp(200px,50vw,280px)]",
+        !compact && "md:hover:scale-[1.03] md:hover:shadow-[0_0_24px_hsl(var(--primary)/0.25)]",
         isCurrentLevel && "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-[0_0_20px_hsl(var(--primary)/0.4)]",
         isFuture && "opacity-60"
       )}
     >
-      {/* Award Image / Placeholder - overflow hidden only here */}
+      {/* Award Image / Placeholder */}
       <div
         className={cn(
-          "relative aspect-[4/5] w-full",
+          "relative w-full",
           "flex items-center justify-center",
           "overflow-hidden rounded-t-xl",
+          compact ? "aspect-[4/5]" : "aspect-[4/5]",
           !level.imageUrl && `bg-gradient-to-br ${level.gradient}`
         )}
       >
@@ -124,48 +54,67 @@ export function RecognitionCard({
           />
         ) : (
           <>
-            {/* Trophy Icon Placeholder */}
             <Trophy
-              className="h-16 w-16 text-white/80 drop-shadow-lg"
+              className={cn(
+                "text-white/80 drop-shadow-lg",
+                compact ? "h-10 w-10" : "h-16 w-16"
+              )}
               strokeWidth={1.5}
             />
-            {/* Metallic Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-white/10 pointer-events-none" />
           </>
         )}
 
         {/* Achieved checkmark */}
         {isAchieved && (
-          <div className="absolute top-2 right-2 bg-emerald-600 rounded-full p-1 shadow-lg">
-            <Check className="h-4 w-4 text-white" strokeWidth={3} />
+          <div className={cn(
+            "absolute bg-emerald-600 rounded-full shadow-lg",
+            compact ? "top-1 right-1 p-0.5" : "top-2 right-2 p-1"
+          )}>
+            <Check className={cn("text-white", compact ? "h-3 w-3" : "h-4 w-4")} strokeWidth={3} />
           </div>
         )}
 
         {/* Current level badge */}
         {isCurrentLevel && (
-          <div className="absolute top-2 left-2">
+          <div className={cn("absolute", compact ? "top-1 left-1" : "top-2 left-2")}>
             <Badge
               variant="default"
-              className="text-[10px] font-bold px-2 py-0.5 bg-primary text-primary-foreground shadow-lg"
+              className={cn(
+                "font-bold bg-primary text-primary-foreground shadow-lg",
+                compact ? "text-[8px] px-1.5 py-0" : "text-[10px] px-2 py-0.5"
+              )}
             >
-              SEU NÍVEL
+              {compact ? "ATUAL" : "SEU NÍVEL"}
             </Badge>
           </div>
         )}
       </div>
 
       {/* Card Content */}
-      <div className="p-4 space-y-2 rounded-b-xl bg-background/80">
-        <h3 className="text-base font-semibold text-foreground leading-tight truncate">
+      <div className={cn(
+        "rounded-b-xl bg-background/80",
+        compact ? "p-2 space-y-1" : "p-4 space-y-2"
+      )}>
+        <h3 className={cn(
+          "font-semibold text-foreground leading-tight truncate",
+          compact ? "text-xs" : "text-base"
+        )}>
           {level.name}
         </h3>
-        <p className="text-sm text-muted-foreground leading-snug line-clamp-2">
+        <p className={cn(
+          "text-muted-foreground leading-snug",
+          compact ? "text-[10px] line-clamp-2" : "text-sm line-clamp-2"
+        )}>
           {level.description}
         </p>
         <div className="flex items-center justify-between pt-1">
           <Badge
             variant="secondary"
-            className="text-xs font-medium px-2.5 py-0.5"
+            className={cn(
+              "font-medium",
+              compact ? "text-[9px] px-1.5 py-0" : "text-xs px-2.5 py-0.5"
+            )}
           >
             Ganha: {level.points.toLocaleString("pt-BR")} pts
           </Badge>

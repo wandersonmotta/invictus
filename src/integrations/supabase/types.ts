@@ -1480,6 +1480,10 @@ export type Database = {
         Args: { p_body: string; p_conversation_id: string }
         Returns: string
       }
+      send_message_with_attachments: {
+        Args: { p_body?: string; p_conversation_id: string }
+        Returns: string
+      }
       toggle_feed_comment_like: {
         Args: { p_comment_id: string }
         Returns: boolean

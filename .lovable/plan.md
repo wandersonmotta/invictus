@@ -1,67 +1,180 @@
 
 
-## Plano de Correção: Branding "Invictus Financeiro" no Desktop
+## Plano: Nova Pagina "Reconhecimento" (Premiacoes)
 
-### Problema Identificado
+Vou criar uma nova pagina/categoria dedicada ao reconhecimento de membros, seguindo o design das referencias enviadas e o padrao visual Invictus.
 
-A screenshot mostra claramente:
-1. O logo "INVICTUS" está ocupando quase toda a largura da sidebar (w-64 = 256px)
-2. O texto "FINANCEIRO" está transbordando para fora da sidebar, sobrepondo o conteúdo principal
-3. A altura do logo (`h-8` = 32px) mantém a proporção original, resultando em largura excessiva
+---
 
-### Causa Raiz
-
-O arquivo `INVICTUS-GOLD_1.png` é uma imagem horizontal larga (logo completo "INVICTUS" com lettering). Ao definir `h-8`, a largura proporcional ultrapassa o espaço disponível na sidebar.
-
-### Solução Proposta
-
-Reorganizar o header da sidebar para empilhar verticalmente o logo e o texto "FINANCEIRO", similar ao padrão de branding usado em outras telas (landing, auth, wait screen).
+### Arquitetura
 
 ```text
-Antes (problematico):
-+----------------------------------+
-| [INVICTUS====] FINANCEIRO        |  <- Horizontal, transborda
-+----------------------------------+
+Nova rota: /reconhecimento
 
-Depois (corrigido):
-+----------------------------------+
-|          [INVICTUS]              |  <- Logo centralizado
-|          FINANCEIRO              |  <- Texto abaixo
-+----------------------------------+
+Navegacao:
+- Adicionar na sidebar (secao "Conta")
+- Adicionar na barra mobile (substituir um placeholder ou adicionar no menu)
 ```
 
-### Alteracoes no Arquivo
+---
 
-**Arquivo:** `src/components/financeiro/FinanceiroLayout.tsx`
+### Design Visual (Baseado nas Referencias)
 
-**Mudancas no header da sidebar desktop (linhas 33-38):**
+As imagens mostram:
+- Carrossel horizontal de premios (placas/trofeus/pulseiras)
+- Cada card: imagem do premio + nome do nivel + requisito + pontos
+- Niveis progressivos: White, Orange, Green, Blue, Brown
 
-1. Mudar layout de `flex items-center gap-3` para `flex flex-col items-center justify-center`
-2. Aumentar altura do header de `h-16` para `h-20` ou `h-24` para acomodar o layout vertical
-3. Reduzir altura do logo para `h-6` para caber horizontalmente na sidebar de 256px
-4. Mover texto "FINANCEIRO" para baixo do logo
-5. Aplicar estilo metalico dourado no texto (similar ao "FRATERNIDADE" do app principal)
+**Adaptacao Invictus:**
+- Cores metalicas: Bronze, Silver, Gold, Black, Elite
+- Cards com estilo `invictus-surface invictus-frame`
+- Scroll horizontal fluido (igual ao Class.tsx)
+- Hover premium com glow dourado
 
-**Codigo atualizado:**
+---
 
-```tsx
-<div className="flex h-20 flex-col items-center justify-center gap-1.5 border-b border-border px-4">
-  <img 
-    src={invictusLogo} 
-    alt="Invictus" 
-    className="h-6 w-auto shrink-0" 
-  />
-  <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-    Financeiro
-  </span>
-</div>
+### Estrutura da Pagina
+
+```text
++-----------------------------------------------+
+|  RECONHECIMENTO                               |
+|  "O sucesso e construido passo a passo."      |
++-----------------------------------------------+
+|                                               |
+|  [Bronze] [Silver] [Gold] [Black] [Elite]     |  <- Carrossel horizontal
+|                                               |
++-----------------------------------------------+
+|                                               |
+|  Seu Progresso (opcional, fase 2)             |
+|                                               |
++-----------------------------------------------+
 ```
+
+---
+
+### Arquivos a Criar
+
+#### 1. `src/pages/Reconhecimento.tsx`
+
+Pagina principal com:
+- Header (titulo + subtitulo inspiracional)
+- Secao de premios em carrossel horizontal
+- Cards com imagem, nome, descricao, pontos
+
+#### 2. `src/components/reconhecimento/RecognitionCard.tsx`
+
+Card individual:
+- Imagem do premio (placeholder CSS inicial)
+- Nome do nivel (ex: "Member Gold")
+- Descricao do requisito
+- Badge com pontos
+- Indicador se conquistado (futuramente)
+
+#### 3. `src/components/reconhecimento/recognitionLevels.ts`
+
+Dados estaticos dos niveis:
+- id, name, description, points, color theme
+- Pode ser migrado para banco depois
+
+---
+
+### Arquivos a Modificar
+
+#### 4. `src/routing/HostRouter.tsx`
+
+Adicionar nova rota:
+```text
+/reconhecimento -> <Reconhecimento />
+```
+
+#### 5. `src/components/AppSidebar.tsx`
+
+Adicionar item na secao "Conta":
+```text
+{ title: "Reconhecimento", url: "/reconhecimento", icon: Trophy }
+```
+(usando icone `Trophy` do Lucide)
+
+#### 6. `src/components/mobile/MobileMenuSheet.tsx`
+
+Adicionar link para "Reconhecimento" na navegacao do menu
+
+#### 7. `src/App.tsx`
+
+Adicionar preloader para a nova pagina
+
+---
+
+### Niveis de Reconhecimento (Proposta)
+
+| Nivel | Nome | Requisito | Pontos | Cor |
+|-------|------|-----------|--------|-----|
+| 1 | Member Bronze | Entrada na Fraternidade | 100 | Cobre |
+| 2 | Member Silver | Acumule R$ 10 mil em resultados | 500 | Prata |
+| 3 | Member Gold | Acumule R$ 50 mil em resultados | 1.000 | Dourado |
+| 4 | Member Black | Acumule R$ 100 mil em resultados | 2.500 | Preto Premium |
+| 5 | Member Elite | Acumule R$ 500 mil em resultados | 5.000 | Dourado Intenso |
+
+(Posso ajustar os nomes/valores conforme sua preferencia)
+
+---
+
+### Design dos Cards (Estilo Class.tsx)
+
+```text
++-------------------+
+|                   |
+|   [Imagem do      |
+|    Premio/Placa]  |
+|                   |
++-------------------+
+| Member Gold       |
+| Acumule R$ 50 mil |
+| em resultados     |
++-------------------+
+| [1.000 pts]       |
++-------------------+
+```
+
+- Aspect ratio: 2:3 (igual aos trainings)
+- Scroll horizontal com snap
+- Largura responsiva: `clamp(140px, 42vw, 188px)`
+
+---
+
+### Imagens dos Premios
+
+Inicialmente vou criar placeholders visuais usando:
+- Gradientes com cores de cada nivel
+- Icone de trofeu/medalha (Lucide)
+- Fundo premium com efeito metalico
+
+Depois voce pode substituir por fotos reais das placas.
+
+---
 
 ### Resultado Esperado
 
-1. Logo INVICTUS centralizado horizontalmente na sidebar
-2. Texto "FINANCEIRO" abaixo do logo, tambem centralizado
-3. Nenhum elemento transbordando para fora da sidebar
-4. Visual limpo e consistente com a identidade Invictus
-5. Layout desktop funcional em notebooks e monitores
+1. Nova pagina `/reconhecimento` acessivel pela sidebar e menu mobile
+2. Carrossel horizontal com 5 niveis de premiacao
+3. Cards com design premium Invictus (glass + gold frame)
+4. Visual consistente com as referencias enviadas
+5. Preparado para futura integracao com dados reais
+
+---
+
+### Resumo de Arquivos
+
+```text
+Criar:
+- src/pages/Reconhecimento.tsx
+- src/components/reconhecimento/RecognitionCard.tsx
+- src/components/reconhecimento/recognitionLevels.ts
+
+Editar:
+- src/routing/HostRouter.tsx (adicionar rota)
+- src/components/AppSidebar.tsx (adicionar nav item)
+- src/components/mobile/MobileMenuSheet.tsx (adicionar link)
+- src/App.tsx (adicionar preloader)
+```
 

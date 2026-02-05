@@ -25,7 +25,8 @@ const preloaders = [
   () => import("./pages/Membro"),
   () => import("./pages/Leads"),
   () => import("./pages/LeadsConexoes"),
-   () => import("./pages/Carteira"),
+  () => import("./pages/Carteira"),
+  () => import("./pages/Reconhecimento"),
 ] as const;
 
 function scheduleIdle(cb: () => void) {

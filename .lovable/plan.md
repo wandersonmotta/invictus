@@ -1,55 +1,75 @@
 
-# Plano: Não Mostrar Conversas Sem Mensagens na Lista
+# Plano: Adicionar Opção "Padrão do Sistema" no Toggle de Tema
 
-## Problema Identificado
+## Situação Atual
 
-Quando o usuário inicia uma nova conversa selecionando um contato mas não envia nenhuma mensagem, a conversa é criada no banco de dados e aparece na lista de threads. O comportamento esperado é que conversas só apareçam após pelo menos uma mensagem ser enviada (similar ao Instagram).
+O sistema já está configurado para suportar o tema do sistema operacional:
+- `defaultTheme="system"` no ThemeProvider
+- `enableSystem={true}` habilitado
 
-**Evidência no banco:**
-- Conversa criada em 05/02/2026 com `last_message_at: NULL` e `message_count: 0`
-- Esta conversa está aparecendo na lista mesmo sem ter mensagens
+**Problema**: O toggle no menu do usuário (`UserMenu.tsx`) só alterna entre "dark" e "light" diretamente com `setTheme()`, fazendo o usuário perder a opção de usar o padrão do sistema.
 
 ## Solução
 
-Modificar a função `get_my_threads` no banco de dados para filtrar conversas onde `last_message_at IS NULL`. Assim, apenas conversas com pelo menos uma mensagem aparecem na lista.
+Substituir o item único de toggle por um **ToggleGroup com 3 opções**:
+1. **Sistema** (ícone Monitor) - segue a preferência do SO
+2. **Claro** (ícone Sol) - sempre claro
+3. **Escuro** (ícone Lua) - sempre escuro
 
 ## Mudanças Técnicas
 
-### Migração SQL
+### Arquivo: `src/components/UserMenu.tsx`
 
-Atualizar a função `get_my_threads` adicionando um filtro na query:
+1. **Importar componentes adicionais:**
+   - `Monitor` do lucide-react (ícone para "Sistema")
+   - `ToggleGroup` e `ToggleGroupItem` dos componentes UI
 
-```sql
-WHERE me.uid IS NOT NULL
-  AND cm.user_id = me.uid
-  AND cm.folder = p_folder
-  AND cm.hidden_at IS NULL
-  AND c.last_message_at IS NOT NULL  -- Nova condição
-```
+2. **Usar `theme` ao invés de apenas `resolvedTheme`:**
+   - `theme` = valor configurado ("system", "light", "dark")
+   - `resolvedTheme` = valor aplicado (só "light" ou "dark")
 
-A mudança será aplicada no JOIN da CTE `agg` para garantir que apenas conversas com mensagens sejam retornadas.
+3. **Substituir o DropdownMenuItem de toggle por um ToggleGroup:**
+   ```text
+   ┌─────────────────────────────────────────┐
+   │  [🖥️]  [☀️]  [🌙]                        │
+   │  Sistema  Claro  Escuro                 │
+   └─────────────────────────────────────────┘
+   ```
 
-## Fluxo Corrigido
+4. **Comportamento:**
+   - Clique em qualquer opção → `setTheme("system" | "light" | "dark")`
+   - A opção selecionada fica destacada
+   - Preferência salva automaticamente no localStorage (`invictus-theme`)
+
+## Fluxo de Persistência
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│         USUÁRIO CLICA "NOVA MENSAGEM"                       │
-│           Seleciona contato → Cria conversa                 │
-└─────────────────────────────────────────────────────────────┘
-                           │
-              ┌────────────┴────────────┐
-              ▼                         ▼
-    Não envia mensagem           Envia mensagem
-          │                           │
-          ▼                           ▼
-   last_message_at = NULL     last_message_at = now()
-          │                           │
-          ▼                           ▼
-   NÃO APARECE na lista       APARECE na lista ✓
+Usuário seleciona tema
+        │
+        ▼
+setTheme("system" | "light" | "dark")
+        │
+        ▼
+Salvo em localStorage "invictus-theme"
+        │
+        ▼
+Próximo acesso → ThemeProvider lê do storage
+        │
+        ▼
+Aplica tema salvo (ou padrão do sistema se nunca alterou)
 ```
 
-## Resultado Esperado
+## Comportamento Final
 
-- Conversas só aparecem na lista após envio da primeira mensagem
-- Conversas "fantasmas" (criadas mas sem mensagens) ficam invisíveis
-- Se o usuário enviar uma mensagem depois, a conversa passa a aparecer normalmente
+| Configuração | SO do usuário | Tema aplicado |
+|--------------|---------------|---------------|
+| Sistema      | Claro         | Claro         |
+| Sistema      | Escuro        | Escuro        |
+| Claro        | Qualquer      | Claro         |
+| Escuro       | Qualquer      | Escuro        |
+
+## Notas
+
+- **Novos usuários**: Começam com "Sistema" (padrão do ThemeProvider)
+- **Usuários existentes** que já usaram o toggle: Terão "light" ou "dark" salvo, mas podem mudar para "Sistema"
+- **Páginas públicas** (Landing, Auth): Continuam forçadas em dark independente da escolha

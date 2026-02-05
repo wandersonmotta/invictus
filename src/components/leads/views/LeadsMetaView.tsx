@@ -134,9 +134,9 @@ export function LeadsMetaView({ meta, isLoading }: LeadsMetaViewProps) {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 min-w-0">
         {/* Funnel */}
-        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40">
+        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 min-w-0">
           <h3 className="text-sm font-medium text-foreground mb-4">Funil de Tráfego</h3>
           <FunnelChart steps={mockFunnelSteps} />
           
@@ -158,10 +158,10 @@ export function LeadsMetaView({ meta, isLoading }: LeadsMetaViewProps) {
         </Card>
 
         {/* Revenue Chart + Checkout metrics */}
-        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40">
+        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 min-w-0">
           <div className="space-y-4">
             {/* Checkout metrics */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4 min-w-0">
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase">Checkouts Iniciados</p>
                 <p className="text-xl font-bold text-foreground">2.474</p>
@@ -177,7 +177,7 @@ export function LeadsMetaView({ meta, isLoading }: LeadsMetaViewProps) {
             </div>
 
             {/* Chart legend */}
-            <div className="flex items-center gap-4 text-xs">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs">
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "hsl(142 76% 36%)" }} />
                 <span className="text-muted-foreground">Faturamento</span>
@@ -201,7 +201,7 @@ export function LeadsMetaView({ meta, isLoading }: LeadsMetaViewProps) {
         </Card>
 
         {/* Best Ads Donut */}
-        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40">
+        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 min-w-0">
           <h3 className="text-sm font-medium text-foreground mb-4">
             Melhores Anúncios (Conversões)
           </h3>
@@ -215,8 +215,8 @@ export function LeadsMetaView({ meta, isLoading }: LeadsMetaViewProps) {
       </div>
 
       {/* Campaigns Table */}
-      <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40">
-        <h3 className="text-sm font-medium text-foreground mb-4">Campanhas</h3>
+      <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 min-w-0 overflow-hidden">
+        <h3 className="text-sm font-medium text-foreground mb-4 truncate">Campanhas</h3>
         <CampaignsTable 
           campaigns={campaigns} 
           platform="meta" 

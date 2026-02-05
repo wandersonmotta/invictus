@@ -129,9 +129,9 @@ export function LeadsGoogleAdsView({ googleAds, isLoading }: LeadsGoogleAdsViewP
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 min-w-0">
         {/* Keywords Table with Pagination */}
-        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 md:row-span-2">
+        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 md:row-span-2 min-w-0 overflow-hidden">
           <KeywordsTable keywords={displayedKeywords} />
           
           {/* Pagination */}
@@ -174,9 +174,9 @@ export function LeadsGoogleAdsView({ googleAds, isLoading }: LeadsGoogleAdsViewP
         </Card>
 
         {/* Multi-line Chart */}
-        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 md:col-span-2 lg:col-span-2">
+        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 md:col-span-2 lg:col-span-2 min-w-0 overflow-hidden">
           {/* Chart legend */}
-          <div className="flex flex-wrap items-center gap-3 md:gap-4 text-xs mb-4">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs mb-4">
             <div className="flex items-center gap-1.5">
               <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
               <span className="text-muted-foreground">Investimento</span>
@@ -203,7 +203,7 @@ export function LeadsGoogleAdsView({ googleAds, isLoading }: LeadsGoogleAdsViewP
         </Card>
 
         {/* Gender Donut */}
-        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40">
+        <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 min-w-0">
           <h3 className="text-sm font-medium text-foreground mb-4">
             Conversões por Gênero
           </h3>
@@ -216,7 +216,8 @@ export function LeadsGoogleAdsView({ googleAds, isLoading }: LeadsGoogleAdsViewP
       </div>
 
       {/* Campaigns Table */}
-      <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40">
+      <Card className="p-4 bg-card/60 backdrop-blur-sm border-border/40 min-w-0 overflow-hidden">
+        <h3 className="text-sm font-medium text-foreground mb-4 truncate">Campanhas</h3>
         <CampaignsTable campaigns={mockCampaigns} platform="google_ads" />
       </Card>
     </div>

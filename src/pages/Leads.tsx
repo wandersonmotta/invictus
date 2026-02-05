@@ -78,7 +78,7 @@ export default function Leads() {
       <LeadsSidebar activeView={activeView} onViewChange={setActiveView} />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         {/* Header */}
         <div className="p-3 md:p-6 border-b border-border/40">
           <div className="flex flex-col gap-4">

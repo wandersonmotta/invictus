@@ -1,82 +1,124 @@
 
-Objetivo: corrigir (1) tela 404 após tentar entrar no financeiro (o que dá a impressão de “sumiu o botão Entrar”) e (2) travas/redirects indevidos causados pelo guard de autenticação geral exigir “perfil aprovado/completo” para usuários do financeiro.
+## Plano de Correção: Painel Financeiro
 
-Diagnóstico (com base no código atual e no print)
-- O print mostra claramente a página 404.
-- Em `src/pages/financeiro/FinanceiroAuth.tsx`, após login bem-sucedido, o código faz `navigate("/dashboard")`.
-  - Em ambiente Lovable (preview), o dashboard financeiro existe em `/financeiro/dashboard`, não em `/dashboard` (ver `HostRouter.tsx`).
-  - Resultado: login funciona, mas ao redirecionar para `/dashboard`, cai em NotFound (404). Daí o usuário volta e “parece que não tem botão”, quando na prática ele está sendo jogado para uma rota inexistente.
-- Além disso, as rotas financeiras em preview e em subdomínio financeiro estão envoltas por `<RequireAuth>` (o guard geral).
-  - `RequireAuth.tsx` hoje consulta `profiles` e impõe regras de “perfil completo” + “approved/pending”.
-  - Para um usuário financeiro (auditor), isso pode não existir/ não fazer sentido e pode causar redirects para `/perfil` ou `/aguardando-aprovacao`, quebrando o fluxo do financeiro.
+### Problemas Identificados
 
-Mudanças propostas (sequência recomendada)
+1. **Erro 404 ao clicar em "Histórico" e "Relatórios"**
+   - A sidebar aponta para `/financeiro/historico` e `/financeiro/relatorios`
+   - Essas rotas **não existem** no `HostRouter.tsx`
+   - Apenas existem: `/financeiro/auth`, `/financeiro/dashboard` e `/financeiro/auditoria/:withdrawalId`
 
-1) Corrigir o redirect pós-login no FinanceiroAuth (causa principal do 404)
-Arquivo: `src/pages/financeiro/FinanceiroAuth.tsx`
-- Importar `isLovableHost` (já existe em `@/lib/appOrigin`).
-- Trocar o `navigate("/dashboard")` por uma rota “context-aware”:
-  - Se estiver em ambiente Lovable (preview): `navigate("/financeiro/dashboard")`
-  - Se estiver em subdomínio `financeiro.` (produção): `navigate("/dashboard")`
-- (Opcional, mas recomendado) respeitar `location.state.from` quando existir (se o usuário foi redirecionado para login ao tentar acessar alguma rota do financeiro). Assim o login volta exatamente para a página tentada.
+2. **Logo "INVICTUS" cortado na sidebar**
+   - O logo é uma imagem com a palavra completa "INVICTUS"
+   - O container do header tem apenas `h-16` e `justify-center`
+   - O logo com `h-8` + texto "FINANCEIRO" não cabem bem lado a lado, causando corte no "I" inicial
 
-2) Criar um guard de autenticação específico do Financeiro (para não exigir perfil/aprovação)
-Problema: `RequireAuth` está acoplado ao conceito de “membro com perfil” e isso não deve bloquear o back-office financeiro.
-Opção A (mais limpa): criar um novo guard
-- Criar componente `RequireFinanceiroAuth` (ou `RequireSession`) que:
-  - Só verifica sessão (logado ou não)
-  - Se não houver sessão, redireciona para a tela de login do financeiro:
-    - Lovable preview: `/financeiro/auth`
-    - Subdomínio financeiro: `/auth`
-  - Não consulta `profiles` e não aplica regras de “approved/pending”.
-- Depois, atualizar `HostRouter.tsx` para usar esse guard nas rotas financeiras, no lugar de `<RequireAuth>`.
-  - Exemplo (preview):
-    - `/financeiro/dashboard`:
-      - `<RequireFinanceiroAuth><RequireFinanceiro> ... </RequireFinanceiro></RequireFinanceiroAuth>`
-    - `/financeiro/auditoria/:withdrawalId` idem
-  - Exemplo (financeiro subdomínio):
-    - `/dashboard` e `/auditoria/:withdrawalId` idem
+3. **Navegação de volta do `AuditoriaDetalhe.tsx` incorreta**
+   - Após aprovar/rejeitar, o código navega para `/dashboard` fixo
+   - No preview Lovable, deveria ser `/financeiro/dashboard`
 
-Opção B (mais rápida, mas menos elegante): alterar `RequireAuth` para “bypass” no financeiro
-- Modificar `RequireAuth.tsx` para detectar:
-  - `location.pathname.startsWith("/financeiro")` OU `isFinanceiroHost(window.location.hostname)`
-- Se for contexto financeiro, `RequireAuth` apenas exige sessão e não roda a lógica de `profiles`.
-- Eu recomendo a Opção A para manter responsabilidades separadas (membro vs auditor).
+---
 
-3) Melhorar definitivamente a visibilidade do botão “Entrar” em telas baixas (reforço)
-Arquivo: `src/pages/financeiro/FinanceiroAuth.tsx`
-- Hoje já foi adicionado `overflow-y-auto` no container externo, mas em algumas combinações (zoom alto, altura baixa, teclado aberto em mobile) ainda pode “cortar”.
-- Ajustes robustos:
-  - Aplicar um `max-height` no card (ex.: `max-h-[calc(100vh-3rem)]`) e `overflow-y-auto` no próprio card.
-  - Garantir espaçamento inferior do formulário (ex.: `pb-2`/`pb-4`) para o botão não encostar no limite.
-  - Evitar `items-center` quando o conteúdo precisa rolar: manter `justify-center` no container, mas permitir `my-auto` (já tem) e scroll interno do card.
-Resultado: mesmo com teclado aberto, dá para rolar e alcançar o botão.
+### Solucao Proposta
 
-4) Verificação (teste)
-- No preview (Lovable):
-  1. Abrir `/financeiro/auth`
-  2. Logar com usuário que tem role `financeiro`
-  3. Confirmar que redireciona para `/financeiro/dashboard` (sem 404)
-  4. Confirmar que o dashboard carrega sem forçar `/perfil` ou `/aguardando-aprovacao`
-- No domínio real (subdomínio financeiro):
-  1. Abrir `financeiro.<dominio>/auth`
-  2. Logar e confirmar redirect para `/dashboard`
-  3. Confirmar que rotas `/auditoria/:id` funcionam
-- Re-testar em janela baixa/zoom 125% para garantir que o botão “Entrar” fica acessível via scroll.
+#### 1. Criar as paginas que faltam
 
-Riscos e cuidados
-- Alterar `RequireAuth` globalmente (Opção B) pode ter efeito colateral em rotas de membros. Por isso a separação (Opção A) é mais segura.
-- Se o usuário financeiro também for membro e tiver perfil “pending”, o guard do financeiro não deve bloquear — esse é o comportamento desejado no back-office.
+Criar duas novas paginas placeholder:
 
-Entregáveis (o que vai mudar no código)
-- `src/pages/financeiro/FinanceiroAuth.tsx`
-  - Redirect pós-login corrigido para preview vs subdomínio
-  - Ajuste de layout do card para garantir botão visível
-- `src/auth/RequireFinanceiroAuth.tsx` (novo) OU alteração controlada em `src/auth/RequireAuth.tsx`
-- `src/routing/HostRouter.tsx`
-  - Troca do guard nas rotas do financeiro para o guard correto
+**`src/pages/financeiro/FinanceiroHistorico.tsx`**
+- Pagina de historico de auditorias (aprovados + rejeitados)
+- Por enquanto, um placeholder com mensagem "Em breve"
 
-Critério de sucesso
-- “Entrar” aparece (ou é alcançável com scroll) em qualquer resolução/zoom.
-- Após login no preview, nunca cai em 404; vai para `/financeiro/dashboard`.
-- Rotas financeiras não exigem perfil aprovado/completo; apenas login + role `financeiro`.
+**`src/pages/financeiro/FinanceiroRelatorios.tsx`**
+- Pagina de relatorios financeiros
+- Por enquanto, um placeholder com mensagem "Em breve"
+
+#### 2. Adicionar as rotas no HostRouter
+
+No bloco Lovable (preview):
+```text
+/financeiro/historico -> FinanceiroHistorico
+/financeiro/relatorios -> FinanceiroRelatorios
+```
+
+No bloco financeiro subdomain (producao):
+```text
+/historico -> FinanceiroHistorico
+/relatorios -> FinanceiroRelatorios
+```
+
+#### 3. Corrigir o layout da sidebar e header mobile
+
+**Arquivo: `src/components/financeiro/FinanceiroLayout.tsx`**
+
+Problemas a corrigir:
+- Logo cortado: o container precisa de mais espaco horizontal
+- Texto "FINANCEIRO" muito grande/largo em telas menores
+
+Ajustes:
+- Trocar `justify-center` por `justify-start` com padding lateral
+- Reduzir o tracking do texto "FINANCEIRO" 
+- Adicionar `shrink-0` no logo para nao comprimir
+- Garantir que o container tem `min-w-0` e `overflow-hidden` se necessario
+- No header mobile, aplicar os mesmos ajustes
+
+#### 4. Corrigir navegacao do AuditoriaDetalhe
+
+**Arquivo: `src/pages/financeiro/AuditoriaDetalhe.tsx`**
+
+- Adicionar deteccao de ambiente (preview vs producao)
+- Corrigir `navigate("/dashboard")` para usar o basePath correto
+- Linhas afetadas: 131, 160, 176, 196
+
+---
+
+### Detalhes Tecnicos
+
+```text
+Novos arquivos:
+- src/pages/financeiro/FinanceiroHistorico.tsx
+- src/pages/financeiro/FinanceiroRelatorios.tsx
+
+Arquivos a editar:
+- src/routing/HostRouter.tsx (adicionar rotas)
+- src/components/financeiro/FinanceiroLayout.tsx (corrigir layout)
+- src/pages/financeiro/AuditoriaDetalhe.tsx (corrigir navegacao)
+```
+
+#### Layout Corrigido (FinanceiroLayout.tsx)
+
+Header da sidebar:
+```text
+<div className="flex h-16 items-center gap-2 border-b border-border px-4">
+  <img src={invictusLogo} alt="Invictus" className="h-6 shrink-0" />
+  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    Financeiro
+  </span>
+</div>
+```
+
+Principais mudancas:
+- Logo menor: `h-6` (era `h-8`)
+- Tracking reduzido: `tracking-wide` (era `tracking-wider`)
+- Texto menor: `text-xs` (era `text-sm`)
+- Flex com gap ao inves de margin: `gap-2` (era `ml-2`)
+- Logo nao encolhe: `shrink-0`
+
+---
+
+### Resultado Esperado
+
+1. Clicar em "Historico" abre pagina de historico (sem 404)
+2. Clicar em "Relatorios" abre pagina de relatorios (sem 404)
+3. Logo "INVICTUS" aparece completo na sidebar
+4. Layout funciona tanto em desktop quanto em mobile/tablet
+5. Navegacao de volta da auditoria funciona corretamente
+
+---
+
+### Proximos Passos (apos implementacao)
+
+1. Testar todas as rotas do financeiro no preview
+2. Testar o fluxo completo de auditoria (abrir item, aprovar/rejeitar, voltar)
+3. Testar layout em diferentes tamanhos de tela
+4. Implementar conteudo real nas paginas de Historico e Relatorios (futuramente)

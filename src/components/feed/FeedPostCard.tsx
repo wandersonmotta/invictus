@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Heart, MessageCircle, MoreHorizontal, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +41,8 @@ function FeedPostCardInner({
   const [deleting, setDeleting] = React.useState(false);
   const [showHeart, setShowHeart] = React.useState(false);
   const lastTapRef = React.useRef<number>(0);
+  const singleTapTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMobile = useIsMobile();
 
   const isMyPost = user?.id === post.author_user_id;
 
@@ -67,23 +70,51 @@ function FeedPostCardInner({
     },
   });
 
-  const handleDoubleTap = () => {
+  const triggerLikeAnimation = () => {
+    if (!post.liked_by_me) {
+      likeMutation.mutate();
+    }
+    setShowHeart(true);
+    setTimeout(() => setShowHeart(false), 800);
+  };
+
+  const handleSingleTap = () => {
+    setInitialFocus("none");
+    setViewerOpen(true);
+  };
+
+  const handleInteraction = () => {
     const now = Date.now();
     const DOUBLE_TAP_DELAY = 300;
 
+    // Clear any pending single-tap timeout
+    if (singleTapTimeoutRef.current) {
+      clearTimeout(singleTapTimeoutRef.current);
+      singleTapTimeoutRef.current = null;
+    }
+
     if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
       // Double tap detected
-      if (!post.liked_by_me) {
-        likeMutation.mutate();
-      }
-      // Show heart animation
-      setShowHeart(true);
-      setTimeout(() => setShowHeart(false), 800);
+      triggerLikeAnimation();
       lastTapRef.current = 0;
     } else {
       lastTapRef.current = now;
+      // Set timeout for single tap action
+      singleTapTimeoutRef.current = setTimeout(() => {
+        handleSingleTap();
+        singleTapTimeoutRef.current = null;
+      }, DOUBLE_TAP_DELAY);
     }
   };
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (singleTapTimeoutRef.current) {
+        clearTimeout(singleTapTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const primary = post.media_urls[0];
   const authorHref = post.author_username
@@ -200,15 +231,21 @@ function FeedPostCardInner({
         </div>
 
         {primary ? (
-          <button
-            type="button"
-            onClick={(e) => {
-              handleDoubleTap();
-            }}
-            onDoubleClick={(e) => {
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={!isMobile ? handleInteraction : undefined}
+            onTouchEnd={isMobile ? (e) => {
+              // Prevent ghost click
               e.preventDefault();
+              handleInteraction();
+            } : undefined}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                handleSingleTap();
+              }
             }}
-            className="relative block w-full bg-muted select-none"
+            className="relative block w-full bg-muted select-none cursor-pointer touch-manipulation"
             aria-label="Abrir publicação"
           >
             <div className="max-h-[70svh] w-full overflow-hidden">
@@ -248,7 +285,7 @@ function FeedPostCardInner({
                 }}
               />
             </div>
-          </button>
+          </div>
         ) : null}
 
         <div className="flex items-center justify-between px-4 py-3">

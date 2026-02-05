@@ -42,6 +42,9 @@ export function MessageBubble({ message, meId, onUpdated }: MessageBubbleProps) 
   // Não renderiza se foi excluída para mim
   if (isDeletedForMe) return null;
 
+  // Não renderiza se foi excluída para todos (some totalmente, igual Instagram)
+  if (isDeleted) return null;
+
   const formatTime = (ts: string) => {
     try {
       return new Date(ts).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -102,17 +105,6 @@ export function MessageBubble({ message, meId, onUpdated }: MessageBubbleProps) 
 
     onUpdated();
   };
-
-  // Mensagem excluída para todos
-  if (isDeleted) {
-    return (
-      <div className={cn("flex", mine ? "justify-end" : "justify-start")}>
-        <div className="max-w-[78%] rounded-2xl px-3 py-2 text-sm border border-border/60 bg-muted/10 italic text-muted-foreground">
-          Mensagem excluída
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={cn("flex group", mine ? "justify-end" : "justify-start")}>

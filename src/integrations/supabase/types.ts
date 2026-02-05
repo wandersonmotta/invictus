@@ -1436,6 +1436,15 @@ export type Database = {
           username: string
         }[]
       }
+      search_mutual_connections: {
+        Args: { p_limit?: number; p_search?: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          user_id: string
+          username: string
+        }[]
+      }
       send_message: {
         Args: { p_body: string; p_conversation_id: string }
         Returns: string

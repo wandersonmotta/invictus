@@ -30,10 +30,10 @@ export function NewMessageDialog({
   const [creating, setCreating] = React.useState(false);
 
   const membersQuery = useQuery({
-    queryKey: ["search_approved_members", q],
+    queryKey: ["search_mutual_connections", q],
     enabled: open,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("search_approved_members", { p_search: q, p_limit: 30 });
+      const { data, error } = await supabase.rpc("search_mutual_connections", { p_search: q, p_limit: 30 });
       if (error) throw error;
       return (data ?? []) as MemberRow[];
     },

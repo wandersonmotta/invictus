@@ -21,6 +21,7 @@ export const recognitionLevels: RecognitionLevel[] = [
     points: 100,
     gradient: "from-amber-700 via-amber-600 to-amber-800",
     accent: "bg-amber-600",
+    imageUrl: "https://wotwxzolgnsmzjpposua.supabase.co/storage/v1/object/public/recognition-awards/bronze-award.png",
   },
   {
     id: "silver",
@@ -30,6 +31,7 @@ export const recognitionLevels: RecognitionLevel[] = [
     points: 500,
     gradient: "from-slate-400 via-slate-300 to-slate-500",
     accent: "bg-slate-400",
+    imageUrl: "https://wotwxzolgnsmzjpposua.supabase.co/storage/v1/object/public/recognition-awards/silver-award.png",
   },
   {
     id: "gold",
@@ -39,6 +41,7 @@ export const recognitionLevels: RecognitionLevel[] = [
     points: 1000,
     gradient: "from-yellow-500 via-yellow-400 to-yellow-600",
     accent: "bg-yellow-500",
+    imageUrl: "https://wotwxzolgnsmzjpposua.supabase.co/storage/v1/object/public/recognition-awards/gold-award.png",
   },
   {
     id: "black",
@@ -48,6 +51,7 @@ export const recognitionLevels: RecognitionLevel[] = [
     points: 2500,
     gradient: "from-zinc-800 via-zinc-700 to-zinc-900",
     accent: "bg-zinc-700",
+    imageUrl: "https://wotwxzolgnsmzjpposua.supabase.co/storage/v1/object/public/recognition-awards/black-award.png",
   },
   {
     id: "elite",
@@ -57,5 +61,6 @@ export const recognitionLevels: RecognitionLevel[] = [
     points: 5000,
     gradient: "from-yellow-400 via-amber-300 to-yellow-500",
     accent: "bg-gradient-to-r from-yellow-400 to-amber-500",
+    imageUrl: "https://wotwxzolgnsmzjpposua.supabase.co/storage/v1/object/public/recognition-awards/elite-award.png",
   },
 ];

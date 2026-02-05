@@ -25,8 +25,8 @@ export default function Reconhecimento() {
         <h2 className="text-base font-semibold text-foreground">Premiações</h2>
 
         {isMobileOrTablet ? (
-          /* Mobile/Tablet: Compact horizontal cards */
-          <div className="flex flex-col gap-3">
+          /* Mobile/Tablet: Grid of compact vertical cards */
+          <div className="grid grid-cols-2 gap-3">
             {recognitionLevels.map((level, index) => (
               <RecognitionCard
                 key={level.id}

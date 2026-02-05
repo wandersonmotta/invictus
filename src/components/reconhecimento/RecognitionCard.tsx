@@ -8,8 +8,8 @@ interface RecognitionCardProps {
   isCurrentLevel?: boolean;
   isAchieved?: boolean;
   isFuture?: boolean;
-  /** Compact vertical layout for mobile (smaller dimensions, same structure) */
-  compact?: boolean;
+  /** Full width card for mobile (one per row) */
+  fullWidth?: boolean;
 }
 
 export function RecognitionCard({
@@ -17,7 +17,7 @@ export function RecognitionCard({
   isCurrentLevel = false,
   isAchieved = false,
   isFuture = false,
-  compact = false,
+  fullWidth = false,
 }: RecognitionCardProps) {
   return (
     <article
@@ -27,10 +27,9 @@ export function RecognitionCard({
         "rounded-xl",
         "overflow-visible",
         "transition-all duration-300",
-        // Compact: smaller fixed width for mobile grid
-        // Full: larger cards for desktop horizontal scroll
-        compact ? "w-[140px]" : "w-[clamp(200px,50vw,280px)]",
-        !compact && "md:hover:scale-[1.03] md:hover:shadow-[0_0_24px_hsl(var(--primary)/0.25)]",
+        // Full width for mobile, fixed width for desktop
+        fullWidth ? "w-full max-w-[320px] mx-auto" : "w-[clamp(200px,50vw,280px)]",
+        !fullWidth && "md:hover:scale-[1.03] md:hover:shadow-[0_0_24px_hsl(var(--primary)/0.25)]",
         isCurrentLevel && "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-[0_0_20px_hsl(var(--primary)/0.4)]",
         isFuture && "opacity-60"
       )}
@@ -38,10 +37,9 @@ export function RecognitionCard({
       {/* Award Image / Placeholder */}
       <div
         className={cn(
-          "relative w-full",
+          "relative w-full aspect-[4/5]",
           "flex items-center justify-center",
           "overflow-hidden rounded-t-xl",
-          compact ? "aspect-[4/5]" : "aspect-[4/5]",
           !level.imageUrl && `bg-gradient-to-br ${level.gradient}`
         )}
       >
@@ -55,10 +53,7 @@ export function RecognitionCard({
         ) : (
           <>
             <Trophy
-              className={cn(
-                "text-white/80 drop-shadow-lg",
-                compact ? "h-10 w-10" : "h-16 w-16"
-              )}
+              className="h-16 w-16 text-white/80 drop-shadow-lg"
               strokeWidth={1.5}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-white/10 pointer-events-none" />
@@ -67,54 +62,36 @@ export function RecognitionCard({
 
         {/* Achieved checkmark */}
         {isAchieved && (
-          <div className={cn(
-            "absolute bg-emerald-600 rounded-full shadow-lg",
-            compact ? "top-1 right-1 p-0.5" : "top-2 right-2 p-1"
-          )}>
-            <Check className={cn("text-white", compact ? "h-3 w-3" : "h-4 w-4")} strokeWidth={3} />
+          <div className="absolute top-2 right-2 bg-emerald-600 rounded-full p-1 shadow-lg">
+            <Check className="h-4 w-4 text-white" strokeWidth={3} />
           </div>
         )}
 
         {/* Current level badge */}
         {isCurrentLevel && (
-          <div className={cn("absolute", compact ? "top-1 left-1" : "top-2 left-2")}>
+          <div className="absolute top-2 left-2">
             <Badge
               variant="default"
-              className={cn(
-                "font-bold bg-primary text-primary-foreground shadow-lg",
-                compact ? "text-[8px] px-1.5 py-0" : "text-[10px] px-2 py-0.5"
-              )}
+              className="text-[10px] font-bold px-2 py-0.5 bg-primary text-primary-foreground shadow-lg"
             >
-              {compact ? "ATUAL" : "SEU NÍVEL"}
+              SEU NÍVEL
             </Badge>
           </div>
         )}
       </div>
 
       {/* Card Content */}
-      <div className={cn(
-        "rounded-b-xl bg-background/80",
-        compact ? "p-2 space-y-1" : "p-4 space-y-2"
-      )}>
-        <h3 className={cn(
-          "font-semibold text-foreground leading-tight truncate",
-          compact ? "text-xs" : "text-base"
-        )}>
+      <div className="p-4 space-y-2 rounded-b-xl bg-background/80">
+        <h3 className="text-base font-semibold text-foreground leading-tight truncate">
           {level.name}
         </h3>
-        <p className={cn(
-          "text-muted-foreground leading-snug",
-          compact ? "text-[10px] line-clamp-2" : "text-sm line-clamp-2"
-        )}>
+        <p className="text-sm text-muted-foreground leading-snug line-clamp-2">
           {level.description}
         </p>
         <div className="flex items-center justify-between pt-1">
           <Badge
             variant="secondary"
-            className={cn(
-              "font-medium",
-              compact ? "text-[9px] px-1.5 py-0" : "text-xs px-2.5 py-0.5"
-            )}
+            className="text-xs font-medium px-2.5 py-0.5"
           >
             Ganha: {level.points.toLocaleString("pt-BR")} pts
           </Badge>

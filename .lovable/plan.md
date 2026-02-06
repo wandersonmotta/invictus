@@ -1,58 +1,61 @@
 
 
-# Validação de CPF multi-source gratuito (melhor esforço)
+# Validação de CPF direto do navegador (IP brasileiro)
 
-## Problema atual
-A BrasilAPI retorna 404 para CPFs que existem na Receita Federal, bloqueando usuários legítimos de salvar sua chave PIX.
+## Problema
+As APIs gratuitas brasileiras (BrasilAPI, Invertexto, Nuvem Fiscal) bloqueiam requisições de IPs fora do Brasil. A edge function roda na Europa, por isso todas falham. Mas o navegador do usuário esta no Brasil.
 
-## Solução
-Atualizar a edge function `validate-cpf` para consultar **múltiplas fontes gratuitas** em sequência. Se alguma confirmar o CPF, aceita. Se todas falharem ou retornarem 404, aceita com fallback (validação matemática já passou).
+## Solucao
+Mover as chamadas de validacao externa para o **frontend** (navegador do usuario). O navegador esta no Brasil, entao as APIs brasileiras vao responder normalmente.
 
-## Fontes de consulta (em ordem)
+A edge function continua existindo apenas para a validacao matematica (ou pode ser removida, ja que a validacao matematica ja existe no frontend via `isValidCPF` em `src/lib/cpf.ts`).
 
-1. **BrasilAPI** -- `https://brasilapi.com.br/api/cpf/v1/{cpf}` (gratuita, instável)
-2. **Invertexto** -- `https://api.invertexto.com/v1/validator?value={cpf}&token=free` (gratuita, sem autenticação para validação básica)
-3. **Nuvem Fiscal** -- `https://api.nuvemfiscal.com.br/cpf/{cpf}` (free tier disponível)
-
-Se qualquer uma responder positivamente (CPF existe), retorna `valid: true` com o nome quando disponível. Se todas falharem (timeout, 404, erro), aceita com `fallback: true` pois a validação matemática já barrou CPFs inventados.
-
-## Lógica de decisão
-
-- Validação matemática falha -> rejeita imediatamente (CPF inventado)
-- Alguma API confirma existência (200) -> aceita com nome do titular
-- Todas as APIs retornam 404 -> aceita com fallback (melhor esforço)
-- Todas as APIs dão timeout/erro -> aceita com fallback
-
-## O que muda para o usuário
-
-- CPFs inventados continuam bloqueados (validação matemática)
-- CPFs reais terão mais chance de serem confirmados (múltiplas fontes)
-- Se nenhuma API estiver disponível, o fluxo não trava -- salva normalmente
-
-## Detalhes Técnicos
-
-**Arquivo alterado:**
-- `supabase/functions/validate-cpf/index.ts` -- reescrever para tentar múltiplas fontes em sequência, com timeout individual de 5 segundos por fonte
-
-**Estrutura da function:**
+## Fluxo proposto
 
 ```text
-1. Recebe CPF
-2. Validação matemática (local, instantânea)
-3. Tenta BrasilAPI (5s timeout)
-   - 200 -> retorna valid: true + nome
-   - 404 -> continua para próxima fonte
-   - erro -> continua
-4. Tenta fontes alternativas (5s timeout cada)
-   - 200 -> retorna valid: true + nome
-   - erro -> continua
-5. Nenhuma fonte confirmou -> retorna valid: true, fallback: true
+Usuario digita CPF (11 digitos)
+  |
+  v
+1. Validacao matematica local (instantanea, ja existe)
+  |-- Falhou -> "CPF invalido"
+  |-- Passou -> continua
+  |
+  v
+2. Consulta BrasilAPI direto do navegador (5s timeout)
+  |-- 200 -> "CPF valido" + nome do titular
+  |-- 404/erro -> tenta proxima fonte
+  |
+  v
+3. Consulta Invertexto direto do navegador (5s timeout)
+  |-- 200 + valid:true -> "CPF valido"
+  |-- erro -> tenta proxima
+  |
+  v
+4. Consulta Nuvem Fiscal direto do navegador (5s timeout)
+  |-- 200 -> "CPF valido" + nome
+  |-- erro -> fallback
+  |
+  v
+5. Nenhuma fonte respondeu -> "CPF valido" (fallback matematico)
 ```
 
-**Resposta da function (sem alteração no contrato):**
-- `{ valid: true, name: "NOME", fallback: false }` -- confirmado por API
-- `{ valid: true, name: null, fallback: true }` -- não confirmado, mas matematicamente válido
-- `{ valid: false, reason: "invalid_digits" }` -- CPF inventado
+## O que muda para o usuario
+- CPFs reais agora serao confirmados com o nome do titular (as APIs vao responder porque o IP e brasileiro)
+- A experiencia continua sendo em tempo real (digita e valida)
+- Se por algum motivo as APIs falharem, o fallback matematico continua funcionando
 
-**Frontend (`PixKeyCard.tsx`):**
-- Sem alteração necessária -- o contrato da resposta é o mesmo. CPFs matematicamente inválidos continuam sendo rejeitados, e o fallback já é tratado como aceitável.
+## Detalhes tecnicos
+
+**Arquivo principal alterado:**
+- `src/components/carteira/PixKeyCard.tsx` -- mover a logica de consulta multi-source para o proprio componente, chamando as APIs diretamente via `fetch` do navegador em vez de chamar a edge function
+
+**Logica no componente:**
+- Manter o debounce de 400ms apos digitar 11 digitos
+- Manter a validacao matematica local como primeiro filtro (`isValidCPF` de `src/lib/cpf.ts`)
+- Substituir a chamada `supabase.functions.invoke("validate-cpf")` por chamadas diretas as APIs brasileiras em sequencia
+- Manter os mesmos estados visuais (loading spinner, check verde, X vermelho)
+
+**Edge function `validate-cpf`:**
+- Pode ser mantida como backup, mas nao sera mais chamada pelo `PixKeyCard`. Nenhuma alteracao necessaria nela.
+
+**Nenhuma alteracao no backend ou banco de dados.**

@@ -16,6 +16,7 @@ import {
   Gift,
   HelpCircle,
   Trophy,
+  ShoppingBag,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -71,6 +72,12 @@ const menuSections: MenuSection[] = [
     label: "Marketing",
     items: [
       { title: "Leads", url: "/leads", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Serviços",
+    items: [
+      { title: "Serviços", url: "/servicos", icon: ShoppingBag },
     ],
   },
   {

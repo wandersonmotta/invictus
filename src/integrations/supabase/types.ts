@@ -1062,6 +1062,86 @@ export type Database = {
         }
         Relationships: []
       }
+      service_categories: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          icon_name: string | null
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      service_items: {
+        Row: {
+          active: boolean
+          category_id: string
+          contact_info: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          price: number | null
+          price_label: string | null
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          category_id: string
+          contact_info?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          price?: number | null
+          price_label?: string | null
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          category_id?: string
+          contact_info?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          price?: number | null
+          price_label?: string | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_categories: {
         Row: {
           created_at: string

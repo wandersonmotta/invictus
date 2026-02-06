@@ -1,61 +1,66 @@
 
+# Carteira funcional -- conectar ao backend real
 
-# Validação de CPF direto do navegador (IP brasileiro)
+## O que vai mudar para voce
 
-## Problema
-As APIs gratuitas brasileiras (BrasilAPI, Invertexto, Nuvem Fiscal) bloqueiam requisições de IPs fora do Brasil. A edge function roda na Europa, por isso todas falham. Mas o navegador do usuário esta no Brasil.
+- O saldo exibido sera o saldo **real** calculado pelo backend (entradas menos saidas)
+- O historico mostrara transacoes reais do banco de dados, nao dados falsos
+- Ao solicitar o saque, o valor **sai imediatamente do saldo** e aparece como "Pendente" no historico
+- O saque cria um registro real que aparece na fila de auditoria do painel financeiro
+- Usuarios novos verao saldo zerado
+- Para sua conta de teste, vamos inserir creditos que somem R$ 249,90
 
-## Solucao
-Mover as chamadas de validacao externa para o **frontend** (navegador do usuario). O navegador esta no Brasil, entao as APIs brasileiras vao responder normalmente.
-
-A edge function continua existindo apenas para a validacao matematica (ou pode ser removida, ja que a validacao matematica ja existe no frontend via `isValidCPF` em `src/lib/cpf.ts`).
-
-## Fluxo proposto
+## Fluxo do saque (como voce descreveu)
 
 ```text
-Usuario digita CPF (11 digitos)
-  |
-  v
-1. Validacao matematica local (instantanea, ja existe)
-  |-- Falhou -> "CPF invalido"
-  |-- Passou -> continua
-  |
-  v
-2. Consulta BrasilAPI direto do navegador (5s timeout)
-  |-- 200 -> "CPF valido" + nome do titular
-  |-- 404/erro -> tenta proxima fonte
-  |
-  v
-3. Consulta Invertexto direto do navegador (5s timeout)
-  |-- 200 + valid:true -> "CPF valido"
-  |-- erro -> tenta proxima
-  |
-  v
-4. Consulta Nuvem Fiscal direto do navegador (5s timeout)
-  |-- 200 -> "CPF valido" + nome
-  |-- erro -> fallback
-  |
-  v
-5. Nenhuma fonte respondeu -> "CPF valido" (fallback matematico)
+1. Usuario clica "Sacar" -> escolhe valor no slider -> confirma
+2. Backend valida saldo, cria withdrawal_request com status "pending"
+3. Frontend recarrega dados -> saldo ja diminuiu, saque aparece como "Pendente" no historico
+4. Financeiro ve na fila de auditoria -> Aprova ou Recusa
+5. Se aprovado: debito registrado no wallet_transactions
+6. Se recusado: saldo volta ao normal
 ```
 
-## O que muda para o usuario
-- CPFs reais agora serao confirmados com o nome do titular (as APIs vao responder porque o IP e brasileiro)
-- A experiencia continua sendo em tempo real (digita e valida)
-- Se por algum motivo as APIs falharem, o fallback matematico continua funcionando
+## Dados de teste para sua conta
+
+Inserir 4 creditos na tabela `wallet_transactions` para o usuario `7ae14bba-...` totalizando R$ 249,90:
+
+| Descricao | Valor | source_type |
+|---|---|---|
+| Comissao - Paulo Silva | 120.00 | commission |
+| Comissao - Lucas Mendes | 60.00 | commission |
+| Comissao - Camila Santos | 45.00 | commission |
+| Bonus de ativacao | 24.90 | bonus |
 
 ## Detalhes tecnicos
 
-**Arquivo principal alterado:**
-- `src/components/carteira/PixKeyCard.tsx` -- mover a logica de consulta multi-source para o proprio componente, chamando as APIs diretamente via `fetch` do navegador em vez de chamar a edge function
+### 1. `src/pages/Carteira.tsx` -- reescrever com dados reais
 
-**Logica no componente:**
-- Manter o debounce de 400ms apos digitar 11 digitos
-- Manter a validacao matematica local como primeiro filtro (`isValidCPF` de `src/lib/cpf.ts`)
-- Substituir a chamada `supabase.functions.invoke("validate-cpf")` por chamadas diretas as APIs brasileiras em sequencia
-- Manter os mesmos estados visuais (loading spinner, check verde, X vermelho)
+- Remover todo mock data (array de transacoes, saldo fixo `249.9`)
+- Ao montar, chamar `rpcUntyped("get_my_wallet")` para obter saldo real, transacoes e saques pendentes
+- Mapear resposta do backend para o formato `Transaction[]`:
+  - `wallet_transactions.type = 'credit'` -> `entrada`
+  - `wallet_transactions.type = 'debit'` -> `saida`, status `aprovado`
+  - `withdrawal_requests.status = 'pending'` -> `saida`, status `pendente`
+  - `withdrawal_requests.status = 'approved'` -> ignorar (ja tem o debit correspondente)
+  - `withdrawal_requests.status = 'rejected'` -> `saida`, status `rejeitado`
+- Combinar tudo em lista unica ordenada por data
+- `handleWithdrawSubmit` passa a ser `async`: chama `rpcUntyped("create_withdrawal_request", { p_gross_amount, p_pix_key })`
+  - Se sucesso: recarrega `get_my_wallet` (saldo ja diminuiu, pendente aparece)
+  - Se erro: mostra toast com a mensagem do backend
+- Mostrar skeleton enquanto carrega
 
-**Edge function `validate-cpf`:**
-- Pode ser mantida como backup, mas nao sera mais chamada pelo `PixKeyCard`. Nenhuma alteracao necessaria nela.
+### 2. `src/components/carteira/WithdrawDialog.tsx` -- ajustar para async
 
-**Nenhuma alteracao no backend ou banco de dados.**
+- Alterar tipo do `onSubmit` para retornar `Promise<void>`
+- Adicionar estado `submitting` com loading no botao
+- Se o pai (Carteira) rejeitar a promise, manter o dialog aberto para o usuario ver o erro
+
+### 3. Seed data via migration
+
+- Inserir 4 registros de credito em `wallet_transactions` para o usuario admin
+
+### Arquivos alterados
+- `src/pages/Carteira.tsx`
+- `src/components/carteira/WithdrawDialog.tsx`
+- Nova migration SQL (seed data)

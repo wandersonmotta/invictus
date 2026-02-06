@@ -1,87 +1,92 @@
 
-# Corrigir Historico de Auditorias e Exibir Auditor
+# Carteira de Bonus -- Visao Consolidada para o Financeiro
 
-## Problema
+## Objetivo
 
-A pagina de Historico retorna erro 400 porque nao existe foreign key entre `withdrawal_requests` e `profiles`. O join `profiles!inner(...)` falha. Alem disso, o historico precisa mostrar quem aprovou ou recusou cada saque (campo `reviewed_by`).
+Criar uma nova pagina "Carteira" no painel financeiro que exibe o total de bonus disponivel de todos os membros, permitindo que a equipe financeira saiba exatamente quanto dinheiro precisa estar em caixa para cobrir possiveis saques.
 
-## Solucao
+---
 
-### 1. Criar uma RPC dedicada: `list_processed_withdrawals`
+## O que sera construido
 
-Assim como o Dashboard usa a RPC `list_pending_withdrawals` para evitar o problema de FK, vamos criar uma RPC semelhante para saques processados. Essa RPC vai:
+### Nova pagina: Carteira de Bonus
 
-- Buscar saques com `status IN ('approved', 'rejected')`
-- Fazer JOIN com `profiles` para dados do solicitante (via `user_id`)
-- Fazer JOIN com `profiles` novamente para dados do auditor (via `reviewed_by`)
-- Retornar tudo em uma estrutura plana (sem nested objects)
-- Usar `SECURITY DEFINER` com verificacao `is_financeiro()` para manter a seguranca
+Uma pagina com:
 
-**Migracao SQL:**
+1. **Card principal** -- Total consolidado de bonus disponivel em toda a plataforma (soma dos saldos de todos os membros)
+2. **Lista de membros** -- Tabela com cada membro que possui saldo, mostrando:
+   - Avatar, nome, username
+   - Saldo disponivel
+   - Ultimo credito recebido (data)
+3. **Busca** -- Campo para filtrar membros por nome/username
+4. **Ordenacao** -- Por saldo (maior primeiro, padrao) ou por nome
+
+---
+
+## Implementacao tecnica
+
+### 1. Nova RPC: `list_all_member_balances`
+
+Como nao existe FK direta entre `wallet_transactions` e `profiles`, e precisamos agregar saldos de todos os membros, vamos criar uma funcao RPC com `SECURITY DEFINER` protegida por `is_financeiro()`.
+
 ```sql
-CREATE OR REPLACE FUNCTION public.list_processed_withdrawals(p_limit int DEFAULT 200)
+CREATE OR REPLACE FUNCTION public.list_all_member_balances()
 RETURNS TABLE (
-  withdrawal_id uuid,
   user_id uuid,
   display_name text,
   username text,
   avatar_url text,
-  gross_amount numeric,
-  fee_amount numeric,
-  net_amount numeric,
-  pix_key text,
-  status text,
-  requested_at timestamptz,
-  reviewed_at timestamptz,
-  rejection_reason text,
-  reviewer_display_name text,
-  reviewer_username text
+  balance numeric,
+  last_credit_at timestamptz
 )
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public
 AS $$
   SELECT
-    wr.id,
-    wr.user_id,
+    wt.user_id,
     p.display_name,
     p.username,
     p.avatar_url,
-    wr.gross_amount,
-    wr.fee_amount,
-    wr.net_amount,
-    wr.pix_key,
-    wr.status::text,
-    wr.requested_at,
-    wr.reviewed_at,
-    wr.rejection_reason,
-    rp.display_name,
-    rp.username
-  FROM withdrawal_requests wr
-  JOIN profiles p ON p.user_id = wr.user_id
-  LEFT JOIN profiles rp ON rp.user_id = wr.reviewed_by
-  WHERE wr.status IN ('approved', 'rejected')
-    AND is_financeiro()
-  ORDER BY wr.reviewed_at DESC NULLS LAST
-  LIMIT p_limit;
+    SUM(CASE WHEN wt.type = 'credit' THEN wt.amount ELSE -wt.amount END) AS balance,
+    MAX(CASE WHEN wt.type = 'credit' THEN wt.created_at END) AS last_credit_at
+  FROM wallet_transactions wt
+  JOIN profiles p ON p.user_id = wt.user_id
+  WHERE is_financeiro()
+  GROUP BY wt.user_id, p.display_name, p.username, p.avatar_url
+  HAVING SUM(CASE WHEN wt.type = 'credit' THEN wt.amount ELSE -wt.amount END) > 0
+  ORDER BY balance DESC;
 $$;
 ```
 
-### 2. Atualizar `FinanceiroHistorico.tsx`
+Essa funcao:
+- Calcula o saldo real de cada membro (creditos - debitos)
+- Filtra apenas membros com saldo positivo
+- Retorna dados do perfil para exibicao
+- So executa se o usuario logado tem role `financeiro`
 
-- Trocar a query direta por `rpcUntyped("list_processed_withdrawals", { p_limit: 200 })`
-- Atualizar a interface `ProcessedWithdrawal` para incluir `reviewer_display_name` e `reviewer_username`
-- Exibir o nome do auditor em cada card (ex: "Aprovado por Fulano" ou "Recusado por Fulano")
-- Manter filtros, badges, e navegacao
+### 2. Nova pagina: `src/pages/financeiro/FinanceiroCarteira.tsx`
 
-### 3. Atualizar `FinanceiroRelatorios.tsx`
+- KPI card no topo com o total consolidado (soma de todos os saldos)
+- Quantidade de membros com saldo
+- Campo de busca para filtrar por nome/username
+- Tabela com Avatar, Nome, Username, Saldo, Ultimo Credito
+- Botao de atualizar
+- Segue o mesmo padrao visual das paginas Historico e Relatorios
 
-- A query de Relatorios que tambem usa `profiles!inner(...)` tambem esta falhando (mesmo erro 400)
-- Trocar para uma query simples sem join (os relatorios so precisam dos valores, nao dos nomes)
-- Para a tabela de atividade recente, criar ou reutilizar a mesma RPC
+### 3. Atualizar navegacao (4 arquivos)
 
-## Resultado esperado
+- **`src/components/financeiro/FinanceiroLayout.tsx`** -- Adicionar item "Carteira" na sidebar com icone `Wallet`
+- **`src/components/financeiro/FinanceiroBottomNav.tsx`** -- Adicionar item "Carteira" na barra inferior mobile
+- **`src/components/financeiro/FinanceiroMenuSheet.tsx`** -- Adicionar item "Carteira" no menu mobile
+- **`src/routing/HostRouter.tsx`** -- Adicionar rota `/financeiro/carteira` (preview) e `/carteira` (producao) com os guards `RequireFinanceiroAuth` e `RequireFinanceiro`
 
-- Historico carrega corretamente com todos os saques processados
-- Cada registro mostra quem aprovou/recusou (nome do auditor)
-- Relatorios tambem funciona sem erro
-- Seguranca mantida via `is_financeiro()` dentro da RPC
+### 4. Arquivos afetados
+
+| Arquivo | Acao |
+|---|---|
+| Nova migracao SQL | Criar RPC `list_all_member_balances` |
+| `src/pages/financeiro/FinanceiroCarteira.tsx` | Criar pagina |
+| `src/components/financeiro/FinanceiroLayout.tsx` | Adicionar nav item |
+| `src/components/financeiro/FinanceiroBottomNav.tsx` | Adicionar nav item |
+| `src/components/financeiro/FinanceiroMenuSheet.tsx` | Adicionar nav item |
+| `src/routing/HostRouter.tsx` | Adicionar rotas |

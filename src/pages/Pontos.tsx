@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { useAuth } from "@/auth/AuthProvider";
-import { useMyProfile } from "@/hooks/useMyProfile";
 import { rpcUntyped } from "@/lib/rpc";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,13 +20,7 @@ interface Reward {
 
 export default function Pontos() {
   const { user } = useAuth();
-  const { data: profile } = useMyProfile(user?.id);
   const qc = useQueryClient();
-
-  const displayName =
-    profile?.display_name ||
-    [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") ||
-    "Usuário";
 
   // Points balance
   const { data: balance = 0, isLoading: balanceLoading } = useQuery({

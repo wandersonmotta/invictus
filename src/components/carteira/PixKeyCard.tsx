@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Save, Info, Loader2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Save, Info, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -14,52 +14,99 @@ interface PixKeyCardProps {
   onUpdate: () => void;
 }
 
+type ValidationState =
+  | { status: "idle" }
+  | { status: "validating" }
+  | { status: "valid"; name: string | null; fallback: boolean }
+  | { status: "invalid"; reason: string };
+
 export function PixKeyCard({ userId, currentPixKey, onUpdate }: PixKeyCardProps) {
   const [pixKey, setPixKey] = useState(currentPixKey ? formatCPF(currentPixKey) : "");
-  const [error, setError] = useState<string | null>(null);
+  const [validation, setValidation] = useState<ValidationState>({ status: "idle" });
   const [saving, setSaving] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastValidatedRef = useRef<string>("");
+
+  const digits = pixKey.replace(/\D/g, "");
+  const isComplete = digits.length === 11;
+  const mathValid = isComplete && isValidCPF(pixKey);
+  const canSave =
+    validation.status === "valid" &&
+    !saving &&
+    digits !== (currentPixKey ?? "").replace(/\D/g, "");
+
+  // Real-time validation when CPF is complete
+  useEffect(() => {
+    // Clear previous debounce
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    // Reset if incomplete
+    if (!isComplete) {
+      setValidation({ status: "idle" });
+      lastValidatedRef.current = "";
+      return;
+    }
+
+    // Math check first
+    if (!mathValid) {
+      setValidation({ status: "invalid", reason: "CPF inválido (dígitos verificadores)" });
+      lastValidatedRef.current = "";
+      return;
+    }
+
+    // Skip if already validated this exact value
+    if (lastValidatedRef.current === digits) return;
+
+    // Debounce the API call
+    debounceRef.current = setTimeout(async () => {
+      setValidation({ status: "validating" });
+
+      try {
+        const { data, error } = await supabase.functions.invoke("validate-cpf", {
+          body: { cpf: digits },
+        });
+
+        if (error) {
+          console.warn("validate-cpf error, accepting with math validation:", error);
+          setValidation({ status: "valid", name: null, fallback: true });
+        } else if (data && !data.valid) {
+          setValidation({
+            status: "invalid",
+            reason:
+              data.reason === "not_found"
+                ? "CPF não encontrado na Receita Federal"
+                : "CPF inválido",
+          });
+        } else {
+          setValidation({
+            status: "valid",
+            name: data?.name ?? null,
+            fallback: data?.fallback ?? false,
+          });
+        }
+        lastValidatedRef.current = digits;
+      } catch {
+        // Network error — accept with fallback
+        setValidation({ status: "valid", name: null, fallback: true });
+        lastValidatedRef.current = digits;
+      }
+    }, 400);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [digits, isComplete, mathValid]);
 
   const handleChange = (value: string) => {
     const formatted = formatCPF(value);
     setPixKey(formatted);
-    setError(null);
   };
 
   const handleSave = async () => {
-    if (!pixKey.trim()) {
-      setError("Informe sua chave PIX (CPF)");
-      return;
-    }
-    if (!isValidCPF(pixKey)) {
-      setError("CPF inválido");
-      return;
-    }
-
-    const digits = pixKey.replace(/\D/g, "");
+    if (!canSave) return;
 
     setSaving(true);
     try {
-      // Validate CPF via backend (Receita Federal)
-      const { data: validation, error: fnError } = await supabase.functions.invoke(
-        "validate-cpf",
-        { body: { cpf: digits } },
-      );
-
-      if (fnError) {
-        console.warn("validate-cpf function error, proceeding with math validation:", fnError);
-        // Fallback: save anyway since math validation passed
-      } else if (validation && !validation.valid) {
-        const reason = validation.reason;
-        if (reason === "not_found") {
-          setError("CPF não encontrado na Receita Federal");
-        } else {
-          setError("CPF inválido");
-        }
-        setSaving(false);
-        return;
-      }
-
-      // Save to database
       const { error: updateError } = await supabase
         .from("profiles")
         .update({ pix_key: digits })
@@ -88,16 +135,47 @@ export function PixKeyCard({ userId, currentPixKey, onUpdate }: PixKeyCardProps)
 
       <div className="space-y-2">
         <Label htmlFor="profile-pix-key">Chave PIX (CPF)</Label>
-        <Input
-          id="profile-pix-key"
-          type="text"
-          inputMode="numeric"
-          placeholder="000.000.000-00"
-          value={pixKey}
-          onChange={(e) => handleChange(e.target.value)}
-          className={error ? "border-destructive" : ""}
-        />
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        <div className="relative">
+          <Input
+            id="profile-pix-key"
+            type="text"
+            inputMode="numeric"
+            placeholder="000.000.000-00"
+            value={pixKey}
+            onChange={(e) => handleChange(e.target.value)}
+            className={
+              validation.status === "invalid"
+                ? "border-destructive pr-10"
+                : validation.status === "valid"
+                  ? "border-green-600 dark:border-green-500 pr-10"
+                  : "pr-10"
+            }
+          />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            {validation.status === "validating" && (
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            )}
+            {validation.status === "valid" && (
+              <CheckCircle2 className="size-4 text-green-600 dark:text-green-500" />
+            )}
+            {validation.status === "invalid" && (
+              <XCircle className="size-4 text-destructive" />
+            )}
+          </div>
+        </div>
+
+        {validation.status === "invalid" && (
+          <p className="text-xs text-destructive">{validation.reason}</p>
+        )}
+        {validation.status === "valid" && validation.name && (
+          <p className="text-xs text-green-600 dark:text-green-500">{validation.name}</p>
+        )}
+        {validation.status === "valid" && validation.fallback && (
+          <p className="text-xs text-muted-foreground">
+            CPF válido (verificação externa indisponível)
+          </p>
+        )}
+
         <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
           <Info className="size-3.5 mt-0.5 shrink-0" />
           <span>Usamos seu CPF como chave padrão para receber saques via PIX</span>
@@ -108,12 +186,12 @@ export function PixKeyCard({ userId, currentPixKey, onUpdate }: PixKeyCardProps)
         variant="goldOutline"
         className="w-full gap-2"
         onClick={handleSave}
-        disabled={saving}
+        disabled={!canSave}
       >
         {saving ? (
           <>
             <Loader2 className="size-4 animate-spin" />
-            Verificando CPF...
+            Salvando...
           </>
         ) : (
           <>

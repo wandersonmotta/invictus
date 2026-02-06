@@ -1,80 +1,48 @@
 
 
-# Gestao de Resgates de Premios no Admin
+# Simplificar pagina de Pontos + Vincular pontos do Reconhecimento
 
 ## Resumo
 
-Adicionar uma nova aba **"Resgates"** no painel Admin (`/admin`) para que o administrador possa visualizar e gerenciar todos os premios solicitados pelos membros. A aba mostrara uma tabela com: foto do perfil do usuario, nome, qual premio foi resgatado, quantidade de pontos gastos, data do resgate, e status atual (pendente, aprovado, rejeitado, entregue).
+Duas mudancas principais:
+1. **Layout da pagina `/pontos`**: Remover o header "Ola, {nome}" e deixar apenas a barra de saldo compacta no topo, seguida dos premios em lista vertical (scroll natural para ver todos).
+2. **Vinculo com Reconhecimento**: Quando o membro atinge uma graduacao (Invictus, Bronze, Silver, etc.), os pontos daquele nivel sao creditados automaticamente no saldo de `point_balances`.
 
 ## O que muda
 
-### 1. Nova aba "Resgates" na pagina Admin
+### 1. Layout simplificado da pagina Pontos
 
-A pagina Admin atualmente tem 6 abas. Sera adicionada uma 7a aba chamada **"Resgates"**, que exibira:
+- Remover o bloco `<header>` com "Ola," e o nome do usuario
+- Manter apenas o `PointsBalanceCard` no topo (barra compacta com icone Gift + saldo)
+- Abaixo, a lista de premios em vertical com scroll natural - o usuario desce para ver mais
+- Sem paginacao, todos os premios carregam de uma vez (sao poucos)
 
-- Tabela com as colunas:
-  - **Avatar + Nome** do membro (foto do perfil e display_name)
-  - **Premio** resgatado (nome do premio)
-  - **Pontos** gastos
-  - **Data** do resgate
-  - **Status** (pendente / aprovado / rejeitado / entregue)
-  - **Acoes** (botoes para aprovar, rejeitar ou marcar como entregue)
+### 2. Pontos do Reconhecimento somam no saldo
 
-- Os dados virao de uma query que cruza `point_redemptions` com `profiles` (para avatar e nome) e `point_rewards` (para nome do premio)
+Quando um membro conquista uma graduacao no sistema de reconhecimento, os pontos correspondentes (ex: Invictus = 50 pts, Bronze = 100 pts, Gold = 1000 pts) devem ser creditados na tabela `point_balances`, somando ao saldo existente.
 
-### 2. Banco de dados
-
-As tabelas `point_balances`, `point_rewards` e `point_redemptions` serao criadas junto com o restante do sistema de pontos (conforme plano anterior aprovado). Para o admin, sera necessario:
-
-- RLS na `point_redemptions` permitindo SELECT para admins
-- RLS na `point_rewards` permitindo ALL para admins (gerenciar catalogo)
-- Uma RPC (ou query direta) que retorne os resgates com dados do perfil e do premio juntos
-
-### 3. Fluxo de gestao
-
-O admin podera:
-1. Ver todos os resgates pendentes no topo da lista
-2. Clicar em "Aprovar" para marcar como aprovado
-3. Clicar em "Rejeitar" para recusar o resgate (pontos devolvidos ao membro)
-4. Clicar em "Entregue" apos enviar o premio fisico
+Isso sera feito via uma funcao no banco de dados que pode ser chamada pelo admin ao aprovar/conceder uma graduacao. Os pontos se acumulam - se o membro ja tem pontos de outra fonte, eles somam; se nao tem nenhum, o saldo e criado com esses pontos.
 
 ## Detalhes tecnicos
 
-### Arquivo: `src/pages/Admin.tsx`
+### Arquivo: `src/pages/Pontos.tsx`
 
-- Adicionar nova tab "Resgates" no `TabsList` (grid passara de 6 para 7 colunas)
-- Novo `TabsContent value="redemptions"` com:
-  - Query `point_redemptions` via RPC que retorna dados enriquecidos (avatar_url, display_name, reward_name, points_spent, requested_at, status)
-  - Tabela usando os componentes Table existentes
-  - Avatar do membro usando componente `Avatar` + `AvatarImage` + `AvatarFallback`
-  - Badge colorido para status (amarelo = pendente, verde = aprovado, vermelho = rejeitado, azul = entregue)
-  - Botoes de acao condicionais baseados no status atual
+- Remover import de `useMyProfile`
+- Remover as variaveis `profile` e `displayName`
+- Remover o bloco `<header className="invictus-page-header">` inteiro (linhas 87-90)
+- Manter o resto: `PointsBalanceCard`, lista de `RewardCard`, e `RedeemConfirmDialog`
 
-### Banco de dados - RPC `admin_list_redemptions`
+### Banco de dados: RPC `grant_recognition_points`
 
-Funcao `SECURITY DEFINER` que retorna os resgates com JOIN em profiles e point_rewards:
+Nova funcao `SECURITY DEFINER` que recebe `p_user_id` e `p_level_id` (ex: "bronze"), verifica a tabela de niveis (ou um mapeamento interno), e faz `INSERT ... ON CONFLICT` no `point_balances` somando os pontos correspondentes. Somente admins podem chamar.
 
-```text
-SELECT
-  r.id, r.user_id, r.points_spent, r.status, r.requested_at, r.reviewed_at,
-  p.display_name, p.avatar_url,
-  pw.name as reward_name
-FROM point_redemptions r
-JOIN profiles p ON p.user_id = r.user_id
-JOIN point_rewards pw ON pw.id = r.reward_id
-ORDER BY r.requested_at DESC
-```
+Mapeamento de pontos por nivel (mesmo do `recognitionLevels.ts`):
+- invictus: 50
+- bronze: 100
+- silver: 500
+- gold: 1000
+- black: 2500
+- elite: 5000
+- diamond: 12000
 
-### Banco de dados - RPC `admin_update_redemption_status`
-
-Funcao `SECURITY DEFINER` que:
-1. Verifica se o caller e admin
-2. Atualiza o status do resgate
-3. Se rejeitado, devolve os pontos ao `point_balances` do membro
-4. Registra `reviewed_at` com timestamp atual
-
-### RLS adicional
-
-- `point_redemptions`: admin pode SELECT todos os registros
-- `point_rewards`: admin pode ALL (criar, editar, remover premios)
-
+Essa funcao sera chamada futuramente quando o fluxo de aprovacao de graduacao for implementado. Por enquanto, fica disponivel para uso manual pelo admin.

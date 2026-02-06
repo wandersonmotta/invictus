@@ -1531,6 +1531,17 @@ export type Database = {
       is_approved: { Args: never; Returns: boolean }
       is_financeiro: { Args: never; Returns: boolean }
       is_mutual_follow: { Args: { a: string; b: string }; Returns: boolean }
+      list_all_member_balances: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          balance: number
+          display_name: string
+          last_credit_at: string
+          user_id: string
+          username: string
+        }[]
+      }
       list_community_channels: {
         Args: never
         Returns: {

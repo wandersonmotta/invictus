@@ -1,6 +1,6 @@
  import { useState, memo } from "react";
  import { useLocation, useNavigate } from "react-router-dom";
- import { ListChecks, FileText, BarChart3, Menu } from "lucide-react";
+ import { ListChecks, FileText, BarChart3, Wallet, Menu } from "lucide-react";
  
  import { useIsMobileOrTablet } from "@/hooks/use-mobile";
  import { isLovableHost } from "@/lib/appOrigin";
@@ -25,8 +25,9 @@
    const navItems: NavItem[] = [
      { id: "auditoria", label: "Auditoria", icon: ListChecks, action: "navigate", url: `${basePath}/dashboard` },
      { id: "historico", label: "Histórico", icon: FileText, action: "navigate", url: `${basePath}/historico` },
-     { id: "relatorios", label: "Relatórios", icon: BarChart3, action: "navigate", url: `${basePath}/relatorios` },
-     { id: "menu", label: "Menu", icon: Menu, action: "menu" },
+      { id: "relatorios", label: "Relatórios", icon: BarChart3, action: "navigate", url: `${basePath}/relatorios` },
+      { id: "carteira", label: "Carteira", icon: Wallet, action: "navigate", url: `${basePath}/carteira` },
+      { id: "menu", label: "Menu", icon: Menu, action: "menu" },
    ];
  
    // Render only on mobile AND tablets (< 1024px)

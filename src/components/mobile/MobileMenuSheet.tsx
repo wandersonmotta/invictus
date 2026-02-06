@@ -17,6 +17,7 @@ import {
   HelpCircle,
   Trophy,
   ShoppingBag,
+  Receipt,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -91,6 +92,7 @@ const menuSections: MenuSection[] = [
   {
     label: "Conta",
     items: [
+      { title: "Minhas Faturas", url: "/faturas", icon: Receipt, placeholder: true },
       { title: "Perfil", url: "/perfil", icon: User },
       { title: "Suporte", url: "/suporte", icon: HelpCircle, placeholder: true },
     ],

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { RefreshCw, Eye, FileText } from "lucide-react";
+import { RefreshCw, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -77,20 +77,22 @@ export default function FinanceiroHistorico() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Histórico de Auditorias</h1>
-          <p className="text-sm text-muted-foreground">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold">Histórico de Auditorias</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             {filtered.length} registro(s)
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchHistory} disabled={loading}>
+        <Button variant="outline" size="sm" onClick={fetchHistory} disabled={loading} className="shrink-0">
           <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          Atualizar
+          <span className="hidden sm:inline">Atualizar</span>
         </Button>
       </div>
 
+      {/* Filters */}
       <ToggleGroup
         type="single"
         value={filter}
@@ -128,67 +130,87 @@ export default function FinanceiroHistorico() {
                 className="cursor-pointer transition-colors hover:bg-accent/50"
                 onClick={() => navigate(`${auditPath}/${w.withdrawal_id}`)}
               >
-                <CardContent className="flex items-center gap-4 p-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={w.avatar_url || undefined} />
-                    <AvatarFallback>
-                      {(w.display_name || w.username || "?")
-                        .charAt(0)
-                        .toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-start gap-3 sm:items-center sm:gap-4">
+                    <Avatar className="h-10 w-10 sm:h-12 sm:w-12 shrink-0">
+                      <AvatarImage src={w.avatar_url || undefined} />
+                      <AvatarFallback>
+                        {(w.display_name || w.username || "?")
+                          .charAt(0)
+                          .toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">
-                        {w.display_name || w.username || "Membro"}
-                      </span>
-                      {w.username && (
-                        <span className="text-sm text-muted-foreground">
-                          {w.username.startsWith("@") ? w.username : `@${w.username}`}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium truncate text-sm sm:text-base">
+                          {w.display_name || w.username || "Membro"}
                         </span>
+                        {w.username && (
+                          <span className="hidden sm:inline text-sm text-muted-foreground">
+                            {w.username.startsWith("@") ? w.username : `@${w.username}`}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-x-2 text-xs sm:text-sm text-muted-foreground">
+                        {w.reviewed_at && (
+                          <span>
+                            {format(new Date(w.reviewed_at), "dd/MM/yyyy HH:mm", {
+                              locale: ptBR,
+                            })}
+                          </span>
+                        )}
+                        {reviewer && <span className="hidden sm:inline">· {reviewer}</span>}
+                      </div>
+                      {!isApproved && w.rejection_reason && (
+                        <p className="mt-1 text-xs text-destructive line-clamp-2 sm:line-clamp-1">
+                          Motivo: {w.rejection_reason}
+                        </p>
                       )}
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-x-2 text-sm text-muted-foreground">
-                      {w.reviewed_at && (
-                        <span>
-                          {format(new Date(w.reviewed_at), "dd/MM/yyyy HH:mm", {
-                            locale: ptBR,
-                          })}
+
+                      {/* Mobile: value + badge below */}
+                      <div className="mt-2 flex items-center justify-between gap-2 sm:hidden">
+                        <span className="text-base font-semibold text-[hsl(var(--gold))]">
+                          {formatCurrency(w.net_amount)}
                         </span>
-                      )}
-                      {reviewer && <span>· {reviewer}</span>}
+                        <Badge
+                          className={
+                            isApproved
+                              ? "border-green-500/50 bg-green-500/10 text-green-500"
+                              : "border-destructive/50 bg-destructive/10 text-destructive"
+                          }
+                          variant="outline"
+                        >
+                          {isApproved ? "Aprovado" : "Recusado"}
+                        </Badge>
+                      </div>
                     </div>
-                    {!isApproved && w.rejection_reason && (
-                      <p className="mt-1 text-xs text-destructive line-clamp-1">
-                        Motivo: {w.rejection_reason}
-                      </p>
-                    )}
+
+                    {/* Desktop: value + badge + icon */}
+                    <div className="hidden sm:flex sm:items-center sm:gap-3">
+                      <div className="text-right shrink-0">
+                        <div className="text-lg font-semibold text-[hsl(var(--gold))]">
+                          {formatCurrency(w.net_amount)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Bruto: {formatCurrency(w.gross_amount)}
+                        </div>
+                      </div>
+                      <Badge
+                        className={
+                          isApproved
+                            ? "border-green-500/50 bg-green-500/10 text-green-500"
+                            : "border-destructive/50 bg-destructive/10 text-destructive"
+                        }
+                        variant="outline"
+                      >
+                        {isApproved ? "Aprovado" : "Recusado"}
+                      </Badge>
+                      <Button variant="ghost" size="icon" className="shrink-0">
+                        <FileText className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-
-                  <div className="text-right shrink-0">
-                    <div className="text-lg font-semibold text-[hsl(var(--gold))]">
-                      {formatCurrency(w.net_amount)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Bruto: {formatCurrency(w.gross_amount)}
-                    </div>
-                  </div>
-
-                  <Badge
-                    className={
-                      isApproved
-                        ? "border-green-500/50 bg-green-500/10 text-green-500"
-                        : "border-destructive/50 bg-destructive/10 text-destructive"
-                    }
-                    variant="outline"
-                  >
-                    {isApproved ? "Aprovado" : "Recusado"}
-                  </Badge>
-
-                  <Button variant="ghost" size="icon" className="shrink-0">
-                    <Eye className="h-4 w-4" />
-                  </Button>
                 </CardContent>
               </Card>
             );

@@ -1,9 +1,10 @@
  import { useNavigate, useLocation } from "react-router-dom";
  import { useTheme } from "next-themes";
  import {
-   ListChecks,
-   FileText,
-   BarChart3,
+  ListChecks,
+  FileText,
+  BarChart3,
+  Wallet,
    ChevronRight,
    LogOut,
    Monitor,
@@ -41,8 +42,9 @@
    const menuItems: MenuItem[] = [
      { title: "Fila de Auditoria", url: `${basePath}/dashboard`, icon: ListChecks },
      { title: "Histórico", url: `${basePath}/historico`, icon: FileText },
-     { title: "Relatórios", url: `${basePath}/relatorios`, icon: BarChart3 },
-   ];
+      { title: "Relatórios", url: `${basePath}/relatorios`, icon: BarChart3 },
+      { title: "Carteira", url: `${basePath}/carteira`, icon: Wallet },
+    ];
  
    const handleNavigate = (item: MenuItem) => {
      navigate(item.url);

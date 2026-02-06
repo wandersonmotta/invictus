@@ -38,6 +38,7 @@ const FinanceiroDashboard = React.lazy(() => import("@/pages/financeiro/Financei
 const AuditoriaDetalhe = React.lazy(() => import("@/pages/financeiro/AuditoriaDetalhe"));
  const FinanceiroHistorico = React.lazy(() => import("@/pages/financeiro/FinanceiroHistorico"));
  const FinanceiroRelatorios = React.lazy(() => import("@/pages/financeiro/FinanceiroRelatorios"));
+ const FinanceiroCarteira = React.lazy(() => import("@/pages/financeiro/FinanceiroCarteira"));
 
 export function HostRouter() {
   const hostname = window.location.hostname;
@@ -100,6 +101,18 @@ export function HostRouter() {
              <RequireFinanceiro>
                <FinanceiroLayout>
                  <FinanceiroRelatorios />
+               </FinanceiroLayout>
+             </RequireFinanceiro>
+           </RequireFinanceiroAuth>
+         }
+       />
+       <Route
+         path="/financeiro/carteira"
+         element={
+           <RequireFinanceiroAuth>
+             <RequireFinanceiro>
+               <FinanceiroLayout>
+                 <FinanceiroCarteira />
                </FinanceiroLayout>
              </RequireFinanceiro>
            </RequireFinanceiroAuth>
@@ -342,6 +355,18 @@ export function HostRouter() {
              <RequireFinanceiro>
                <FinanceiroLayout>
                  <FinanceiroRelatorios />
+               </FinanceiroLayout>
+             </RequireFinanceiro>
+           </RequireFinanceiroAuth>
+         }
+       />
+       <Route
+         path="/carteira"
+         element={
+           <RequireFinanceiroAuth>
+             <RequireFinanceiro>
+               <FinanceiroLayout>
+                 <FinanceiroCarteira />
                </FinanceiroLayout>
              </RequireFinanceiro>
            </RequireFinanceiroAuth>

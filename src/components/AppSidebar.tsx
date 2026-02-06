@@ -1,5 +1,5 @@
 import { useLocation } from "react-router-dom";
-import { Home as HomeIcon, MapPin, Search, Send, User, Shield, Clapperboard, MessagesSquare, Newspaper, BarChart3, Wallet, Gift, HelpCircle, Trophy } from "lucide-react";
+import { Home as HomeIcon, MapPin, Search, Send, User, Shield, Clapperboard, MessagesSquare, Newspaper, BarChart3, Wallet, Gift, HelpCircle, Trophy, ShoppingBag } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -60,6 +60,12 @@ const navSections: NavSection[] = [
     label: "Marketing",
     items: [
       { title: "Leads", url: "/leads", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Serviços",
+    items: [
+      { title: "Serviços", url: "/servicos", icon: ShoppingBag },
     ],
   },
   {

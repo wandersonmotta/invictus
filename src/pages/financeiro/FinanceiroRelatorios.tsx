@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { rpcUntyped } from "@/lib/rpc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,29 +31,27 @@ interface KPIs {
   pendingTotal: number;
 }
 
-interface RecentWithdrawal {
-  id: string;
+interface RecentRow {
+  withdrawal_id: string;
+  display_name: string | null;
+  username: string | null;
   gross_amount: number;
   net_amount: number;
   fee_amount: number;
   status: string;
   requested_at: string;
   reviewed_at: string | null;
-  profiles: {
-    display_name: string | null;
-    username: string | null;
-  };
 }
 
 export default function FinanceiroRelatorios() {
   const [kpis, setKpis] = useState<KPIs | null>(null);
-  const [recent, setRecent] = useState<RecentWithdrawal[]>([]);
+  const [recent, setRecent] = useState<RecentRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     setLoading(true);
 
-    // Fetch all withdrawal_requests to compute KPIs client-side
+    // KPIs: simple query without profile join
     const { data: all } = await supabase
       .from("withdrawal_requests")
       .select("gross_amount, fee_amount, net_amount, status")
@@ -72,15 +71,13 @@ export default function FinanceiroRelatorios() {
       });
     }
 
-    // Recent 20 withdrawals with profile info
-    const { data: recentData } = await supabase
-      .from("withdrawal_requests")
-      .select("id, gross_amount, net_amount, fee_amount, status, requested_at, reviewed_at, profiles!inner(display_name, username)")
-      .order("requested_at", { ascending: false })
-      .limit(20);
-
+    // Recent processed withdrawals via RPC (includes profile names)
+    const { data: recentData } = await rpcUntyped<RecentRow[]>(
+      "list_processed_withdrawals",
+      { p_limit: 20 }
+    );
     if (recentData) {
-      setRecent(recentData as unknown as RecentWithdrawal[]);
+      setRecent(recentData);
     }
 
     setLoading(false);
@@ -206,17 +203,16 @@ export default function FinanceiroRelatorios() {
               </TableHeader>
               <TableBody>
                 {recent.map((w) => {
-                  const profile = w.profiles;
                   const displayName =
-                    profile.display_name ||
-                    (profile.username
-                      ? profile.username.startsWith("@")
-                        ? profile.username
-                        : `@${profile.username}`
+                    w.display_name ||
+                    (w.username
+                      ? w.username.startsWith("@")
+                        ? w.username
+                        : `@${w.username}`
                       : "Membro");
 
                   return (
-                    <TableRow key={w.id}>
+                    <TableRow key={w.withdrawal_id}>
                       <TableCell className="font-medium">{displayName}</TableCell>
                       <TableCell className="text-right">
                         {formatCurrency(w.gross_amount)}

@@ -1657,6 +1657,26 @@ export type Database = {
           withdrawal_id: string
         }[]
       }
+      list_processed_withdrawals: {
+        Args: { p_limit?: number }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          fee_amount: number
+          gross_amount: number
+          net_amount: number
+          pix_key: string
+          rejection_reason: string
+          requested_at: string
+          reviewed_at: string
+          reviewer_display_name: string
+          reviewer_username: string
+          status: string
+          user_id: string
+          username: string
+          withdrawal_id: string
+        }[]
+      }
       list_profile_feed_posts: {
         Args: { p_before?: string; p_limit?: number; p_user_id: string }
         Returns: {

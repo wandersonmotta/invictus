@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { rpcUntyped } from "@/lib/rpc";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,11 @@ import { ptBR } from "date-fns/locale";
 type StatusFilter = "all" | "approved" | "rejected";
 
 interface ProcessedWithdrawal {
-  id: string;
+  withdrawal_id: string;
   user_id: string;
+  display_name: string | null;
+  username: string | null;
+  avatar_url: string | null;
   gross_amount: number;
   fee_amount: number;
   net_amount: number;
@@ -24,11 +27,8 @@ interface ProcessedWithdrawal {
   requested_at: string;
   reviewed_at: string | null;
   rejection_reason: string | null;
-  profiles: {
-    display_name: string | null;
-    username: string | null;
-    avatar_url: string | null;
-  };
+  reviewer_display_name: string | null;
+  reviewer_username: string | null;
 }
 
 export default function FinanceiroHistorico() {
@@ -44,15 +44,12 @@ export default function FinanceiroHistorico() {
 
   const fetchHistory = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("withdrawal_requests")
-      .select("id, user_id, gross_amount, fee_amount, net_amount, pix_key, status, requested_at, reviewed_at, rejection_reason, profiles!inner(display_name, username, avatar_url)")
-      .in("status", ["approved", "rejected"])
-      .order("reviewed_at", { ascending: false })
-      .limit(200);
-
+    const { data, error } = await rpcUntyped<ProcessedWithdrawal[]>(
+      "list_processed_withdrawals",
+      { p_limit: 200 }
+    );
     if (!error && data) {
-      setWithdrawals(data as unknown as ProcessedWithdrawal[]);
+      setWithdrawals(data);
     }
     setLoading(false);
   };
@@ -71,6 +68,13 @@ export default function FinanceiroHistorico() {
       style: "currency",
       currency: "BRL",
     }).format(value);
+
+  const reviewerLabel = (w: ProcessedWithdrawal) => {
+    const name = w.reviewer_display_name || w.reviewer_username;
+    if (!name) return null;
+    const prefix = w.status === "approved" ? "Aprovado por" : "Recusado por";
+    return `${prefix} ${name}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -115,20 +119,20 @@ export default function FinanceiroHistorico() {
       ) : (
         <div className="space-y-3">
           {filtered.map((w) => {
-            const profile = w.profiles;
             const isApproved = w.status === "approved";
+            const reviewer = reviewerLabel(w);
 
             return (
               <Card
-                key={w.id}
+                key={w.withdrawal_id}
                 className="cursor-pointer transition-colors hover:bg-accent/50"
-                onClick={() => navigate(`${auditPath}/${w.id}`)}
+                onClick={() => navigate(`${auditPath}/${w.withdrawal_id}`)}
               >
                 <CardContent className="flex items-center gap-4 p-4">
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={profile.avatar_url || undefined} />
+                    <AvatarImage src={w.avatar_url || undefined} />
                     <AvatarFallback>
-                      {(profile.display_name || profile.username || "?")
+                      {(w.display_name || w.username || "?")
                         .charAt(0)
                         .toUpperCase()}
                     </AvatarFallback>
@@ -137,13 +141,11 @@ export default function FinanceiroHistorico() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium truncate">
-                        {profile.display_name || profile.username || "Membro"}
+                        {w.display_name || w.username || "Membro"}
                       </span>
-                      {profile.username && (
+                      {w.username && (
                         <span className="text-sm text-muted-foreground">
-                          {profile.username.startsWith("@")
-                            ? profile.username
-                            : `@${profile.username}`}
+                          {w.username.startsWith("@") ? w.username : `@${w.username}`}
                         </span>
                       )}
                     </div>
@@ -155,6 +157,7 @@ export default function FinanceiroHistorico() {
                           })}
                         </span>
                       )}
+                      {reviewer && <span>· {reviewer}</span>}
                     </div>
                     {!isApproved && w.rejection_reason && (
                       <p className="mt-1 text-xs text-destructive line-clamp-1">

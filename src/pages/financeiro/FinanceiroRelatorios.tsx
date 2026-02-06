@@ -6,14 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   RefreshCw,
   DollarSign,
   TrendingUp,
@@ -51,7 +43,6 @@ export default function FinanceiroRelatorios() {
   const fetchData = async () => {
     setLoading(true);
 
-    // KPIs: simple query without profile join
     const { data: all } = await supabase
       .from("withdrawal_requests")
       .select("gross_amount, fee_amount, net_amount, status")
@@ -71,7 +62,6 @@ export default function FinanceiroRelatorios() {
       });
     }
 
-    // Recent processed withdrawals via RPC (includes profile names)
     const { data: recentData } = await rpcUntyped<RecentRow[]>(
       "list_processed_withdrawals",
       { p_limit: 20 }
@@ -142,33 +132,34 @@ export default function FinanceiroRelatorios() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Relatórios Financeiros</h1>
-        <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2">
+        <h1 className="text-xl sm:text-2xl font-bold">Relatórios Financeiros</h1>
+        <Button variant="outline" size="sm" onClick={fetchData} disabled={loading} className="shrink-0">
           <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          Atualizar
+          <span className="hidden sm:inline">Atualizar</span>
         </Button>
       </div>
 
       {/* KPI Cards */}
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-28 w-full" />
+            <Skeleton key={i} className="h-24 sm:h-28 w-full" />
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           {kpiCards.map((kpi) => (
             <Card key={kpi.title}>
-              <CardContent className="flex items-center gap-4 p-4">
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted ${kpi.color}`}>
-                  <kpi.icon className="h-5 w-5" />
+              <CardContent className="flex items-center gap-3 p-3 sm:p-4">
+                <div className={`flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-muted ${kpi.color}`}>
+                  <kpi.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">{kpi.title}</p>
-                  <p className="text-lg font-bold truncate">{kpi.value}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">{kpi.title}</p>
+                  <p className="text-sm sm:text-lg font-bold truncate">{kpi.value}</p>
                 </div>
               </CardContent>
             </Card>
@@ -176,14 +167,14 @@ export default function FinanceiroRelatorios() {
         </div>
       )}
 
-      {/* Recent table */}
+      {/* Recent withdrawals */}
       <Card>
-        <CardHeader>
+        <CardHeader className="px-3 sm:px-6">
           <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
             Últimos Saques
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3 sm:px-6">
           {loading ? (
             <Skeleton className="h-48 w-full" />
           ) : recent.length === 0 ? (
@@ -191,17 +182,55 @@ export default function FinanceiroRelatorios() {
               Nenhum saque registrado
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Membro</TableHead>
-                  <TableHead className="text-right">Bruto</TableHead>
-                  <TableHead className="text-right">Líquido</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Data</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left">
+                      <th className="pb-2 font-medium text-muted-foreground">Membro</th>
+                      <th className="pb-2 font-medium text-muted-foreground text-right">Bruto</th>
+                      <th className="pb-2 font-medium text-muted-foreground text-right">Líquido</th>
+                      <th className="pb-2 font-medium text-muted-foreground">Status</th>
+                      <th className="pb-2 font-medium text-muted-foreground">Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recent.map((w) => {
+                      const displayName =
+                        w.display_name ||
+                        (w.username
+                          ? w.username.startsWith("@")
+                            ? w.username
+                            : `@${w.username}`
+                          : "Membro");
+
+                      return (
+                        <tr key={w.withdrawal_id} className="border-b border-border/50">
+                          <td className="py-2.5 font-medium">{displayName}</td>
+                          <td className="py-2.5 text-right">
+                            {formatCurrency(w.gross_amount)}
+                          </td>
+                          <td className="py-2.5 text-right text-[hsl(var(--gold))]">
+                            {formatCurrency(w.net_amount)}
+                          </td>
+                          <td className="py-2.5">{statusBadge(w.status)}</td>
+                          <td className="py-2.5 text-muted-foreground">
+                            {format(
+                              new Date(w.reviewed_at || w.requested_at),
+                              "dd/MM/yy HH:mm",
+                              { locale: ptBR }
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile card list */}
+              <div className="sm:hidden space-y-2">
                 {recent.map((w) => {
                   const displayName =
                     w.display_name ||
@@ -212,27 +241,29 @@ export default function FinanceiroRelatorios() {
                       : "Membro");
 
                   return (
-                    <TableRow key={w.withdrawal_id}>
-                      <TableCell className="font-medium">{displayName}</TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(w.gross_amount)}
-                      </TableCell>
-                      <TableCell className="text-right text-[hsl(var(--gold))]">
-                        {formatCurrency(w.net_amount)}
-                      </TableCell>
-                      <TableCell>{statusBadge(w.status)}</TableCell>
-                      <TableCell className="text-muted-foreground">
+                    <div key={w.withdrawal_id} className="rounded-lg border border-border p-3 space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-sm truncate">{displayName}</span>
+                        {statusBadge(w.status)}
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Bruto: {formatCurrency(w.gross_amount)}</span>
+                        <span className="font-semibold text-sm text-[hsl(var(--gold))]">
+                          {formatCurrency(w.net_amount)}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
                         {format(
                           new Date(w.reviewed_at || w.requested_at),
                           "dd/MM/yy HH:mm",
                           { locale: ptBR }
                         )}
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                    </div>
                   );
                 })}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

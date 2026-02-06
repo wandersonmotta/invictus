@@ -51,50 +51,50 @@ export default function FinanceiroCarteira() {
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Carteira de Bônus</h1>
-          <p className="text-sm text-muted-foreground">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold">Carteira de Bônus</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Visão consolidada dos saldos disponíveis
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchBalances} disabled={loading}>
+        <Button variant="outline" size="sm" onClick={fetchBalances} disabled={loading} className="shrink-0">
           <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          Atualizar
+          <span className="hidden sm:inline">Atualizar</span>
         </Button>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
         <Card>
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-              <Wallet className="h-6 w-6 text-primary" />
+          <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5">
+            <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <Wallet className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Disponível</p>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-muted-foreground">Total Disponível</p>
               {loading ? (
                 <Skeleton className="mt-1 h-7 w-32" />
               ) : (
-                <p className="text-2xl font-bold text-[hsl(var(--gold))]">{fmt(totalBalance)}</p>
+                <p className="text-xl sm:text-2xl font-bold text-[hsl(var(--gold))]">{fmt(totalBalance)}</p>
               )}
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-              <Users className="h-6 w-6 text-primary" />
+          <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5">
+            <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <Users className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Membros com Saldo</p>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-muted-foreground">Membros com Saldo</p>
               {loading ? (
                 <Skeleton className="mt-1 h-7 w-16" />
               ) : (
-                <p className="text-2xl font-bold">{members.length}</p>
+                <p className="text-xl sm:text-2xl font-bold">{members.length}</p>
               )}
             </div>
           </CardContent>
@@ -132,37 +132,39 @@ export default function FinanceiroCarteira() {
         <div className="space-y-2">
           {filtered.map((m) => (
             <Card key={m.user_id}>
-              <CardContent className="flex items-center gap-4 p-4">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={m.avatar_url || undefined} />
-                  <AvatarFallback>
-                    {(m.display_name || m.username || "?").charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <Avatar className="h-9 w-9 sm:h-10 sm:w-10 shrink-0">
+                    <AvatarImage src={m.avatar_url || undefined} />
+                    <AvatarFallback>
+                      {(m.display_name || m.username || "?").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
 
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium truncate">
+                  <div className="min-w-0 flex-1">
+                    <span className="font-medium text-sm sm:text-base truncate block">
                       {m.display_name || m.username || "Membro"}
                     </span>
-                    {m.username && (
-                      <span className="text-sm text-muted-foreground">
-                        {m.username.startsWith("@") ? m.username : `@${m.username}`}
-                      </span>
-                    )}
+                    <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                      {m.username && (
+                        <span className="hidden sm:inline">
+                          {m.username.startsWith("@") ? m.username : `@${m.username}`}
+                        </span>
+                      )}
+                      {m.last_credit_at && (
+                        <span>
+                          Último crédito:{" "}
+                          {format(new Date(m.last_credit_at), "dd/MM/yyyy", { locale: ptBR })}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {m.last_credit_at && (
-                    <p className="text-xs text-muted-foreground">
-                      Último crédito:{" "}
-                      {format(new Date(m.last_credit_at), "dd/MM/yyyy", { locale: ptBR })}
-                    </p>
-                  )}
-                </div>
 
-                <div className="text-right shrink-0">
-                  <span className="text-lg font-semibold text-[hsl(var(--gold))]">
-                    {fmt(Number(m.balance))}
-                  </span>
+                  <div className="text-right shrink-0">
+                    <span className="text-sm sm:text-lg font-semibold text-[hsl(var(--gold))]">
+                      {fmt(Number(m.balance))}
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>

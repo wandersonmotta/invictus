@@ -68,7 +68,7 @@ const navSections: NavSection[] = [
       { title: "Perfil", url: "/perfil", icon: User },
       { title: "Carteira", url: "/carteira", icon: Wallet },
       { title: "Reconhecimento", url: "/reconhecimento", icon: Trophy },
-      { title: "Pontos", url: "/pontos", icon: Gift, placeholder: true },
+      { title: "Pontos", url: "/pontos", icon: Gift },
       { title: "Suporte", url: "/suporte", icon: HelpCircle, placeholder: true },
     ],
   },

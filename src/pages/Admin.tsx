@@ -28,6 +28,7 @@ import { Navigate } from "react-router-dom";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { rpcUntyped } from "@/lib/rpc";
 import { PendingProfileReviewDialog } from "@/components/admin/PendingProfileReviewDialog";
+import { AdminRedemptionsTab } from "@/components/admin/AdminRedemptionsTab";
 type Category = {
   id: string;
   name: string;
@@ -613,13 +614,14 @@ export default function Admin() {
             <p>Se você deveria ser admin, peça para um administrador validar sua conta e permissões.</p>
           </CardContent>
         </Card> : <Tabs defaultValue="approvals" className="w-full">
-          <TabsList className="grid h-11 w-full grid-cols-6">
+          <TabsList className="grid h-11 w-full grid-cols-7">
             <TabsTrigger value="approvals">Aprovações</TabsTrigger>
-            <TabsTrigger value="members">Área de membros</TabsTrigger>
+            <TabsTrigger value="members">Membros</TabsTrigger>
             <TabsTrigger value="invites">Convites</TabsTrigger>
             <TabsTrigger value="categories">Categorias</TabsTrigger>
             <TabsTrigger value="trainings">Treinamentos</TabsTrigger>
             <TabsTrigger value="leads">Leads</TabsTrigger>
+            <TabsTrigger value="redemptions">Resgates</TabsTrigger>
           </TabsList>
 
           <TabsContent value="approvals" className="mt-4 space-y-4">
@@ -1121,6 +1123,10 @@ export default function Admin() {
                 </p>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="redemptions" className="mt-4 space-y-4">
+            <AdminRedemptionsTab />
           </TabsContent>
         </Tabs>}
     </main>;

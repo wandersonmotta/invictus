@@ -105,7 +105,7 @@
                      </span>
                      {w.username && (
                        <span className="text-sm text-muted-foreground">
-                         @{w.username}
+                         {w.username.startsWith("@") ? w.username : `@${w.username}`}
                        </span>
                      )}
                    </div>

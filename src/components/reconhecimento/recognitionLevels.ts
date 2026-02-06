@@ -14,10 +14,20 @@ export interface RecognitionLevel {
 
 export const recognitionLevels: RecognitionLevel[] = [
   {
-    id: "bronze",
-    name: "Member Bronze",
+    id: "invictus",
+    name: "Member Invictus",
     description: "Adicione 3 pessoas",
     requirement: "3 pessoas",
+    points: 50,
+    gradient: "from-zinc-900 via-yellow-600 to-zinc-900",
+    accent: "bg-gradient-to-r from-yellow-500 to-zinc-800",
+    imageUrl: "https://wotwxzolgnsmzjpposua.supabase.co/storage/v1/object/public/recognition-awards/invictus-award.png",
+  },
+  {
+    id: "bronze",
+    name: "Member Bronze",
+    description: "Acumule R$ 10 mil em resultados",
+    requirement: "R$ 10 mil",
     points: 100,
     gradient: "from-amber-700 via-amber-600 to-amber-800",
     accent: "bg-amber-600",
@@ -26,8 +36,8 @@ export const recognitionLevels: RecognitionLevel[] = [
   {
     id: "silver",
     name: "Member Silver",
-    description: "Acumule R$ 10 mil em resultados",
-    requirement: "R$ 10 mil",
+    description: "Acumule R$ 30 mil em resultados",
+    requirement: "R$ 30 mil",
     points: 500,
     gradient: "from-slate-400 via-slate-300 to-slate-500",
     accent: "bg-slate-400",
@@ -36,8 +46,8 @@ export const recognitionLevels: RecognitionLevel[] = [
   {
     id: "gold",
     name: "Member Gold",
-    description: "Acumule R$ 50 mil em resultados",
-    requirement: "R$ 50 mil",
+    description: "Acumule R$ 100 mil em resultados",
+    requirement: "R$ 100 mil",
     points: 1000,
     gradient: "from-yellow-500 via-yellow-400 to-yellow-600",
     accent: "bg-yellow-500",
@@ -46,8 +56,8 @@ export const recognitionLevels: RecognitionLevel[] = [
   {
     id: "black",
     name: "Member Black",
-    description: "Acumule R$ 100 mil em resultados",
-    requirement: "R$ 100 mil",
+    description: "Acumule R$ 250 mil em resultados",
+    requirement: "R$ 250 mil",
     points: 2500,
     gradient: "from-zinc-800 via-zinc-700 to-zinc-900",
     accent: "bg-zinc-700",

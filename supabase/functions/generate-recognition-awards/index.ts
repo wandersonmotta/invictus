@@ -15,6 +15,7 @@ interface LevelConfig {
 }
 
 const LEVEL_CONFIGS: LevelConfig[] = [
+  { id: "invictus", name: "INVICTUS", color: "black/gold", stripe: "gold" },
   { id: "bronze", name: "BRONZE", color: "amber/copper", stripe: "amber" },
   { id: "silver", name: "SILVER", color: "clear/white", stripe: "silver" },
   { id: "gold", name: "GOLD", color: "yellow/gold", stripe: "gold" },
@@ -24,6 +25,15 @@ const LEVEL_CONFIGS: LevelConfig[] = [
 ];
 
 function buildPrompt(level: LevelConfig): string {
+  if (level.id === "invictus") {
+    return `Photorealistic 3D premium black leather bracelet on dark gradient background.
+Matte black leather band with gold metallic clasp and gold edge stitching.
+Gold metallic plate on top engraved with "MEMBER INVICTUS" text in elegant serif font.
+Small Invictus logo embossed in gold on the clasp.
+Professional product photography, studio lighting, soft reflections on gold details.
+Clean minimal composition. Premium luxury fashion accessory style.
+High detail, 4K quality, centered composition.`;
+  }
   return `Photorealistic 3D acrylic award trophy on dark gradient background.
 Silver metallic rectangular frame with rounded corners and polished chrome border.
 Inside: ${level.color} translucent crystal gem with faceted cuts catching light.
@@ -59,7 +69,7 @@ serve(async (req) => {
     const levelConfig = LEVEL_CONFIGS.find((l) => l.id === levelId);
   if (!levelConfig) {
     return new Response(
-      JSON.stringify({ error: "Invalid level. Use: bronze, silver, gold, black, elite, diamond" }),
+      JSON.stringify({ error: "Invalid level. Use: invictus, bronze, silver, gold, black, elite, diamond" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

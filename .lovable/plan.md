@@ -1,58 +1,58 @@
 
 
-# Validação de CPF via Receita Federal (API externa)
+# Validação de CPF multi-source gratuito (melhor esforço)
 
-## Situação atual
-O projeto já tem validação **matemática** do CPF (dígitos verificadores). Isso impede números inventados, mas não verifica se o CPF realmente existe na Receita Federal.
+## Problema atual
+A BrasilAPI retorna 404 para CPFs que existem na Receita Federal, bloqueando usuários legítimos de salvar sua chave PIX.
 
-## O que será feito
+## Solução
+Atualizar a edge function `validate-cpf` para consultar **múltiplas fontes gratuitas** em sequência. Se alguma confirmar o CPF, aceita. Se todas falharem ou retornarem 404, aceita com fallback (validação matemática já passou).
 
-### 1. Nova edge function: `validate-cpf`
-Criar uma function backend que:
-- Recebe o CPF do frontend
-- Primeiro valida matematicamente (rápido, sem chamada externa)
-- Depois consulta a **BrasilAPI** (`https://brasilapi.com.br/api/cpf/v1/{cpf}`), que é gratuita e consulta a base da Receita Federal
-- Retorna: CPF válido/inválido + nome do titular (quando disponível)
-- Se a API externa estiver fora do ar, aceita o CPF apenas com validação matemática (fallback seguro)
+## Fontes de consulta (em ordem)
 
-### 2. Atualizar `PixKeyCard.tsx`
-- Ao clicar "Salvar", chamar a edge function antes de gravar no banco
-- Mostrar estado de "Verificando CPF..." durante a consulta
-- Exibir erro claro se o CPF não existir na Receita
-- Se a API estiver indisponível, salvar mesmo assim (com validação matemática)
+1. **BrasilAPI** -- `https://brasilapi.com.br/api/cpf/v1/{cpf}` (gratuita, instável)
+2. **Invertexto** -- `https://api.invertexto.com/v1/validator?value={cpf}&token=free` (gratuita, sem autenticação para validação básica)
+3. **Nuvem Fiscal** -- `https://api.nuvemfiscal.com.br/cpf/{cpf}` (free tier disponível)
 
-### 3. Sem necessidade de API key
-A BrasilAPI é **gratuita e aberta** -- não precisa de chave de API nem configuração de secrets.
+Se qualquer uma responder positivamente (CPF existe), retorna `valid: true` com o nome quando disponível. Se todas falharem (timeout, 404, erro), aceita com `fallback: true` pois a validação matemática já barrou CPFs inventados.
 
-## Fluxo do usuário
+## Lógica de decisão
 
-1. Digita o CPF no campo
-2. Clica "Salvar chave PIX"
-3. Validação matemática local (instantânea)
-4. Se passa, chama a edge function que consulta a Receita
-5. Se o CPF existe: salva normalmente
-6. Se não existe: mostra "CPF não encontrado na Receita Federal"
-7. Se a API falhar (timeout/indisponível): salva com validação matemática apenas
+- Validação matemática falha -> rejeita imediatamente (CPF inventado)
+- Alguma API confirma existência (200) -> aceita com nome do titular
+- Todas as APIs retornam 404 -> aceita com fallback (melhor esforço)
+- Todas as APIs dão timeout/erro -> aceita com fallback
 
----
+## O que muda para o usuário
+
+- CPFs inventados continuam bloqueados (validação matemática)
+- CPFs reais terão mais chance de serem confirmados (múltiplas fontes)
+- Se nenhuma API estiver disponível, o fluxo não trava -- salva normalmente
 
 ## Detalhes Técnicos
 
-**Arquivos criados:**
-- `supabase/functions/validate-cpf/index.ts` -- edge function que consulta BrasilAPI
+**Arquivo alterado:**
+- `supabase/functions/validate-cpf/index.ts` -- reescrever para tentar múltiplas fontes em sequência, com timeout individual de 5 segundos por fonte
 
-**Arquivos alterados:**
-- `src/components/carteira/PixKeyCard.tsx` -- integrar chamada da edge function no fluxo de save
-- `supabase/config.toml` -- registrar a nova function com `verify_jwt = false`
+**Estrutura da function:**
 
-**Edge function (`validate-cpf`):**
+```text
+1. Recebe CPF
+2. Validação matemática (local, instantânea)
+3. Tenta BrasilAPI (5s timeout)
+   - 200 -> retorna valid: true + nome
+   - 404 -> continua para próxima fonte
+   - erro -> continua
+4. Tenta fontes alternativas (5s timeout cada)
+   - 200 -> retorna valid: true + nome
+   - erro -> continua
+5. Nenhuma fonte confirmou -> retorna valid: true, fallback: true
 ```
-POST /validate-cpf
-Body: { "cpf": "12345678900" }
 
-Resposta sucesso: { "valid": true, "name": "NOME DA PESSOA" }
-Resposta falha:   { "valid": false, "reason": "not_found" }
-Resposta fallback: { "valid": true, "name": null, "fallback": true }
-```
+**Resposta da function (sem alteração no contrato):**
+- `{ valid: true, name: "NOME", fallback: false }` -- confirmado por API
+- `{ valid: true, name: null, fallback: true }` -- não confirmado, mas matematicamente válido
+- `{ valid: false, reason: "invalid_digits" }` -- CPF inventado
 
-**Fallback:** Se a BrasilAPI retornar erro 5xx ou timeout, a function retorna `valid: true` com `fallback: true` para não bloquear o usuário quando o serviço externo estiver instável.
+**Frontend (`PixKeyCard.tsx`):**
+- Sem alteração necessária -- o contrato da resposta é o mesmo. CPFs matematicamente inválidos continuam sendo rejeitados, e o fallback já é tratado como aceitável.

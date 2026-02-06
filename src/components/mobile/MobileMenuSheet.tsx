@@ -81,12 +81,17 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
+    label: "Saldo e Pontuações",
+    items: [
+      { title: "Carteira", url: "/carteira", icon: Wallet },
+      { title: "Pontos", url: "/pontos", icon: Gift, placeholder: true },
+      { title: "Reconhecimento", url: "/reconhecimento", icon: Trophy },
+    ],
+  },
+  {
     label: "Conta",
     items: [
       { title: "Perfil", url: "/perfil", icon: User },
-      { title: "Carteira", url: "/carteira", icon: Wallet },
-      { title: "Reconhecimento", url: "/reconhecimento", icon: Trophy },
-      { title: "Pontos", url: "/pontos", icon: Gift, placeholder: true },
       { title: "Suporte", url: "/suporte", icon: HelpCircle, placeholder: true },
     ],
   },

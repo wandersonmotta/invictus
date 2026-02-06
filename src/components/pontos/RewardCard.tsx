@@ -25,7 +25,7 @@ export function RewardCard({ reward, balance, onRedeem, redeeming }: RewardCardP
       )}
     >
       {reward.image_url && (
-        <div className="aspect-[4/5] w-full overflow-hidden rounded-xl bg-muted/30">
+        <div className="aspect-[3/4] w-full overflow-hidden rounded-xl bg-muted/30">
           <img
             src={reward.image_url}
             alt={reward.name}

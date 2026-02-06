@@ -76,23 +76,27 @@ export default function Pontos() {
   const loading = balanceLoading || rewardsLoading;
 
   return (
-    <main className="invictus-page mx-auto w-full max-w-md px-4 py-6 pb-24 sm:px-6">
+    <main className="invictus-page mx-auto w-full max-w-5xl px-4 py-6 pb-24 sm:px-6">
       {loading ? (
         <div className="space-y-4">
           <Skeleton className="h-28 w-full rounded-2xl" />
-          <Skeleton className="h-40 w-full rounded-2xl" />
-          <Skeleton className="h-40 w-full rounded-2xl" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Skeleton className="h-72 w-full rounded-2xl" />
+            <Skeleton className="h-72 w-full rounded-2xl" />
+            <Skeleton className="h-72 w-full rounded-2xl" />
+          </div>
         </div>
       ) : (
         <>
           <PointsBalanceCard balance={balance} />
 
-          <section className="mt-6 space-y-4">
-            <h2 className="text-base font-semibold text-foreground">Prêmios disponíveis</h2>
+          <section className="mt-6">
+            <h2 className="text-base font-semibold text-foreground mb-4">Prêmios disponíveis</h2>
             {rewards.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhum prêmio disponível no momento.</p>
             ) : (
-              rewards.map((r) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {rewards.map((r) => (
                 <RewardCard
                   key={r.id}
                   reward={r}
@@ -100,7 +104,8 @@ export default function Pontos() {
                   onRedeem={() => setRedeemTarget(r)}
                   redeeming={redeeming && redeemTarget?.id === r.id}
                 />
-              ))
+              ))}
+              </div>
             )}
           </section>
         </>

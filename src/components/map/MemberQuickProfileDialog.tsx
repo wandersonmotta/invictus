@@ -125,7 +125,7 @@ export function MemberQuickProfileDialog({
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-base font-semibold">{p.display_name}</div>
-                  <div className="truncate text-sm text-muted-foreground">@{p.username}</div>
+                  <div className="truncate text-sm text-muted-foreground">{p.username?.startsWith("@") ? p.username : `@${p.username}`}</div>
                   {p.city && p.state ? (
                     <div className="mt-1 text-sm text-muted-foreground">
                       {p.city}/{p.state}

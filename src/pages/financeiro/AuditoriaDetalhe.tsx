@@ -242,7 +242,7 @@
                {member.display_name || member.username || "Membro"}
              </div>
              {member.username && (
-               <div className="text-sm text-muted-foreground">@{member.username}</div>
+               <div className="text-sm text-muted-foreground">{member.username?.startsWith("@") ? member.username : `@${member.username}`}</div>
              )}
              <div className="mt-1 text-sm">
                <span className="text-muted-foreground">PIX: </span>

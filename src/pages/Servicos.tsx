@@ -117,6 +117,7 @@ export default function Servicos() {
                   key={cat.id}
                   name={cat.name}
                   description={cat.description}
+                  iconName={cat.icon_name}
                   onClick={() => setSelectedCategoryId(cat.id)}
                 />
               ))}

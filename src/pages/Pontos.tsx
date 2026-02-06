@@ -77,11 +77,6 @@ export default function Pontos() {
 
   return (
     <main className="invictus-page mx-auto w-full max-w-md px-4 py-6 pb-24 sm:px-6">
-      <header className="invictus-page-header">
-        <p className="text-sm text-muted-foreground">Olá,</p>
-        <h1 className="invictus-h1">{displayName}</h1>
-      </header>
-
       {loading ? (
         <div className="space-y-4">
           <Skeleton className="h-28 w-full rounded-2xl" />

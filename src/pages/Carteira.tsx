@@ -103,7 +103,10 @@ export default function Carteira() {
       return;
     }
     const walletData = typeof data === "string" ? JSON.parse(data) : data;
-    setBalance(walletData.balance ?? 0);
+    const pendingGross = (walletData.pending_withdrawals ?? [])
+      .filter((w: WalletWithdrawal) => w.status === "pending")
+      .reduce((sum: number, w: WalletWithdrawal) => sum + (w.gross_amount ?? 0), 0);
+    setBalance((walletData.balance ?? 0) - pendingGross);
     setTransactions(mapToTransactions(walletData));
     setLoading(false);
   }, []);

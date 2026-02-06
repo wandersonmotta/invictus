@@ -1628,6 +1628,10 @@ export type Database = {
         Args: { p_withdrawal_id: string }
         Returns: Json
       }
+      grant_recognition_points: {
+        Args: { p_level_id: string; p_user_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

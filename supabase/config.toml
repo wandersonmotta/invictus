@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.validate-cpf]
 verify_jwt = false
+
+[functions.generate-reward-images]
+verify_jwt = false

@@ -42,10 +42,13 @@ function mapToTransactions(data: WalletData): Transaction[] {
   const items: Transaction[] = [];
 
   for (const tx of data.transactions) {
+    // Strip PIX key info from withdrawal descriptions (e.g. "Saque aprovado - PIX: 123...")
+    const cleanDescription = tx.description.replace(/\s*[-–]\s*PIX:.*$/i, "").trim();
+
     items.push({
       id: tx.id,
       date: tx.created_at,
-      description: tx.description,
+      description: cleanDescription,
       type: tx.type === "credit" ? "entrada" : "saida",
       status: "aprovado",
       amount: tx.amount,

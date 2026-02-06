@@ -895,6 +895,95 @@ export type Database = {
         }
         Relationships: []
       }
+      point_balances: {
+        Row: {
+          balance: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      point_redemptions: {
+        Row: {
+          id: string
+          points_spent: number
+          requested_at: string
+          reviewed_at: string | null
+          reward_id: string
+          status: Database["public"]["Enums"]["redemption_status"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          points_spent: number
+          requested_at?: string
+          reviewed_at?: string | null
+          reward_id: string
+          status?: Database["public"]["Enums"]["redemption_status"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          points_spent?: number
+          requested_at?: string
+          reviewed_at?: string | null
+          reward_id?: string
+          status?: Database["public"]["Enums"]["redemption_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "point_redemptions_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "point_rewards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      point_rewards: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          points_cost: number
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          points_cost: number
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          points_cost?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           access_status: Database["public"]["Enums"]["access_status"]
@@ -1289,6 +1378,20 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_list_redemptions: {
+        Args: { p_limit?: number }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          id: string
+          points_spent: number
+          requested_at: string
+          reviewed_at: string
+          reward_name: string
+          status: Database["public"]["Enums"]["redemption_status"]
+          user_id: string
+        }[]
+      }
       admin_log: {
         Args: { p_action: string; p_target_user_id?: string }
         Returns: undefined
@@ -1318,6 +1421,13 @@ export type Database = {
           profile_id: string
           user_id: string
         }[]
+      }
+      admin_update_redemption_status: {
+        Args: {
+          p_redemption_id: string
+          p_status: Database["public"]["Enums"]["redemption_status"]
+        }
+        Returns: boolean
       }
       approve_withdrawal: {
         Args: { p_notes?: string; p_withdrawal_id: string }
@@ -1433,6 +1543,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_my_points: { Args: never; Returns: number }
       get_my_threads: {
         Args: { p_folder: Database["public"]["Enums"]["conversation_folder"] }
         Returns: {
@@ -1710,6 +1821,7 @@ export type Database = {
         }[]
       }
       mark_notifications_read: { Args: { p_before: string }; Returns: number }
+      redeem_reward: { Args: { p_reward_id: string }; Returns: string }
       reject_withdrawal: {
         Args: { p_reason: string; p_withdrawal_id: string }
         Returns: boolean
@@ -1772,6 +1884,7 @@ export type Database = {
       conversation_folder: "inbox" | "requests"
       conversation_type: "direct" | "group"
       profile_visibility: "members" | "mutuals" | "private"
+      redemption_status: "pending" | "approved" | "rejected" | "delivered"
       wallet_transaction_type: "credit" | "debit"
       withdrawal_status: "pending" | "approved" | "rejected"
     }
@@ -1906,6 +2019,7 @@ export const Constants = {
       conversation_folder: ["inbox", "requests"],
       conversation_type: ["direct", "group"],
       profile_visibility: ["members", "mutuals", "private"],
+      redemption_status: ["pending", "approved", "rejected", "delivered"],
       wallet_transaction_type: ["credit", "debit"],
       withdrawal_status: ["pending", "approved", "rejected"],
     },

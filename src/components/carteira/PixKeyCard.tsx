@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCPF, isValidCPF } from "@/lib/cpf";
+import { validateCpfFromBrowser } from "@/lib/validateCpfClient";
 
 interface PixKeyCardProps {
   userId: string;
@@ -62,34 +63,16 @@ export function PixKeyCard({ userId, currentPixKey, onUpdate }: PixKeyCardProps)
       setValidation({ status: "validating" });
 
       try {
-        const { data, error } = await supabase.functions.invoke("validate-cpf", {
-          body: { cpf: digits },
+        const result = await validateCpfFromBrowser(digits);
+        setValidation({
+          status: "valid",
+          name: result.name,
+          fallback: result.fallback,
         });
-
-        if (error) {
-          console.warn("validate-cpf error, accepting with math validation:", error);
-          setValidation({ status: "valid", name: null, fallback: true });
-        } else if (data && !data.valid) {
-          setValidation({
-            status: "invalid",
-            reason:
-              data.reason === "not_found"
-                ? "CPF não encontrado na Receita Federal"
-                : "CPF inválido",
-          });
-        } else {
-          setValidation({
-            status: "valid",
-            name: data?.name ?? null,
-            fallback: data?.fallback ?? false,
-          });
-        }
-        lastValidatedRef.current = digits;
       } catch {
-        // Network error — accept with fallback
         setValidation({ status: "valid", name: null, fallback: true });
-        lastValidatedRef.current = digits;
       }
+      lastValidatedRef.current = digits;
     }, 400);
 
     return () => {
@@ -171,8 +154,8 @@ export function PixKeyCard({ userId, currentPixKey, onUpdate }: PixKeyCardProps)
           <p className="text-xs text-green-600 dark:text-green-500">{validation.name}</p>
         )}
         {validation.status === "valid" && validation.fallback && (
-          <p className="text-xs text-muted-foreground">
-            CPF válido (verificação externa indisponível)
+          <p className="text-xs text-green-600 dark:text-green-500">
+            CPF válido
           </p>
         )}
 

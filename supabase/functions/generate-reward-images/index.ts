@@ -9,11 +9,11 @@ const corsHeaders = {
 
 const REWARD_PROMPTS: Record<string, string> = {
   "Resort All Inclusive com Acompanhante":
-    "Cinematic aerial photograph of an ultra-luxury tropical resort with infinity pool overlooking crystal-clear turquoise ocean. Golden sunset light bathes the scene. Elegant couple in white linen walking along the pool edge. Palm trees, overwater bungalows in background. Professional travel photography, 4K, warm golden tones, dramatic lighting, premium hospitality advertising style.",
+    "Cinematic aerial photograph of a luxury beachfront resort in Porto de Galinhas, Pernambuco, Brazil. Crystal-clear emerald-green natural pools formed by coral reefs along the white sand beach. Coconut palm trees lining the shore. Premium resort architecture with infinity pool overlooking the ocean. Golden hour sunset light. Warm tropical tones. Professional travel photography, 4K quality, luxury hospitality advertising style.",
   "iPhone 17 Pro Max":
-    "Premium product photography of a sleek modern smartphone floating against a deep black gradient background. Metallic titanium finish with subtle prismatic light reflections. Cinematic studio lighting with soft rim light highlighting the edges. Ultra-clean minimal composition, 4K quality, luxury tech advertising style.",
+    "Professional product photography of an Apple iPhone 17 Pro Max in Desert Titanium orange color. The phone displays its redesigned camera island with aluminum frame. Thin bezels, titanium body with matte orange finish. Floating against a deep black gradient background. Cinematic studio lighting with soft rim light. Ultra-clean minimal composition, 4K quality, Apple product advertising style.",
   "MacBook M4":
-    "Professional product photography of a premium laptop computer open on an elegant dark wood desk. Dark moody background with dramatic side lighting. Screen glowing softly. Minimalist setup with subtle gold accents. Cinematic studio lighting, 4K quality, luxury tech advertising, clean composition.",
+    "Professional product photography of an Apple MacBook Pro M4 laptop, open at an angle showing the Liquid Retina XDR display and black keyboard. Space gray aluminum unibody design with Apple logo on the lid. Clean dark gradient background. Cinematic studio lighting with soft reflections on the aluminum surface. Ultra-clean minimal composition, 4K quality, Apple product advertising style.",
   "Cruzeiro All Inclusive com Acompanhante":
     "Cinematic photograph of a massive luxury cruise ship sailing through deep blue ocean at golden hour sunset. Warm amber light reflects off the water. Premium deck with elegant lighting visible. Dramatic sky with clouds painted in gold and purple. Professional travel photography, 4K, wide angle, luxury cruise advertising style.",
   "Viagem para Paris com Acompanhante - All Inclusive":

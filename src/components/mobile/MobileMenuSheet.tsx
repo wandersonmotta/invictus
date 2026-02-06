@@ -56,6 +56,12 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
+    label: "Serviços e Produtos",
+    items: [
+      { title: "Serviços", url: "/servicos", icon: ShoppingBag },
+    ],
+  },
+  {
     label: "Treinamentos",
     items: [
       { title: "Class", url: "/class", icon: Clapperboard },
@@ -72,12 +78,6 @@ const menuSections: MenuSection[] = [
     label: "Marketing",
     items: [
       { title: "Leads", url: "/leads", icon: BarChart3 },
-    ],
-  },
-  {
-    label: "Serviços",
-    items: [
-      { title: "Serviços", url: "/servicos", icon: ShoppingBag },
     ],
   },
   {

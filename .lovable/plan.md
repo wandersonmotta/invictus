@@ -1,63 +1,56 @@
 
-Objetivo
-- No desktop (computador/notebook), a página /reconhecimento deve caber 100% na altura visível, sem rolagem vertical, mantendo o tamanho/visual original dos cards (sem “compactar” o card).
-- A rolagem deve existir apenas na horizontal (carrossel de premiações).
+# Novo nível "Member Invictus" + Atualização dos requisitos
 
-Diagnóstico (pelo código atual + seu print)
-- O scroll vertical está vindo do container principal do layout (`AppLayout`), que sempre usa `overflow-y-auto` no “Main content area”.
-- Mesmo com o `Reconhecimento` tentando ocupar `h-full` e usando `flex-1 min-h-0`, a combinação de:
-  - padding vertical do conteúdo (`p-4 sm:p-5 lg:p-6`)
-  - gaps/space-y do header/section
-  - `pb-3` no carrossel
-  pode causar alguns pixels de overflow vertical. Como o pai é `overflow-y-auto`, você consegue “descer” para ver a parte de baixo.
+## Resumo
+Adicionar um novo primeiro nível **"Member Invictus"** (pulseira, requisito: adicionar 3 pessoas) e atualizar os valores de requisito dos demais níveis.
 
-Estratégia de correção (sem mexer no tamanho do card)
-1) Tornar o “Main content area” do `AppLayout` configurável por rota
-- Usar `useLocation()` dentro de `AppLayout` para detectar `pathname === "/reconhecimento"` (desktop).
-- Para essa rota especificamente:
-  - Trocar `overflow-y-auto` por `overflow-y-hidden` (no desktop) para impedir qualquer rolagem vertical.
-  - Ajustar o padding do container apenas o necessário (normalmente reduzir um pouco o padding vertical) para garantir que o conteúdo caiba sem cortar nada.
-  - Manter o comportamento atual de mobile/tablet (continua com `overflow-y-auto` + `pb-24` por causa do bottom nav).
+## Novos valores dos níveis (7 no total)
 
-2) Ajuste fino no `Reconhecimento.tsx` (desktop) só para eliminar micro-overflow
-Sem alterar o card:
-- Remover o `pb-3` do container do carrossel (isso frequentemente cria “sobrinha” vertical desnecessária).
-- Garantir que o container do carrossel não crie altura extra:
-  - Manter `flex-1 min-h-0 overflow-hidden` no wrapper (já está ok).
-  - Manter `h-full` no `overflow-x-auto` (já está ok).
-- Se ainda sobrar 1–8px de overflow por conta de gaps/space-y, reduzir apenas espaçamentos verticais no desktop (sem tocar no card):
-  - `gap-6` -> `gap-4` somente no desktop
-  - `section space-y-4` -> `space-y-3` somente no desktop
-  - `header space-y-1` pode virar `space-y-0.5` somente no desktop
-Esses ajustes preservam o “tamanho do card” e só refinam o ritmo vertical para caber na dobra.
+| # | ID | Nome | Requisito | Prêmio |
+|---|-----|------|-----------|--------|
+| 1 | invictus | Member Invictus | Adicione 3 pessoas | Pulseira |
+| 2 | bronze | Member Bronze | R$ 10 mil em resultados | Placa |
+| 3 | silver | Member Silver | R$ 30 mil em resultados | Placa |
+| 4 | gold | Member Gold | R$ 100 mil em resultados | Placa |
+| 5 | black | Member Black | R$ 250 mil em resultados | Placa |
+| 6 | elite | Member Elite | R$ 500 mil (sem alteração) | Placa |
+| 7 | diamond | Member Diamond | R$ 1 milhão (sem alteração) | Placa |
 
-3) Critério de sucesso (o que vou validar no teste)
-- Desktop:
-  - Não deve existir scroll vertical no conteúdo da página (trackpad/mouse wheel não move para baixo).
-  - Todo o conteúdo (títulos + cards completos com nome/descrição/badge) deve estar visível sem precisar rolar.
-  - O carrossel continua com scroll horizontal funcionando e com snap.
-- Mobile/Tablet:
-  - Continua tendo scroll vertical natural e `pb-24` para não ficar atrás do bottom nav.
+## O que será feito
 
-4) Teste prático (automatizado + visual) que vou executar ao implementar
-- Abrir /reconhecimento em viewport desktop e validar:
-  - `mainContent.scrollHeight === mainContent.clientHeight` (ou diferença 0/1px) e que o wheel não desloca verticalmente.
-- Validar em viewport menor de notebook (ex.: 1366x768) e maior (1920x1080).
-- Validar rapidamente mobile (390x844) para garantir que não quebrou o padding do bottom nav nem a pilha vertical.
+### 1. Gerar imagem da pulseira via IA
+- Atualizar a edge function `generate-recognition-awards` para incluir o nível `invictus` com um prompt específico para uma **pulseira premium** (não placa de acrílico) com o texto "MEMBER INVICTUS" e estilo Invictus (dourado/preto, luxo).
+- Chamar a function para gerar a imagem e fazer upload no storage.
 
-Arquivos que serão alterados
-- `src/components/AppLayout.tsx`
-  - Adicionar `useLocation()`
-  - Aplicar classes condicionais por rota (/reconhecimento) e por breakpoint (desktop vs mobile/tablet)
-- `src/pages/Reconhecimento.tsx`
-  - Remover `pb-3` do carrossel desktop
-  - (Se necessário) reduzir somente espaçamentos verticais no desktop para eliminar overflow residual
+### 2. Atualizar `recognitionLevels.ts`
+- Adicionar o novo nível `invictus` como primeiro item do array, com gradient preto/dourado e a URL da imagem gerada.
+- Atualizar os requisitos/descrições dos demais níveis:
+  - Bronze: R$ 10 mil
+  - Silver: R$ 30 mil
+  - Gold: R$ 100 mil
+  - Black: R$ 250 mil
+  - Elite e Diamond: mantidos
 
-Riscos / Observações
-- Se a altura da tela for muito baixa (ex.: janelas pequenas), qualquer layout pode precisar de scroll. A correção vai focar em “desktop normal” (notebook/monitor) e remover o overflow que hoje aparece mesmo com espaço suficiente.
-- Vou evitar qualquer mudança em `RecognitionCard.tsx` para garantir “tamanho original do card”.
+### 3. Atualizar a edge function
+- Adicionar config do nível `invictus` no `LEVEL_CONFIGS` com prompt diferenciado (pulseira em vez de placa).
+- Atualizar a mensagem de erro para incluir "invictus" na lista de níveis válidos.
 
-Sequência de implementação
-1) Ajustar `AppLayout.tsx` para suportar modo “sem scroll vertical” especificamente em /reconhecimento no desktop.
-2) Ajustar `Reconhecimento.tsx` (remover `pb-3` e, se necessário, pequenos ajustes em gap/space-y só no desktop).
-3) Rodar testes visuais nos breakpoints e confirmar que a rolagem vertical sumiu sem cortar conteúdo.
+### Pontuação do novo nível
+- Será definida como **50 pts** (abaixo dos 100 do Bronze), mantendo a progressão.
+
+---
+
+## Detalhes Técnicos
+
+**Arquivos alterados:**
+- `supabase/functions/generate-recognition-awards/index.ts` -- adicionar nível "invictus" com prompt de pulseira
+- `src/components/reconhecimento/recognitionLevels.ts` -- adicionar nível + atualizar requisitos
+
+**Prompt da pulseira (IA):**
+Pulseira premium preta com detalhes dourados, texto "MEMBER INVICTUS" gravado, estilo luxo/business, mesma estética de produto (fundo escuro, iluminação de estúdio, 4K).
+
+**Sequência:**
+1. Editar a edge function com o novo nível
+2. Deploy da function
+3. Chamar a function para gerar a imagem da pulseira
+4. Atualizar `recognitionLevels.ts` com a URL gerada e os novos requisitos

@@ -1,5 +1,3 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -27,6 +25,74 @@ function isValidCPFMath(cpf: string): boolean {
   return true;
 }
 
+function json(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function fetchWithTimeout(url: string, timeoutMs = 5000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Try BrasilAPI */
+async function tryBrasilAPI(digits: string): Promise<{ valid: true; name: string | null } | null> {
+  try {
+    const res = await fetchWithTimeout(`https://brasilapi.com.br/api/cpf/v1/${digits}`);
+    if (res.ok) {
+      const data = await res.json();
+      return { valid: true, name: data.nome ?? null };
+    }
+    // consume body to avoid leak
+    await res.text();
+    return null; // 404 or other — try next source
+  } catch {
+    return null;
+  }
+}
+
+/** Try Invertexto free validator */
+async function tryInvertexto(digits: string): Promise<{ valid: true; name: string | null } | null> {
+  try {
+    const res = await fetchWithTimeout(
+      `https://api.invertexto.com/v1/validator?value=${digits}&token=free`,
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (data.valid === true) {
+        return { valid: true, name: null };
+      }
+    }
+    await res.text();
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Try Nuvem Fiscal free tier */
+async function tryNuvemFiscal(digits: string): Promise<{ valid: true; name: string | null } | null> {
+  try {
+    const res = await fetchWithTimeout(`https://api.nuvemfiscal.com.br/cpf/${digits}`);
+    if (res.ok) {
+      const data = await res.json();
+      return { valid: true, name: data.nome ?? data.name ?? null };
+    }
+    await res.text();
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -38,55 +104,22 @@ Deno.serve(async (req) => {
 
     // 1. Mathematical validation
     if (!isValidCPFMath(digits)) {
-      return new Response(
-        JSON.stringify({ valid: false, reason: "invalid_digits" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return json({ valid: false, reason: "invalid_digits" });
     }
 
-    // 2. Query BrasilAPI with timeout
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
+    // 2. Try multiple free sources sequentially
+    const sources = [tryBrasilAPI, tryInvertexto, tryNuvemFiscal];
 
-      const res = await fetch(
-        `https://brasilapi.com.br/api/cpf/v1/${digits}`,
-        { signal: controller.signal },
-      );
-      clearTimeout(timeout);
-
-      if (res.ok) {
-        const data = await res.json();
-        return new Response(
-          JSON.stringify({ valid: true, name: data.nome ?? null }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+    for (const source of sources) {
+      const result = await source(digits);
+      if (result) {
+        return json({ valid: true, name: result.name, fallback: false });
       }
-
-      if (res.status === 404) {
-        return new Response(
-          JSON.stringify({ valid: false, reason: "not_found" }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      // 5xx or unexpected status → fallback
-      await res.text(); // consume body
-      return new Response(
-        JSON.stringify({ valid: true, name: null, fallback: true }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    } catch (_fetchErr) {
-      // Timeout or network error → fallback
-      return new Response(
-        JSON.stringify({ valid: true, name: null, fallback: true }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
     }
-  } catch (_err) {
-    return new Response(
-      JSON.stringify({ error: "Invalid request body" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+
+    // 3. No source confirmed — accept with fallback (math validation passed)
+    return json({ valid: true, name: null, fallback: true });
+  } catch {
+    return json({ error: "Invalid request body" }, 400);
   }
 });

@@ -1,92 +1,80 @@
 
-# Carteira de Bonus -- Visao Consolidada para o Financeiro
 
-## Objetivo
+# Gestao de Resgates de Premios no Admin
 
-Criar uma nova pagina "Carteira" no painel financeiro que exibe o total de bonus disponivel de todos os membros, permitindo que a equipe financeira saiba exatamente quanto dinheiro precisa estar em caixa para cobrir possiveis saques.
+## Resumo
 
----
+Adicionar uma nova aba **"Resgates"** no painel Admin (`/admin`) para que o administrador possa visualizar e gerenciar todos os premios solicitados pelos membros. A aba mostrara uma tabela com: foto do perfil do usuario, nome, qual premio foi resgatado, quantidade de pontos gastos, data do resgate, e status atual (pendente, aprovado, rejeitado, entregue).
 
-## O que sera construido
+## O que muda
 
-### Nova pagina: Carteira de Bonus
+### 1. Nova aba "Resgates" na pagina Admin
 
-Uma pagina com:
+A pagina Admin atualmente tem 6 abas. Sera adicionada uma 7a aba chamada **"Resgates"**, que exibira:
 
-1. **Card principal** -- Total consolidado de bonus disponivel em toda a plataforma (soma dos saldos de todos os membros)
-2. **Lista de membros** -- Tabela com cada membro que possui saldo, mostrando:
-   - Avatar, nome, username
-   - Saldo disponivel
-   - Ultimo credito recebido (data)
-3. **Busca** -- Campo para filtrar membros por nome/username
-4. **Ordenacao** -- Por saldo (maior primeiro, padrao) ou por nome
+- Tabela com as colunas:
+  - **Avatar + Nome** do membro (foto do perfil e display_name)
+  - **Premio** resgatado (nome do premio)
+  - **Pontos** gastos
+  - **Data** do resgate
+  - **Status** (pendente / aprovado / rejeitado / entregue)
+  - **Acoes** (botoes para aprovar, rejeitar ou marcar como entregue)
 
----
+- Os dados virao de uma query que cruza `point_redemptions` com `profiles` (para avatar e nome) e `point_rewards` (para nome do premio)
 
-## Implementacao tecnica
+### 2. Banco de dados
 
-### 1. Nova RPC: `list_all_member_balances`
+As tabelas `point_balances`, `point_rewards` e `point_redemptions` serao criadas junto com o restante do sistema de pontos (conforme plano anterior aprovado). Para o admin, sera necessario:
 
-Como nao existe FK direta entre `wallet_transactions` e `profiles`, e precisamos agregar saldos de todos os membros, vamos criar uma funcao RPC com `SECURITY DEFINER` protegida por `is_financeiro()`.
+- RLS na `point_redemptions` permitindo SELECT para admins
+- RLS na `point_rewards` permitindo ALL para admins (gerenciar catalogo)
+- Uma RPC (ou query direta) que retorne os resgates com dados do perfil e do premio juntos
 
-```sql
-CREATE OR REPLACE FUNCTION public.list_all_member_balances()
-RETURNS TABLE (
-  user_id uuid,
-  display_name text,
-  username text,
-  avatar_url text,
-  balance numeric,
-  last_credit_at timestamptz
-)
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT
-    wt.user_id,
-    p.display_name,
-    p.username,
-    p.avatar_url,
-    SUM(CASE WHEN wt.type = 'credit' THEN wt.amount ELSE -wt.amount END) AS balance,
-    MAX(CASE WHEN wt.type = 'credit' THEN wt.created_at END) AS last_credit_at
-  FROM wallet_transactions wt
-  JOIN profiles p ON p.user_id = wt.user_id
-  WHERE is_financeiro()
-  GROUP BY wt.user_id, p.display_name, p.username, p.avatar_url
-  HAVING SUM(CASE WHEN wt.type = 'credit' THEN wt.amount ELSE -wt.amount END) > 0
-  ORDER BY balance DESC;
-$$;
+### 3. Fluxo de gestao
+
+O admin podera:
+1. Ver todos os resgates pendentes no topo da lista
+2. Clicar em "Aprovar" para marcar como aprovado
+3. Clicar em "Rejeitar" para recusar o resgate (pontos devolvidos ao membro)
+4. Clicar em "Entregue" apos enviar o premio fisico
+
+## Detalhes tecnicos
+
+### Arquivo: `src/pages/Admin.tsx`
+
+- Adicionar nova tab "Resgates" no `TabsList` (grid passara de 6 para 7 colunas)
+- Novo `TabsContent value="redemptions"` com:
+  - Query `point_redemptions` via RPC que retorna dados enriquecidos (avatar_url, display_name, reward_name, points_spent, requested_at, status)
+  - Tabela usando os componentes Table existentes
+  - Avatar do membro usando componente `Avatar` + `AvatarImage` + `AvatarFallback`
+  - Badge colorido para status (amarelo = pendente, verde = aprovado, vermelho = rejeitado, azul = entregue)
+  - Botoes de acao condicionais baseados no status atual
+
+### Banco de dados - RPC `admin_list_redemptions`
+
+Funcao `SECURITY DEFINER` que retorna os resgates com JOIN em profiles e point_rewards:
+
+```text
+SELECT
+  r.id, r.user_id, r.points_spent, r.status, r.requested_at, r.reviewed_at,
+  p.display_name, p.avatar_url,
+  pw.name as reward_name
+FROM point_redemptions r
+JOIN profiles p ON p.user_id = r.user_id
+JOIN point_rewards pw ON pw.id = r.reward_id
+ORDER BY r.requested_at DESC
 ```
 
-Essa funcao:
-- Calcula o saldo real de cada membro (creditos - debitos)
-- Filtra apenas membros com saldo positivo
-- Retorna dados do perfil para exibicao
-- So executa se o usuario logado tem role `financeiro`
+### Banco de dados - RPC `admin_update_redemption_status`
 
-### 2. Nova pagina: `src/pages/financeiro/FinanceiroCarteira.tsx`
+Funcao `SECURITY DEFINER` que:
+1. Verifica se o caller e admin
+2. Atualiza o status do resgate
+3. Se rejeitado, devolve os pontos ao `point_balances` do membro
+4. Registra `reviewed_at` com timestamp atual
 
-- KPI card no topo com o total consolidado (soma de todos os saldos)
-- Quantidade de membros com saldo
-- Campo de busca para filtrar por nome/username
-- Tabela com Avatar, Nome, Username, Saldo, Ultimo Credito
-- Botao de atualizar
-- Segue o mesmo padrao visual das paginas Historico e Relatorios
+### RLS adicional
 
-### 3. Atualizar navegacao (4 arquivos)
+- `point_redemptions`: admin pode SELECT todos os registros
+- `point_rewards`: admin pode ALL (criar, editar, remover premios)
 
-- **`src/components/financeiro/FinanceiroLayout.tsx`** -- Adicionar item "Carteira" na sidebar com icone `Wallet`
-- **`src/components/financeiro/FinanceiroBottomNav.tsx`** -- Adicionar item "Carteira" na barra inferior mobile
-- **`src/components/financeiro/FinanceiroMenuSheet.tsx`** -- Adicionar item "Carteira" no menu mobile
-- **`src/routing/HostRouter.tsx`** -- Adicionar rota `/financeiro/carteira` (preview) e `/carteira` (producao) com os guards `RequireFinanceiroAuth` e `RequireFinanceiro`
-
-### 4. Arquivos afetados
-
-| Arquivo | Acao |
-|---|---|
-| Nova migracao SQL | Criar RPC `list_all_member_balances` |
-| `src/pages/financeiro/FinanceiroCarteira.tsx` | Criar pagina |
-| `src/components/financeiro/FinanceiroLayout.tsx` | Adicionar nav item |
-| `src/components/financeiro/FinanceiroBottomNav.tsx` | Adicionar nav item |
-| `src/components/financeiro/FinanceiroMenuSheet.tsx` | Adicionar nav item |
-| `src/routing/HostRouter.tsx` | Adicionar rotas |

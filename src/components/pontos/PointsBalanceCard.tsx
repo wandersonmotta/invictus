@@ -1,24 +1,34 @@
-import { Gift } from "lucide-react";
+import { Gift, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface PointsBalanceCardProps {
   balance: number;
+  redeemedCount: number;
 }
 
-export function PointsBalanceCard({ balance }: PointsBalanceCardProps) {
+export function PointsBalanceCard({ balance, redeemedCount }: PointsBalanceCardProps) {
   return (
-    <div
-      className={cn(
-        "invictus-surface invictus-frame relative w-full rounded-2xl p-5",
-        "bg-gradient-to-br from-card/80 to-card/60"
-      )}
-    >
-      <Gift className="absolute right-4 top-4 size-6 text-primary/60" />
-      <div className="space-y-1">
-        <p className="text-sm text-muted-foreground">Seus pontos</p>
-        <p className="text-3xl font-bold tracking-tight text-foreground">
-          {balance.toLocaleString("pt-BR")}
-        </p>
+    <div className="flex w-full rounded-2xl overflow-hidden invictus-frame">
+      {/* Resgatados */}
+      <div className="flex flex-1 items-center gap-3 bg-card/80 px-5 py-4">
+        <Gift className="size-5 text-primary shrink-0" />
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground leading-tight">Resgatados</p>
+          <p className="text-xl font-bold tracking-tight text-foreground">
+            {redeemedCount.toLocaleString("pt-BR")}
+          </p>
+        </div>
+      </div>
+
+      {/* Meus pontos */}
+      <div className="flex flex-1 items-center gap-3 bg-foreground px-5 py-4">
+        <Star className="size-5 text-background/70 shrink-0" />
+        <div className="min-w-0">
+          <p className="text-xs text-background/60 leading-tight">Meus pontos</p>
+          <p className="text-xl font-bold tracking-tight text-background">
+            {balance.toLocaleString("pt-BR")}
+          </p>
+        </div>
       </div>
     </div>
   );

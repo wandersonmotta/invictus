@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, User, FileText, Upload, ShoppingCart, Pencil, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, User, FileText, Upload, ShoppingCart, CreditCard, X, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -308,18 +308,51 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
 
       {/* Names list card */}
       <Card className="p-4 mb-4">
-        <div className="flex items-center gap-2 text-muted-foreground mb-2">
+        <div className="flex items-center gap-2 text-muted-foreground mb-3">
           <User className="h-4 w-4" />
           <span className="text-sm">Lista de nomes</span>
         </div>
+
+        {addedNames.length > 0 && (
+          <div className="flex flex-col gap-2 mb-3">
+            {addedNames.map((item, idx) => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2"
+              >
+                <div className="flex items-start gap-2">
+                  <span className="text-xs text-muted-foreground mt-0.5">{idx + 1}.</span>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground uppercase">{item.person_name}</p>
+                    {item.document && (
+                      <p className="text-xs text-muted-foreground">{item.document}</p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setAddedNames((prev) => prev.filter((n) => n.id !== item.id));
+                    await supabase.from("limpa_nome_requests" as any).delete().eq("id", item.id);
+                  }}
+                  className="h-6 w-6 rounded-full flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
+                  aria-label="Remover nome"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm">
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
             <span>Nomes: <strong className="text-foreground">{addedNames.length}</strong></span>
           </div>
           <div className="flex items-center gap-2 text-sm">
-            <Pencil className="h-4 w-4 text-muted-foreground" />
-            <span>Valor: <strong className="text-foreground">R$ {addedNames.length * 0}</strong></span>
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
+            <span>Valor: <strong className="text-foreground">R$ {addedNames.length * 150}</strong></span>
           </div>
         </div>
       </Card>

@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, User, FileText, Upload, ShoppingCart, CreditCard, X, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -37,6 +36,29 @@ interface LocalNomeItem {
   identidadeFile: File | null;
 }
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Remove data URL prefix to get raw base64
+      const base64 = result.split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function serializeFileForStorage(file: File | null) {
+  if (!file) return null;
+  return {
+    name: file.name,
+    type: file.type,
+    base64: await fileToBase64(file),
+  };
+}
+
 export function AddNomeView({ onBack }: AddNomeViewProps) {
   const [personName, setPersonName] = useState("");
   const [document, setDocument] = useState("");
@@ -47,10 +69,10 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
   const [docStatus, setDocStatus] = useState<DocStatus>("idle");
   const [docError, setDocError] = useState("");
   const [nameAutoFilled, setNameAutoFilled] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const fichaRef = useRef<HTMLInputElement>(null);
   const identidadeRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const queryClient = useQueryClient();
 
   // Debounced document validation
   useEffect(() => {
@@ -144,58 +166,46 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
     resetForm();
   };
 
-  const paymentMutation = useMutation({
-    mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Não autenticado");
-      if (addedNames.length === 0) throw new Error("Lista vazia");
+  const handleGoToPayment = async () => {
+    if (addedNames.length === 0) return;
+    setIsRedirecting(true);
 
-      for (const item of addedNames) {
-        const { data, error } = await supabase
-          .from("limpa_nome_requests" as any)
-          .insert({
-            user_id: user.id,
-            person_name: item.person_name,
-            document: item.document || null,
-            whatsapp: item.whatsapp,
-          } as any)
-          .select("id")
-          .single();
-        if (error) throw error;
+    try {
+      // Serialize files to sessionStorage
+      const itemsForStorage = await Promise.all(
+        addedNames.map(async (item) => ({
+          person_name: item.person_name,
+          document: item.document,
+          whatsapp: item.whatsapp,
+          fichaFile: await serializeFileForStorage(item.fichaFile),
+          identidadeFile: await serializeFileForStorage(item.identidadeFile),
+        })),
+      );
+      sessionStorage.setItem("limpa_nome_items", JSON.stringify(itemsForStorage));
 
-        const requestId = (data as any).id;
+      // Call edge function to create checkout session
+      const namesPayload = addedNames.map((item) => ({
+        person_name: item.person_name,
+        document: item.document,
+        whatsapp: item.whatsapp,
+      }));
 
-        for (const { file, docType } of [
-          { file: item.fichaFile, docType: "ficha_associativa" },
-          { file: item.identidadeFile, docType: "identidade" },
-        ]) {
-          if (!file) continue;
-          const path = `${user.id}/${requestId}/${docType}_${file.name}`;
-          const { error: uploadErr } = await supabase.storage
-            .from("limpa-nome-docs")
-            .upload(path, file);
-          if (uploadErr) throw uploadErr;
+      const { data, error } = await supabase.functions.invoke("create-limpa-nome-payment", {
+        body: { names: namesPayload },
+      });
 
-          await supabase
-            .from("limpa_nome_documents" as any)
-            .insert({
-              request_id: requestId,
-              doc_type: docType,
-              storage_path: path,
-              file_name: file.name,
-            } as any);
-        }
+      if (error || !data?.url) {
+        throw new Error(data?.error || error?.message || "Erro ao criar sessão de pagamento");
       }
-    },
-    onSuccess: () => {
-      toast.success("Nomes enviados com sucesso!");
-      setAddedNames([]);
-      queryClient.invalidateQueries({ queryKey: ["limpa-nome-requests"] });
-    },
-    onError: (err: any) => {
-      toast.error(err?.message || "Erro ao enviar nomes.");
-    },
-  });
+
+      // Redirect to Stripe Checkout
+      window.location.href = data.url;
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Erro ao iniciar pagamento");
+      setIsRedirecting(false);
+    }
+  };
 
   const docDigits = document.replace(/\D/g, "");
   const isDocComplete = docDigits.length === 11 || docDigits.length === 14;
@@ -374,10 +384,17 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
       {/* Payment button */}
       <Button
         className="w-full bg-[hsl(0,85%,65%)] hover:bg-[hsl(0,85%,55%)] text-white font-semibold py-5"
-        disabled={addedNames.length === 0 || paymentMutation.isPending}
-        onClick={() => paymentMutation.mutate()}
+        disabled={addedNames.length === 0 || isRedirecting}
+        onClick={handleGoToPayment}
       >
-        {paymentMutation.isPending ? "Enviando..." : "Ir para pagamento"}
+        {isRedirecting ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            Redirecionando...
+          </>
+        ) : (
+          "Ir para pagamento"
+        )}
       </Button>
     </div>
   );

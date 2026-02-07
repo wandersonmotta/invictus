@@ -729,6 +729,39 @@ export type Database = {
           },
         ]
       }
+      limpa_nome_requests: {
+        Row: {
+          created_at: string
+          document: string | null
+          id: string
+          notes: string | null
+          person_name: string
+          status: Database["public"]["Enums"]["limpa_nome_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          document?: string | null
+          id?: string
+          notes?: string | null
+          person_name: string
+          status?: Database["public"]["Enums"]["limpa_nome_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          document?: string | null
+          id?: string
+          notes?: string | null
+          person_name?: string
+          status?: Database["public"]["Enums"]["limpa_nome_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       member_live_locations: {
         Row: {
           approx_decimals: number
@@ -1970,6 +2003,7 @@ export type Database = {
       app_role: "admin" | "moderator" | "user" | "financeiro"
       conversation_folder: "inbox" | "requests"
       conversation_type: "direct" | "group"
+      limpa_nome_status: "aberto" | "em_andamento" | "finalizado"
       profile_visibility: "members" | "mutuals" | "private"
       redemption_status: "pending" | "approved" | "rejected" | "delivered"
       wallet_transaction_type: "credit" | "debit"
@@ -2105,6 +2139,7 @@ export const Constants = {
       app_role: ["admin", "moderator", "user", "financeiro"],
       conversation_folder: ["inbox", "requests"],
       conversation_type: ["direct", "group"],
+      limpa_nome_status: ["aberto", "em_andamento", "finalizado"],
       profile_visibility: ["members", "mutuals", "private"],
       redemption_status: ["pending", "approved", "rejected", "delivered"],
       wallet_transaction_type: ["credit", "debit"],

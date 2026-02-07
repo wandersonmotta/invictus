@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.generate-reward-images]
 verify_jwt = false
+
+[functions.hubdev-document-lookup]
+verify_jwt = false

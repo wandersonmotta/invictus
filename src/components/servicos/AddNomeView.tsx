@@ -89,6 +89,12 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
           ? await validateCpfFromBrowser(digits)
           : await validateCnpjFromBrowser(digits);
 
+        if (result.valid === false) {
+          setDocStatus("invalid");
+          setDocError(isCpf ? "CPF não encontrado na base" : "CNPJ não encontrado na base");
+          return;
+        }
+
         setDocStatus("valid");
         if (result.name) {
           setPersonName(result.name);

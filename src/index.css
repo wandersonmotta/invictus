@@ -487,8 +487,8 @@ html {
 }
 
 ::-webkit-scrollbar {
-  width: 5px !important;
-  height: 5px !important;
+  width: 3px !important;
+  height: 3px !important;
   background: transparent !important;
 }
 

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { formatCPF, isValidCPF } from "@/lib/cpf";
 import { formatCNPJ, isValidCNPJ } from "@/lib/cnpj";
 import { validateCpfFromBrowser, validateCnpjFromBrowser } from "@/lib/validateCpfClient";
+import { PixPaymentView } from "./PixPaymentView";
 
 interface AddNomeViewProps {
   onBack: () => void;
@@ -60,6 +61,12 @@ async function serializeFileForStorage(file: File | null) {
 }
 
 export function AddNomeView({ onBack }: AddNomeViewProps) {
+  const [paymentData, setPaymentData] = useState<{
+    payment_intent_id: string;
+    pix_qr_code_url: string;
+    pix_code: string;
+    expires_at: number;
+  } | null>(null);
   const [personName, setPersonName] = useState("");
   const [document, setDocument] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
@@ -183,7 +190,7 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
       );
       sessionStorage.setItem("limpa_nome_items", JSON.stringify(itemsForStorage));
 
-      // Call edge function to create checkout session
+      // Call edge function to create PaymentIntent with Pix
       const namesPayload = addedNames.map((item) => ({
         person_name: item.person_name,
         document: item.document,
@@ -194,15 +201,15 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
         body: { names: namesPayload },
       });
 
-      if (error || !data?.url) {
-        throw new Error(data?.error || error?.message || "Erro ao criar sessão de pagamento");
+      if (error || !data?.pix_code) {
+        throw new Error(data?.error || error?.message || "Erro ao gerar Pix");
       }
 
-      // Redirect to Stripe Checkout
-      window.location.href = data.url;
+      setPaymentData(data);
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Erro ao iniciar pagamento");
+    } finally {
       setIsRedirecting(false);
     }
   };
@@ -214,6 +221,17 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
     isDocComplete &&
     docStatus === "valid" &&
     whatsapp.replace(/\D/g, "").length >= 10;
+
+  if (paymentData) {
+    return (
+      <PixPaymentView
+        paymentData={paymentData}
+        totalAmount={addedNames.length * 150}
+        onBack={() => setPaymentData(null)}
+        onComplete={onBack}
+      />
+    );
+  }
 
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-6">

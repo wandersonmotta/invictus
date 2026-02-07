@@ -1,83 +1,63 @@
 
 
-## Integrar API cpfcnpj.com.br para validacao de CPF e CNPJ
+## Lista de nomes com remover (X), valor R$ 150/nome e fallback de validacao
 
-### API escolhida: cpfcnpj.com.br
+### Resumo
 
-- **CPF**: Pacote 1 (CPF A) - retorna nome completo - R$ 0,17/consulta - SEM data de nascimento
-- **CNPJ**: Pacote 4 (CNPJ A) - retorna razao social - R$ 0,15/consulta
-- Endpoint: `GET https://api.cpfcnpj.com.br/{token}/{pacote}/{cpfcnpj}`
-- Autenticacao por token (sem restricao de IP)
-- Contratacao minima: R$ 10 no plano Premium (creditos nao expiram)
+Atualizar o card "Lista de nomes" para exibir cada nome individualmente com botao X para remover, valor fixo de R$ 150 por nome, e icone de pagamento no lugar do lapis. Sem botao de editar -- se errou, remove e cadastra de novo.
 
-### O que voce precisa fazer antes
+Tambem garantir que quando a API estiver sem creditos (fallback), o sistema aceita o documento com base na validacao matematica, apenas sem auto-preenchimento do nome.
 
-1. Criar conta em cpfcnpj.com.br
-2. Comprar creditos dos pacotes CPF A (pacote 1) e CNPJ A (pacote 4)
-3. Gerar o token de integracao no painel (menu API > Tokens)
-4. Informar o token quando solicitado pelo sistema
+### Mudancas no arquivo `src/components/servicos/AddNomeView.tsx`
 
-### Implementacao
+**1. Listar cada nome individualmente no card**
+- Cada item mostra o nome (em destaque) e o documento abaixo
+- Botao X vermelho a direita para remover
+- Numeracao sequencial (1, 2, 3...) como na referencia
 
-**1. Salvar token como segredo no backend**
-- Sera solicitado o token da API para armazenamento seguro
+**2. Remover nome ao clicar no X**
+- Remove do estado local `addedNames`
+- Deleta o registro da tabela `limpa_nome_requests` no banco
 
-**2. Criar funcao backend `hubdev-document-lookup`**
-- Recebe tipo (cpf/cnpj) e numero do documento
-- CPF: chama `https://api.cpfcnpj.com.br/{token}/1/{cpf}` (pacote 1 = CPF A)
-- CNPJ: chama `https://api.cpfcnpj.com.br/{token}/4/{cnpj}` (pacote 4 = CNPJ A)
-- Valida matematicamente antes de gastar creditos
-- Retorna nome completo (CPF) ou razao social (CNPJ)
+**3. Valor R$ 150 por nome**
+- Trocar `addedNames.length * 0` por `addedNames.length * 150`
+- Exibir valor formatado (R$ 150, R$ 300, R$ 450...)
 
-**3. Atualizar validacao no cliente (`validateCpfClient.ts`)**
-- Substituir chamadas diretas a APIs brasileiras por chamada a funcao backend
-- Remover SCPA, BrasilAPI, ReceitaWS
-- Uma unica funcao que chama o backend para ambos os tipos
+**4. Trocar icone do valor**
+- Substituir `Pencil` por `CreditCard` do lucide-react ao lado do valor
 
-**4. Remover campo de data de nascimento (nao necessario)**
-- A API CPF A nao exige data de nascimento
+**5. Sem botao de editar**
+- Nao adicionar funcionalidade de edicao. Se errou, remove (X) e cadastra novamente
 
-### Fluxo do usuario
+### Mudanca no backend (fallback sem creditos)
+
+O backend (`hubdev-document-lookup`) ja trata o caso de token ausente ou API falhando -- retorna `{ valid: true, name: null, fallback: true }`. O frontend ja aceita esse cenario (docStatus = "valid", sem auto-preenchimento). Nenhuma mudanca necessaria nessa parte.
+
+### Layout da lista
 
 ```text
-Usuario digita CPF (11 digitos) ou CNPJ (14 digitos)
-  -> Validacao matematica local
-  -> Se valido: chama backend -> backend chama cpfcnpj.com.br
-  -> CPF: nome completo preenchido automaticamente
-  -> CNPJ: razao social preenchida automaticamente
+Lista de nomes
+
+1. NOME COMPLETO DA PESSOA               [X]
+   052.085.541-86
+
+2. OUTRO NOME COMPLETO                   [X]
+   044.057.751-92
+
+Nomes: 2                    Valor: R$ 300
 ```
-
-### Arquivos a criar/modificar
-
-- `supabase/functions/hubdev-document-lookup/index.ts` (criar) - funcao backend que chama a API com o token seguro
-- `src/lib/validateCpfClient.ts` (atualizar) - chamar o backend em vez de APIs diretas
-- `src/components/servicos/AddNomeView.tsx` (sem mudanca significativa) - ja tem o fluxo de debounce e auto-preenchimento funcionando
 
 ### Detalhes tecnicos
 
-**Funcao backend:**
-```text
-POST /hubdev-document-lookup
-Body: { type: "cpf" | "cnpj", document: "12345678901" }
+**Arquivo: `src/components/servicos/AddNomeView.tsx`**
 
--> Valida matematicamente
--> Chama GET https://api.cpfcnpj.com.br/{CPFCNPJ_TOKEN}/{pacote}/{document}
-   - pacote 1 para CPF, pacote 4 para CNPJ
--> Retorna { valid: true/false, name: "Nome Completo" ou "Razao Social" }
-```
+- Importar `X` e `CreditCard` do lucide-react (remover `Pencil`)
+- No card "Lista de nomes", mapear `addedNames` para exibir cada item com indice, nome, documento e botao X
+- Ao clicar X: filtrar `addedNames` removendo o item e chamar `supabase.from("limpa_nome_requests").delete().eq("id", item.id)`
+- Linha de resumo: `Nomes: {count}` e `Valor: R$ {count * 150}`
+- Icone `CreditCard` no lugar de `Pencil`
 
-**Resposta da API (CPF A):**
-- `status`: 1 (sucesso) ou 0 (erro)
-- `nome`: nome completo do titular
+### Arquivos modificados
 
-**Resposta da API (CNPJ A):**
-- `status`: 1 (sucesso) ou 0 (erro)
-- `razao_social`: razao social da empresa
-
-### Resultado esperado
-
-- **CPF**: Usuario digita CPF -> nome completo aparece automaticamente (sem pedir data de nascimento)
-- **CNPJ**: Usuario digita CNPJ -> razao social aparece automaticamente
-- Token protegido no backend
-- Custo por consulta: R$ 0,15 a R$ 0,17
+- `src/components/servicos/AddNomeView.tsx` (unico arquivo)
 

@@ -73,13 +73,13 @@ export function LimpaNomeView({ onBack }: LimpaNomeViewProps) {
       </div>
 
       {/* Filter chips */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
+      <div className="flex flex-wrap gap-2 mb-6">
         {filters.map((f) => (
           <button
             key={f.key}
             onClick={() => setActiveFilter(f.key)}
             className={cn(
-              "px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors border",
+              "px-3 py-1 rounded-full text-xs sm:text-sm font-medium transition-colors border",
               activeFilter === f.key
                 ? "bg-primary text-primary-foreground border-primary"
                 : "bg-card text-muted-foreground border-border hover:border-primary/40"

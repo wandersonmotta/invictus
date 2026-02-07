@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 import { useAuth } from "@/auth/AuthProvider";
@@ -82,6 +84,7 @@ function mapToTransactions(data: WalletData): Transaction[] {
 }
 
 export default function Carteira() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { data: profile } = useMyProfile(user?.id);
 
@@ -143,9 +146,13 @@ export default function Carteira() {
   return (
     <main className="invictus-page mx-auto w-full max-w-3xl px-4 py-6 pb-24 sm:px-6">
       {/* Header */}
-      <header className="invictus-page-header">
-        <p className="text-sm text-muted-foreground">Olá,</p>
-        <h1 className="invictus-h1">{displayName}</h1>
+      <header className="mb-6 flex items-center gap-3">
+        <button onClick={() => navigate(-1)} className="text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft className="size-5" />
+        </button>
+        <p className="text-base text-muted-foreground">
+          Olá, <strong className="text-foreground font-semibold">{displayName}</strong>
+        </p>
       </header>
 
       {loading ? (

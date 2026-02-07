@@ -1,11 +1,13 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, User, FileText, Upload, ShoppingCart, Pencil } from "lucide-react";
+import { ArrowLeft, User, FileText, Upload, ShoppingCart, Pencil, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { formatCPF } from "@/lib/cpf";
+import { formatCPF, isValidCPF } from "@/lib/cpf";
+import { formatCNPJ, isValidCNPJ } from "@/lib/cnpj";
+import { validateCpfFromBrowser, validateCnpjFromBrowser } from "@/lib/validateCpfClient";
 
 interface AddNomeViewProps {
   onBack: () => void;
@@ -18,20 +20,13 @@ function formatPhone(value: string): string {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
-function formatCNPJ(value: string): string {
-  const digits = value.replace(/\D/g, "").slice(0, 14);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
-  if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
-  if (digits.length <= 12) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
-  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
-}
-
 function formatDocument(value: string): string {
   const digits = value.replace(/\D/g, "");
   if (digits.length <= 11) return formatCPF(value);
   return formatCNPJ(value);
 }
+
+type DocStatus = "idle" | "validating" | "valid" | "invalid";
 
 interface NomeItem {
   id: string;
@@ -47,9 +42,68 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
   const [fichaFile, setFichaFile] = useState<File | null>(null);
   const [identidadeFile, setIdentidadeFile] = useState<File | null>(null);
   const [addedNames, setAddedNames] = useState<NomeItem[]>([]);
+  const [docStatus, setDocStatus] = useState<DocStatus>("idle");
+  const [docError, setDocError] = useState("");
+  const [nameAutoFilled, setNameAutoFilled] = useState(false);
   const fichaRef = useRef<HTMLInputElement>(null);
   const identidadeRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queryClient = useQueryClient();
+
+  // Debounced document validation
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    const digits = document.replace(/\D/g, "");
+    
+    // Reset when incomplete
+    if ((digits.length < 11) || (digits.length > 11 && digits.length < 14)) {
+      setDocStatus("idle");
+      setDocError("");
+      return;
+    }
+
+    // Ignore if length doesn't match CPF or CNPJ
+    if (digits.length !== 11 && digits.length !== 14) {
+      setDocStatus("idle");
+      setDocError("");
+      return;
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      const isCpf = digits.length === 11;
+
+      // Mathematical validation first
+      const mathValid = isCpf ? isValidCPF(digits) : isValidCNPJ(digits);
+      if (!mathValid) {
+        setDocStatus("invalid");
+        setDocError(isCpf ? "CPF inválido" : "CNPJ inválido");
+        return;
+      }
+
+      setDocStatus("validating");
+      setDocError("");
+
+      try {
+        const result = isCpf
+          ? await validateCpfFromBrowser(digits)
+          : await validateCnpjFromBrowser(digits);
+
+        setDocStatus("valid");
+        if (result.name) {
+          setPersonName(result.name);
+          setNameAutoFilled(true);
+        }
+      } catch {
+        // If API fails, still accept (math validation passed)
+        setDocStatus("valid");
+      }
+    }, 500);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [document]);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -79,7 +133,6 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
 
       const requestId = (data as any).id;
 
-      // Upload docs if present
       for (const { file, docType } of [
         { file: fichaFile, docType: "ficha_associativa" },
         { file: identidadeFile, docType: "identidade" },
@@ -112,13 +165,22 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
       setWhatsapp("");
       setFichaFile(null);
       setIdentidadeFile(null);
+      setDocStatus("idle");
+      setDocError("");
+      setNameAutoFilled(false);
     },
     onError: (err: any) => {
       toast.error(err?.message || "Erro ao adicionar nome.");
     },
   });
 
-  const isValid = personName.trim().length >= 2 && document.replace(/\D/g, "").length >= 11 && whatsapp.replace(/\D/g, "").length >= 10;
+  const docDigits = document.replace(/\D/g, "");
+  const isDocComplete = docDigits.length === 11 || docDigits.length === 14;
+  const isValid =
+    personName.trim().length >= 2 &&
+    isDocComplete &&
+    docStatus === "valid" &&
+    whatsapp.replace(/\D/g, "").length >= 10;
 
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-6">
@@ -136,22 +198,7 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
 
       {/* Form Card */}
       <Card className="p-5 mb-4">
-        {/* Nome */}
-        <div className="mb-4">
-          <label className="text-sm text-muted-foreground mb-1.5 block">Nome | Nome Fantasia*</label>
-          <div className="flex items-center gap-2 border-b border-border pb-2">
-            <User className="h-4 w-4 text-muted-foreground shrink-0" />
-            <input
-              className="bg-transparent w-full text-sm text-foreground placeholder:text-muted-foreground outline-none"
-              placeholder="Informe o nome"
-              value={personName}
-              onChange={(e) => setPersonName(e.target.value)}
-              maxLength={200}
-            />
-          </div>
-        </div>
-
-        {/* CPF / CNPJ */}
+        {/* CPF / CNPJ — moved above Nome */}
         <div className="mb-4">
           <label className="text-sm text-muted-foreground mb-1.5 block">CPF | CNPJ*</label>
           <div className="flex items-center gap-2 border-b border-border pb-2">
@@ -160,9 +207,43 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
               className="bg-transparent w-full text-sm text-foreground placeholder:text-muted-foreground outline-none"
               placeholder="Informe o CPF ou CNPJ"
               value={document}
-              onChange={(e) => setDocument(formatDocument(e.target.value))}
+              onChange={(e) => {
+                setDocument(formatDocument(e.target.value));
+                setNameAutoFilled(false);
+              }}
               maxLength={18}
             />
+            {docStatus === "validating" && <Loader2 className="h-4 w-4 text-muted-foreground animate-spin shrink-0" />}
+            {docStatus === "valid" && <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />}
+            {docStatus === "invalid" && <XCircle className="h-4 w-4 text-destructive shrink-0" />}
+          </div>
+          {docStatus === "validating" && (
+            <p className="text-xs text-muted-foreground mt-1">Validando...</p>
+          )}
+          {docStatus === "invalid" && docError && (
+            <p className="text-xs text-destructive mt-1">{docError}</p>
+          )}
+          {docStatus === "valid" && (
+            <p className="text-xs text-green-500 mt-1">Documento válido</p>
+          )}
+        </div>
+
+        {/* Nome */}
+        <div className="mb-4">
+          <label className="text-sm text-muted-foreground mb-1.5 block">Nome | Nome Fantasia*</label>
+          <div className="flex items-center gap-2 border-b border-border pb-2">
+            <User className="h-4 w-4 text-muted-foreground shrink-0" />
+            <input
+              className="bg-transparent w-full text-sm text-foreground placeholder:text-muted-foreground outline-none"
+              placeholder={docStatus === "validating" ? "Buscando nome..." : "Informe o nome"}
+              value={personName}
+              onChange={(e) => {
+                setPersonName(e.target.value);
+                setNameAutoFilled(false);
+              }}
+              maxLength={200}
+            />
+            {nameAutoFilled && <span className="text-[10px] text-muted-foreground whitespace-nowrap">auto</span>}
           </div>
         </div>
 

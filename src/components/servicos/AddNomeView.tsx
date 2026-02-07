@@ -28,11 +28,13 @@ function formatDocument(value: string): string {
 
 type DocStatus = "idle" | "validating" | "valid" | "invalid";
 
-interface NomeItem {
-  id: string;
+interface LocalNomeItem {
+  tempId: string;
   person_name: string;
   document: string;
   whatsapp: string;
+  fichaFile: File | null;
+  identidadeFile: File | null;
 }
 
 export function AddNomeView({ onBack }: AddNomeViewProps) {
@@ -41,7 +43,7 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
   const [whatsapp, setWhatsapp] = useState("");
   const [fichaFile, setFichaFile] = useState<File | null>(null);
   const [identidadeFile, setIdentidadeFile] = useState<File | null>(null);
-  const [addedNames, setAddedNames] = useState<NomeItem[]>([]);
+  const [addedNames, setAddedNames] = useState<LocalNomeItem[]>([]);
   const [docStatus, setDocStatus] = useState<DocStatus>("idle");
   const [docError, setDocError] = useState("");
   const [nameAutoFilled, setNameAutoFilled] = useState(false);
@@ -56,14 +58,12 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
 
     const digits = document.replace(/\D/g, "");
     
-    // Reset when incomplete
     if ((digits.length < 11) || (digits.length > 11 && digits.length < 14)) {
       setDocStatus("idle");
       setDocError("");
       return;
     }
 
-    // Ignore if length doesn't match CPF or CNPJ
     if (digits.length !== 11 && digits.length !== 14) {
       setDocStatus("idle");
       setDocError("");
@@ -73,7 +73,6 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
     debounceRef.current = setTimeout(async () => {
       const isCpf = digits.length === 11;
 
-      // Mathematical validation first
       const mathValid = isCpf ? isValidCPF(digits) : isValidCNPJ(digits);
       if (!mathValid) {
         setDocStatus("invalid");
@@ -101,7 +100,6 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
           setNameAutoFilled(true);
         }
       } catch {
-        // If API fails, still accept (math validation passed)
         setDocStatus("valid");
       }
     }, 500);
@@ -111,72 +109,91 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
     };
   }, [document]);
 
-  const mutation = useMutation({
+  const resetForm = () => {
+    setPersonName("");
+    setDocument("");
+    setWhatsapp("");
+    setFichaFile(null);
+    setIdentidadeFile(null);
+    setDocStatus("idle");
+    setDocError("");
+    setNameAutoFilled(false);
+  };
+
+  const handleAddToList = () => {
+    const trimmedName = personName.trim();
+    if (!trimmedName) { toast.error("Nome obrigatório"); return; }
+
+    const docDigits = document.replace(/\D/g, "");
+    if (!docDigits) { toast.error("CPF/CNPJ obrigatório"); return; }
+
+    const phoneDigits = whatsapp.replace(/\D/g, "");
+    if (phoneDigits.length < 10) { toast.error("WhatsApp obrigatório"); return; }
+
+    const item: LocalNomeItem = {
+      tempId: crypto.randomUUID(),
+      person_name: trimmedName,
+      document: document.trim(),
+      whatsapp: `+55${phoneDigits}`,
+      fichaFile,
+      identidadeFile,
+    };
+
+    setAddedNames((prev) => [...prev, item]);
+    toast.success("Nome adicionado à lista!");
+    resetForm();
+  };
+
+  const paymentMutation = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
+      if (addedNames.length === 0) throw new Error("Lista vazia");
 
-      const trimmedName = personName.trim();
-      if (!trimmedName) throw new Error("Nome obrigatório");
-
-      const docDigits = document.replace(/\D/g, "");
-      if (!docDigits) throw new Error("CPF/CNPJ obrigatório");
-
-      const phoneDigits = whatsapp.replace(/\D/g, "");
-      if (phoneDigits.length < 10) throw new Error("WhatsApp obrigatório");
-
-      const { data, error } = await supabase
-        .from("limpa_nome_requests" as any)
-        .insert({
-          user_id: user.id,
-          person_name: trimmedName,
-          document: document.trim() || null,
-          whatsapp: `+55${phoneDigits}`,
-        } as any)
-        .select("id")
-        .single();
-      if (error) throw error;
-
-      const requestId = (data as any).id;
-
-      for (const { file, docType } of [
-        { file: fichaFile, docType: "ficha_associativa" },
-        { file: identidadeFile, docType: "identidade" },
-      ]) {
-        if (!file) continue;
-        const path = `${user.id}/${requestId}/${docType}_${file.name}`;
-        const { error: uploadErr } = await supabase.storage
-          .from("limpa-nome-docs")
-          .upload(path, file);
-        if (uploadErr) throw uploadErr;
-
-        await supabase
-          .from("limpa_nome_documents" as any)
+      for (const item of addedNames) {
+        const { data, error } = await supabase
+          .from("limpa_nome_requests" as any)
           .insert({
-            request_id: requestId,
-            doc_type: docType,
-            storage_path: path,
-            file_name: file.name,
-          } as any);
-      }
+            user_id: user.id,
+            person_name: item.person_name,
+            document: item.document || null,
+            whatsapp: item.whatsapp,
+          } as any)
+          .select("id")
+          .single();
+        if (error) throw error;
 
-      return { id: requestId, person_name: trimmedName, document: document.trim(), whatsapp: `+55${phoneDigits}` };
+        const requestId = (data as any).id;
+
+        for (const { file, docType } of [
+          { file: item.fichaFile, docType: "ficha_associativa" },
+          { file: item.identidadeFile, docType: "identidade" },
+        ]) {
+          if (!file) continue;
+          const path = `${user.id}/${requestId}/${docType}_${file.name}`;
+          const { error: uploadErr } = await supabase.storage
+            .from("limpa-nome-docs")
+            .upload(path, file);
+          if (uploadErr) throw uploadErr;
+
+          await supabase
+            .from("limpa_nome_documents" as any)
+            .insert({
+              request_id: requestId,
+              doc_type: docType,
+              storage_path: path,
+              file_name: file.name,
+            } as any);
+        }
+      }
     },
-    onSuccess: (item) => {
-      toast.success("Nome adicionado à lista!");
-      setAddedNames((prev) => [...prev, item]);
+    onSuccess: () => {
+      toast.success("Nomes enviados com sucesso!");
+      setAddedNames([]);
       queryClient.invalidateQueries({ queryKey: ["limpa-nome-requests"] });
-      setPersonName("");
-      setDocument("");
-      setWhatsapp("");
-      setFichaFile(null);
-      setIdentidadeFile(null);
-      setDocStatus("idle");
-      setDocError("");
-      setNameAutoFilled(false);
     },
     onError: (err: any) => {
-      toast.error(err?.message || "Erro ao adicionar nome.");
+      toast.error(err?.message || "Erro ao enviar nomes.");
     },
   });
 
@@ -204,7 +221,7 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
 
       {/* Form Card */}
       <Card className="p-5 mb-4">
-        {/* CPF / CNPJ — moved above Nome */}
+        {/* CPF / CNPJ */}
         <div className="mb-4">
           <label className="text-sm text-muted-foreground mb-1.5 block">CPF | CNPJ*</label>
           <div className="flex items-center gap-2 border-b border-border pb-2">
@@ -300,10 +317,10 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
       {/* Add button */}
       <Button
         className="w-full mb-4 bg-[hsl(245,80%,60%)] hover:bg-[hsl(245,80%,50%)] text-white font-semibold py-5"
-        disabled={!isValid || mutation.isPending}
-        onClick={() => mutation.mutate()}
+        disabled={!isValid}
+        onClick={handleAddToList}
       >
-        {mutation.isPending ? "Adicionando..." : "Adicionar à lista"}
+        Adicionar à lista
       </Button>
 
       {/* Names list card */}
@@ -317,7 +334,7 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
           <div className="flex flex-col gap-2 mb-3">
             {addedNames.map((item, idx) => (
               <div
-                key={item.id}
+                key={item.tempId}
                 className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2"
               >
                 <div className="flex items-start gap-2">
@@ -331,10 +348,7 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
                 </div>
                 <button
                   type="button"
-                  onClick={async () => {
-                    setAddedNames((prev) => prev.filter((n) => n.id !== item.id));
-                    await supabase.from("limpa_nome_requests" as any).delete().eq("id", item.id);
-                  }}
+                  onClick={() => setAddedNames((prev) => prev.filter((n) => n.tempId !== item.tempId))}
                   className="h-6 w-6 rounded-full flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
                   aria-label="Remover nome"
                 >
@@ -360,10 +374,10 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
       {/* Payment button */}
       <Button
         className="w-full bg-[hsl(0,85%,65%)] hover:bg-[hsl(0,85%,55%)] text-white font-semibold py-5"
-        disabled={addedNames.length === 0}
-        onClick={() => toast.info("Funcionalidade de pagamento em breve!")}
+        disabled={addedNames.length === 0 || paymentMutation.isPending}
+        onClick={() => paymentMutation.mutate()}
       >
-        Ir para pagamento
+        {paymentMutation.isPending ? "Enviando..." : "Ir para pagamento"}
       </Button>
     </div>
   );

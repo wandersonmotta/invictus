@@ -4,6 +4,7 @@
 @import "./styles/invictus-topbar.css";
 @import "./styles/invictus-auth.css";
 @import "./styles/invictus-mobile-nav.css";
+@import "./styles/invictus-scrollbar.css";
 
 @tailwind base;
 @tailwind components;

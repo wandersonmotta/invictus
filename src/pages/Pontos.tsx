@@ -33,6 +33,20 @@ export default function Pontos() {
     },
   });
 
+  // Redeemed count
+  const { data: redeemedCount = 0 } = useQuery({
+    queryKey: ["my_redeemed_count", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { count, error } = await (supabase as any)
+        .from("point_redemptions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user!.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
   // Rewards catalog
   const { data: rewards = [], isLoading: rewardsLoading } = useQuery({
     queryKey: ["point_rewards"],
@@ -88,10 +102,9 @@ export default function Pontos() {
         </div>
       ) : (
         <>
-          <PointsBalanceCard balance={balance} />
+          <PointsBalanceCard balance={balance} redeemedCount={redeemedCount} />
 
           <section className="mt-6">
-            <h2 className="text-base font-semibold text-foreground mb-4">Prêmios disponíveis</h2>
             {rewards.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhum prêmio disponível no momento.</p>
             ) : (

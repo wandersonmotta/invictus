@@ -1,95 +1,83 @@
 
 
-## Corrigir validacao de CPF/CNPJ e auto-preenchimento de nome
+## Integrar API cpfcnpj.com.br para validacao de CPF e CNPJ
 
-### Problema identificado
+### API escolhida: cpfcnpj.com.br
 
-Nos logs de rede, as tres APIs de CPF estao falhando:
-- **BrasilAPI** `/cpf/v1/` retorna **404** (endpoint foi removido)
-- **Invertexto** retorna **401** (token "free" nao funciona mais)
-- **NuvemFiscal** retorna **401** (requer autenticacao)
+- **CPF**: Pacote 1 (CPF A) - retorna nome completo - R$ 0,17/consulta - SEM data de nascimento
+- **CNPJ**: Pacote 4 (CNPJ A) - retorna razao social - R$ 0,15/consulta
+- Endpoint: `GET https://api.cpfcnpj.com.br/{token}/{pacote}/{cpfcnpj}`
+- Autenticacao por token (sem restricao de IP)
+- Contratacao minima: R$ 10 no plano Premium (creditos nao expiram)
 
-Como todas falham, o sistema cai no fallback (validacao matematica apenas) e nunca retorna o nome.
+### O que voce precisa fazer antes
 
-Para CNPJ, o usuario quer apenas a **razao social** (nao nome fantasia).
+1. Criar conta em cpfcnpj.com.br
+2. Comprar creditos dos pacotes CPF A (pacote 1) e CNPJ A (pacote 4)
+3. Gerar o token de integracao no painel (menu API > Tokens)
+4. Informar o token quando solicitado pelo sistema
 
-### Solucao
+### Implementacao
 
-**1. CPF - Adicionar nova fonte: API do Ministerio da Saude (SCPA)**
+**1. Salvar token como segredo no backend**
+- Sera solicitado o token da API para armazenamento seguro
 
-Existe uma API gratuita e funcional que valida se o CPF esta registrado na Receita Federal:
+**2. Criar funcao backend `hubdev-document-lookup`**
+- Recebe tipo (cpf/cnpj) e numero do documento
+- CPF: chama `https://api.cpfcnpj.com.br/{token}/1/{cpf}` (pacote 1 = CPF A)
+- CNPJ: chama `https://api.cpfcnpj.com.br/{token}/4/{cnpj}` (pacote 4 = CNPJ A)
+- Valida matematicamente antes de gastar creditos
+- Retorna nome completo (CPF) ou razao social (CNPJ)
+
+**3. Atualizar validacao no cliente (`validateCpfClient.ts`)**
+- Substituir chamadas diretas a APIs brasileiras por chamada a funcao backend
+- Remover SCPA, BrasilAPI, ReceitaWS
+- Uma unica funcao que chama o backend para ambos os tipos
+
+**4. Remover campo de data de nascimento (nao necessario)**
+- A API CPF A nao exige data de nascimento
+
+### Fluxo do usuario
+
+```text
+Usuario digita CPF (11 digitos) ou CNPJ (14 digitos)
+  -> Validacao matematica local
+  -> Se valido: chama backend -> backend chama cpfcnpj.com.br
+  -> CPF: nome completo preenchido automaticamente
+  -> CNPJ: razao social preenchida automaticamente
 ```
-GET https://scpa-backend.saude.gov.br/public/scpa-usuario/validacao-cpf/{cpf}
-```
 
-Essa API **confirma que o CPF existe** na base da Receita Federal, porem **nao retorna o nome** (nenhuma API gratuita retorna o nome do CPF atualmente). O campo Nome ficara para preenchimento manual pelo usuario quando for CPF.
+### Arquivos a criar/modificar
 
-**2. CNPJ - Corrigir para retornar razao social + adicionar ReceitaWS como fallback**
-
-- Trocar a prioridade: usar `razao_social` ao inves de `nome_fantasia`
-- Adicionar ReceitaWS como segunda fonte: `GET https://receitaws.com.br/v1/cnpj/{cnpj}` (retorna campo `nome` = razao social)
-- BrasilAPI continua como primeira tentativa
-
-**3. Limpar fontes mortas**
-
-Remover `tryInvertexto` e `tryNuvemFiscal` (ambas retornam 401 permanentemente). Substituir `tryBrasilAPI` para CPF pelo SCPA.
-
-### Arquivos a modificar
-
-**`src/lib/validateCpfClient.ts`**:
-- Remover `tryBrasilAPI` (para CPF), `tryInvertexto`, `tryNuvemFiscal`
-- Adicionar `trySCPA(digits)` que chama a API do Ministerio da Saude para validar CPF
-- Atualizar `validateCpfFromBrowser` para usar SCPA (valida existencia, sem nome)
-- Atualizar `validateCnpjFromBrowser`:
-  - Priorizar `razao_social` no retorno
-  - Adicionar ReceitaWS como segunda fonte para CNPJ
-
-**`src/components/servicos/AddNomeView.tsx`**:
-- Ajustar label do campo Nome para "Nome | Razao Social*" (refletir que CNPJ retorna razao social)
-- Quando for CPF e nao houver nome retornado, manter campo editavel com placeholder "Informe o nome completo"
+- `supabase/functions/hubdev-document-lookup/index.ts` (criar) - funcao backend que chama a API com o token seguro
+- `src/lib/validateCpfClient.ts` (atualizar) - chamar o backend em vez de APIs diretas
+- `src/components/servicos/AddNomeView.tsx` (sem mudanca significativa) - ja tem o fluxo de debounce e auto-preenchimento funcionando
 
 ### Detalhes tecnicos
 
-Nova funcao SCPA para CPF:
-```typescript
-async function trySCPA(digits: string): Promise<{ name: string | null } | null> {
-  const res = await fetchWithTimeout(
-    `https://scpa-backend.saude.gov.br/public/scpa-usuario/validacao-cpf/${digits}`
-  );
-  if (res.ok) {
-    const data = await res.json();
-    // API retorna objeto se CPF existe, ou erro se nao
-    if (!data?.error) return { name: null }; // CPF valido, sem nome
-  }
-  return null;
-}
+**Funcao backend:**
+```text
+POST /hubdev-document-lookup
+Body: { type: "cpf" | "cnpj", document: "12345678901" }
+
+-> Valida matematicamente
+-> Chama GET https://api.cpfcnpj.com.br/{CPFCNPJ_TOKEN}/{pacote}/{document}
+   - pacote 1 para CPF, pacote 4 para CNPJ
+-> Retorna { valid: true/false, name: "Nome Completo" ou "Razao Social" }
 ```
 
-ReceitaWS fallback para CNPJ:
-```typescript
-async function tryReceitaWS(digits: string): Promise<{ razaoSocial: string | null } | null> {
-  const res = await fetchWithTimeout(
-    `https://receitaws.com.br/v1/cnpj/${digits}`
-  );
-  if (res.ok) {
-    const data = await res.json();
-    if (data.status !== "ERROR") {
-      return { razaoSocial: data.nome ?? null };
-    }
-  }
-  return null;
-}
-```
+**Resposta da API (CPF A):**
+- `status`: 1 (sucesso) ou 0 (erro)
+- `nome`: nome completo do titular
 
-CNPJ corrigido para priorizar razao social:
-```typescript
-// Antes: name: nomeFantasia || razaoSocial
-// Depois: name: razaoSocial
-```
+**Resposta da API (CNPJ A):**
+- `status`: 1 (sucesso) ou 0 (erro)
+- `razao_social`: razao social da empresa
 
 ### Resultado esperado
 
-- **CPF**: Valida se o CPF existe na Receita Federal (via SCPA). Mostra "Documento valido". Usuario preenche o nome manualmente.
-- **CNPJ**: Busca e preenche automaticamente a **razao social** da empresa. Mostra "Documento valido" com nome auto-preenchido.
-- Ambos mostram feedback visual (spinner, check verde, X vermelho).
+- **CPF**: Usuario digita CPF -> nome completo aparece automaticamente (sem pedir data de nascimento)
+- **CNPJ**: Usuario digita CNPJ -> razao social aparece automaticamente
+- Token protegido no backend
+- Custo por consulta: R$ 0,15 a R$ 0,17
 

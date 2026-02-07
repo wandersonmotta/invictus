@@ -1,113 +1,122 @@
 
 
-## Reestruturar fluxo Limpa Nome: lista local, olho para visualizar, + para adicionar
+## Integrar pagamento Pix via Stripe no fluxo Limpa Nome
 
-### Problema atual
+### Resumo
 
-1. Ao clicar "Adicionar a lista", o sistema ja salva no banco -- mesmo sem pagamento
-2. Os cards de status expandem com chevron mostrando nomes inline (nao segue a referencia)
-3. Falta o icone de olho para visualizar nomes pagos
-4. Falta a tela de detalhes ao clicar no olho de cada nome
+Quando o usuario clicar "Ir para pagamento", o sistema criara uma sessao de checkout no Stripe com o valor total (R$ 150 x quantidade de nomes), gerando a opcao de pagamento via Pix (QR Code + codigo copia-e-cola). Apos o pagamento ser confirmado, o usuario e redirecionado de volta ao app e os nomes sao salvos no banco de dados.
 
-### O que muda
-
-**1. AddNomeView -- lista apenas em memoria (sem salvar no banco)**
-- "Adicionar a lista" NAO insere no banco. Apenas adiciona ao estado local `addedNames`
-- Se fechar ou recarregar a pagina, perde a lista
-- Salvar no banco e fazer upload dos documentos SOMENTE ao clicar "Ir para pagamento" (futuramente, quando o pagamento for implementado, salva apos confirmacao)
-- Por enquanto, "Ir para pagamento" salva tudo no banco de uma vez e exibe mensagem de sucesso
-
-**2. LimpaNomeView -- cards com icone de olho e +**
-- Remover o chevron (expand inline)
-- Em cada card de status, colocar icone de olho (Eye do lucide) que navega para uma tela de listagem dos nomes daquele status
-- No card "Aberto", manter o botao + que abre o AddNomeView
-- Layout do card conforme referencia:
-  - Badge de status + texto "Sem atualizacao" no topo
-  - "Total enviado / em andamento / finalizados" com o numero grande
-  - Icone olho (e + no Aberto) no canto direito
-
-**3. Nova tela: NomesListView -- lista de nomes por status**
-- Abre ao clicar no olho de um card de status
-- Header com botao voltar e titulo
-- "Total de nomes: X"
-- Campo de busca por CPF/CNPJ
-- Lista de nomes com: Nome (uppercase), CPF/CNPJ abaixo, e icone de olho ao lado
-- Separador tracejado entre itens (como na referencia)
-
-**4. Nova tela: NomeDetailView -- detalhes de um nome**
-- Abre ao clicar no olho de um nome na lista
-- Header com botao voltar
-- Exibe nome completo e CPF/CNPJ
-- Se houver documentos enviados (ficha associativa, identidade), exibe links para visualizar
-- Se nao houver documentos, exibe apenas nome e CPF/CNPJ
-- Somente leitura, sem opcao de editar
-
-### Fluxo do usuario
+### Fluxo do pagamento
 
 ```text
-LimpaNomeView (dashboard)
+Usuario monta lista local (AddNomeView)
   |
-  |-- [+] --> AddNomeView (formulario, lista em memoria)
-  |              |-- "Adicionar a lista" (apenas local)
-  |              |-- "Ir para pagamento" (salva tudo no banco)
-  |              |-- Voltar (perde lista)
+  |-- Clica "Ir para pagamento"
+  |     |
+  |     |-- Frontend envia lista para edge function "create-limpa-nome-payment"
+  |     |-- Edge function cria produto/sessao no Stripe com valor total
+  |     |-- Stripe retorna URL do checkout
+  |     |-- Frontend redireciona para Stripe Checkout (Pix habilitado)
   |
-  |-- [olho] --> NomesListView (nomes pagos daquele status)
-                    |
-                    |-- [olho por nome] --> NomeDetailView (detalhes + documentos)
+  |-- Usuario paga via Pix (QR Code ou copia-e-cola)
+  |     |
+  |     |-- Stripe confirma pagamento em tempo real
+  |     |-- Redireciona para pagina de sucesso
+  |
+  |-- Pagina de sucesso salva os nomes no banco
+        |-- Insere registros em limpa_nome_requests
+        |-- Faz upload dos documentos
+        |-- Insere registros em limpa_nome_documents
 ```
+
+### O que sera criado/modificado
+
+**1. Produto no Stripe**
+- Criar produto "Limpa Nome - Consulta" com preco unitario de R$ 150,00 (15000 centavos BRL)
+- O preco sera usado na sessao de checkout com quantidade dinamica (baseada no numero de nomes)
+
+**2. Nova edge function: `create-limpa-nome-payment`**
+- Recebe a lista de nomes do frontend (sem salvar no banco ainda)
+- Autentica o usuario via token
+- Cria sessao de checkout Stripe com:
+  - `mode: "payment"` (pagamento unico)
+  - `payment_method_types: ["pix"]`
+  - `line_items` com o preco do produto e quantidade = numero de nomes
+  - `metadata` com os dados dos nomes (JSON serializado) para recuperar depois
+  - `success_url` apontando para rota de sucesso com session_id
+  - `cancel_url` apontando de volta para /servicos
+- Retorna a URL do checkout para redirecionamento
+
+**3. Nova edge function: `verify-limpa-nome-payment`**
+- Recebe o `session_id` do Stripe
+- Verifica se o pagamento foi confirmado (`payment_status === "paid"`)
+- Recupera os dados dos nomes do metadata da sessao
+- Insere os registros no banco (`limpa_nome_requests`)
+- Retorna confirmacao de sucesso
+- O upload de documentos sera tratado separadamente (os arquivos ficam no frontend)
+
+**4. Modificar `AddNomeView.tsx`**
+- No clique de "Ir para pagamento":
+  - Salvar a lista de nomes no `sessionStorage` (para recuperar apos redirect)
+  - Chamar edge function `create-limpa-nome-payment` com os dados
+  - Redirecionar para a URL do Stripe Checkout
+- Remover a mutacao atual que salva direto no banco
+
+**5. Nova rota/pagina: pagina de sucesso do pagamento**
+- Rota: `/pagamento-sucesso`
+- Recebe `session_id` como query param
+- Chama `verify-limpa-nome-payment` para confirmar pagamento
+- Recupera arquivos do `sessionStorage`
+- Faz upload dos documentos para o storage
+- Insere registros de documentos em `limpa_nome_documents`
+- Exibe mensagem de sucesso
+- Redireciona para /servicos apos confirmacao
+
+**6. Configuracao do Stripe**
+- Habilitar Pix como metodo de pagamento no dashboard do Stripe (instrucao para o usuario)
 
 ### Detalhes tecnicos
 
-**Arquivo: `src/components/servicos/AddNomeView.tsx`**
-- Remover insert no banco da mutacao "Adicionar a lista"
-- O `addedNames` passa a ser puramente local (sem id do banco)
-- Gerar id temporario com `crypto.randomUUID()` para a key do React
-- Armazenar os arquivos (fichaFile, identidadeFile) por nome na lista local
-- Criar nova mutacao para "Ir para pagamento" que:
-  - Insere cada nome na tabela `limpa_nome_requests`
-  - Faz upload dos documentos para cada nome
-  - Insere registros em `limpa_nome_documents`
-  - Limpa a lista e exibe sucesso
-  - Invalida o cache de queries
+**Produto Stripe**
+- Nome: "Limpa Nome - Consulta"
+- Preco: R$ 150,00 (15000 centavos em BRL)
+- Tipo: one-time (nao recorrente)
 
-**Arquivo: `src/components/servicos/LimpaNomeView.tsx`**
-- Adicionar estado para navegacao interna: `viewMode` (dashboard / nomes-list / nome-detail)
-- Substituir chevron por `Eye` do lucide-react em todos os cards
-- Remover logica de expand inline
-- Ao clicar olho: setar `viewMode = "nomes-list"` com o status filtrado
-- Renderizar componente correspondente baseado em `viewMode`
+**Edge function `create-limpa-nome-payment` (supabase/functions/create-limpa-nome-payment/index.ts)**
+- CORS headers padrao
+- Autenticacao via Supabase token
+- Stripe SDK via `https://esm.sh/stripe@18.5.0`
+- API version: `2025-08-27.basil`
+- Cria customer no Stripe se nao existir
+- Sessao de checkout com Pix habilitado
+- Metadata armazena: nomes, documentos, whatsapp (JSON)
+- `verify_jwt = false` no config.toml
 
-**Novo arquivo: `src/components/servicos/NomesListView.tsx`**
-- Props: `status`, `onBack`, `onViewDetail(request)`
-- Busca nomes do banco filtrados por status
-- Campo de busca filtra localmente por CPF/CNPJ
-- Cada item tem icone de olho que chama `onViewDetail`
+**Edge function `verify-limpa-nome-payment` (supabase/functions/verify-limpa-nome-payment/index.ts)**
+- Recebe session_id
+- Verifica pagamento no Stripe
+- Insere dados no banco usando service role key
+- `verify_jwt = false` no config.toml
 
-**Novo arquivo: `src/components/servicos/NomeDetailView.tsx`**
-- Props: `request` (dados do nome), `onBack`
-- Exibe nome, documento
-- Busca documentos da tabela `limpa_nome_documents` pelo `request_id`
-- Se houver documentos, exibe links/botoes para visualizar (gera URL publica do storage)
-- Se nao houver, exibe somente os dados basicos
+**Pagina de sucesso (`src/pages/PagamentoSucesso.tsx`)**
+- Lê `session_id` da URL
+- Recupera lista de nomes e arquivos do `sessionStorage`
+- Chama verify-limpa-nome-payment
+- Faz upload dos arquivos via Supabase Storage
+- Insere metadados dos documentos na tabela
 
-### Interface do NomeItem local (AddNomeView)
-
-```text
-interface LocalNomeItem {
-  tempId: string;          // crypto.randomUUID()
-  person_name: string;
-  document: string;
-  whatsapp: string;
-  fichaFile: File | null;
-  identidadeFile: File | null;
-}
-```
+**Limitacao importante sobre arquivos**
+- `sessionStorage` nao pode armazenar objetos File diretamente
+- Os arquivos (ficha associativa, identidade) serao convertidos para base64 antes de salvar no sessionStorage
+- Na pagina de sucesso, serao convertidos de volta para File antes do upload
 
 ### Arquivos a criar/modificar
 
-- `src/components/servicos/AddNomeView.tsx` (modificar -- lista local, salvar tudo no pagamento)
-- `src/components/servicos/LimpaNomeView.tsx` (modificar -- olho + navegacao)
-- `src/components/servicos/NomesListView.tsx` (criar -- lista de nomes por status)
-- `src/components/servicos/NomeDetailView.tsx` (criar -- detalhes de um nome)
+- Criar produto e preco no Stripe (via ferramenta)
+- `supabase/functions/create-limpa-nome-payment/index.ts` (criar)
+- `supabase/functions/verify-limpa-nome-payment/index.ts` (criar)
+- `supabase/config.toml` -- nao editavel diretamente, mas registrar verify_jwt = false
+- `src/components/servicos/AddNomeView.tsx` (modificar -- redirecionar para Stripe)
+- `src/pages/PagamentoSucesso.tsx` (criar)
+- `src/App.tsx` (adicionar rota /pagamento-sucesso)
 

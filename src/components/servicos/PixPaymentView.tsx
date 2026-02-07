@@ -43,9 +43,10 @@ interface PixPaymentViewProps {
   totalAmount: number;
   onBack: () => void;
   onComplete: () => void;
+  servicePaymentId?: string;
 }
 
-export function PixPaymentView({ paymentData, totalAmount, onBack, onComplete }: PixPaymentViewProps) {
+export function PixPaymentView({ paymentData, totalAmount, onBack, onComplete, servicePaymentId }: PixPaymentViewProps) {
   const [stage, setStage] = useState<Stage>("waiting");
   const [copied, setCopied] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -95,6 +96,13 @@ export function PixPaymentView({ paymentData, totalAmount, onBack, onComplete }:
           verifiedRef.current = true;
           if (intervalRef.current) clearInterval(intervalRef.current);
           setStage("confirmed");
+          // Update service_payments record if we have one
+          if (servicePaymentId) {
+            await supabase
+              .from("service_payments" as any)
+              .update({ status: "approved", paid_at: new Date().toISOString() } as any)
+              .eq("id", servicePaymentId);
+          }
           await handlePostPayment(data.request_ids);
         }
       } catch {

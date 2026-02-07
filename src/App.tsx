@@ -28,6 +28,7 @@ const preloaders = [
   () => import("./pages/Carteira"),
   () => import("./pages/Reconhecimento"),
   () => import("./pages/PagamentoSucesso"),
+  () => import("./pages/Pagamentos"),
 ] as const;
 
 function scheduleIdle(cb: () => void) {

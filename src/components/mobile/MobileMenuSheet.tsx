@@ -18,6 +18,7 @@ import {
   Trophy,
   ShoppingBag,
   Receipt,
+  CreditCard,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -54,6 +55,7 @@ const menuSections: MenuSection[] = [
       { title: "Feed", url: "/feed", icon: Newspaper },
       { title: "Mapa", url: "/mapa", icon: MapPin },
       { title: "Buscar", url: "/buscar", icon: Search },
+      { title: "Pagamentos", url: "/pagamentos", icon: CreditCard },
     ],
   },
   {

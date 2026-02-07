@@ -1216,6 +1216,57 @@ export type Database = {
           },
         ]
       }
+      service_payments: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          expires_at: string | null
+          id: string
+          item_count: number
+          items_snapshot: Json
+          paid_at: string | null
+          payment_external_id: string | null
+          payment_provider: string
+          pix_code: string | null
+          pix_qr_code_url: string | null
+          service_type: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_cents?: number
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          item_count?: number
+          items_snapshot?: Json
+          paid_at?: string | null
+          payment_external_id?: string | null
+          payment_provider?: string
+          pix_code?: string | null
+          pix_qr_code_url?: string | null
+          service_type?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          item_count?: number
+          items_snapshot?: Json
+          paid_at?: string | null
+          payment_external_id?: string | null
+          payment_provider?: string
+          pix_code?: string | null
+          pix_qr_code_url?: string | null
+          service_type?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       training_categories: {
         Row: {
           created_at: string

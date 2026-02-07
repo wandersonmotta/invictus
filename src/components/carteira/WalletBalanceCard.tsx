@@ -1,52 +1,40 @@
- import { CreditCard, ExternalLink } from "lucide-react";
- import { Button } from "@/components/ui/button";
- import { cn } from "@/lib/utils";
- 
- interface WalletBalanceCardProps {
-   balance: number;
+import { Wallet, ArrowUpRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+interface WalletBalanceCardProps {
+  balance: number;
   canWithdraw: boolean;
-   onWithdraw?: () => void;
- }
- 
+  onWithdraw?: () => void;
+}
+
 export function WalletBalanceCard({ balance, canWithdraw, onWithdraw }: WalletBalanceCardProps) {
-   const formattedBalance = balance.toLocaleString("pt-BR", {
-     style: "currency",
-     currency: "BRL",
-   });
- 
-   return (
-     <div className="flex flex-col gap-4">
-       {/* Balance Card */}
-       <div
-         className={cn(
-           "invictus-surface invictus-frame relative w-full rounded-2xl p-5",
-           "bg-gradient-to-br from-card/80 to-card/60"
-         )}
-       >
-         {/* Icon */}
-         <CreditCard className="absolute right-4 top-4 size-6 text-primary/60" />
- 
-         {/* Content */}
-         <div className="space-y-1">
-           <p className="text-sm text-muted-foreground">Bônus atual</p>
-           <p className="text-3xl font-bold tracking-tight text-foreground">
-             {formattedBalance}
-           </p>
-         </div>
-       </div>
- 
-       {/* Withdraw Button - Aligned right */}
-       <div className="flex justify-end">
-         <Button
-           variant="goldOutline"
-           className="gap-2"
-           onClick={onWithdraw}
-          disabled={!canWithdraw}
-         >
-           Sacar
-           <ExternalLink className="size-4" />
-         </Button>
-       </div>
-     </div>
-   );
- }
+  const formattedBalance = balance.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+
+  return (
+    <div className="flex items-stretch gap-3">
+      {/* Balance Card */}
+      <div className="relative flex-1 rounded-2xl bg-foreground p-5">
+        <Wallet className="absolute right-4 top-4 size-6 text-background/40" />
+        <div className="space-y-1">
+          <p className="text-sm text-background/60">Saldo atual</p>
+          <p className="text-3xl font-bold tracking-tight text-background">
+            {formattedBalance}
+          </p>
+        </div>
+      </div>
+
+      {/* Withdraw Button */}
+      <Button
+        className="flex h-auto flex-col items-center justify-center gap-1 rounded-2xl bg-red-950/40 px-5 text-red-400 hover:bg-red-950/60 hover:text-red-300 border border-red-900/30"
+        onClick={onWithdraw}
+        disabled={!canWithdraw}
+      >
+        <ArrowUpRight className="size-5" />
+        <span className="text-xs font-semibold">Sacar</span>
+      </Button>
+    </div>
+  );
+}

@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ServiceCategoryCard } from "@/components/servicos/ServiceCategoryCard";
 import { ServiceItemCard } from "@/components/servicos/ServiceItemCard";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ServiceCategory {
   id: string;
@@ -23,11 +24,13 @@ interface ServiceItem {
   price_label: string | null;
   image_url: string | null;
   contact_info: string | null;
+  icon_name: string | null;
   sort_order: number;
 }
 
 export default function Servicos() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const { data: categories = [], isLoading: loadingCategories } = useQuery({
     queryKey: ["service-categories"],
@@ -49,7 +52,7 @@ export default function Servicos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("service_items" as any)
-        .select("id, name, description, price, price_label, image_url, contact_info, sort_order")
+        .select("id, name, description, price, price_label, image_url, contact_info, icon_name, sort_order")
         .eq("category_id", selectedCategoryId!)
         .order("sort_order");
       if (error) throw error;
@@ -81,17 +84,26 @@ export default function Servicos() {
             <p className="text-muted-foreground text-sm">
               Nenhum item cadastrado nesta categoria ainda.
             </p>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
+          ) : isMobile ? (
+            <div className="flex flex-col gap-2">
               {items.map((item) => (
                 <ServiceItemCard
                   key={item.id}
                   name={item.name}
                   description={item.description}
-                  price={item.price}
-                  priceLabel={item.price_label}
-                  imageUrl={item.image_url}
-                  contactInfo={item.contact_info}
+                  iconName={item.icon_name}
+                  compact
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-4 grid-cols-2 sm:grid-cols-3">
+              {items.map((item) => (
+                <ServiceItemCard
+                  key={item.id}
+                  name={item.name}
+                  description={item.description}
+                  iconName={item.icon_name}
                 />
               ))}
             </div>

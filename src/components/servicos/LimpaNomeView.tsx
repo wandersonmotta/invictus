@@ -4,7 +4,7 @@ import { ArrowLeft, Plus, ChevronDown, ChevronUp, Send, Clock, CheckCircle2 } fr
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { AddNomeDialog } from "./AddNomeDialog";
+import { AddNomeView } from "./AddNomeView";
 import { cn } from "@/lib/utils";
 
 type StatusFilter = "todos" | "aberto" | "em_andamento" | "finalizado";
@@ -30,7 +30,7 @@ const filters: { key: StatusFilter; label: string }[] = [
 
 export function LimpaNomeView({ onBack }: LimpaNomeViewProps) {
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("todos");
-  const [addOpen, setAddOpen] = useState(false);
+  const [showAddView, setShowAddView] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   const { data: requests = [] } = useQuery({
@@ -62,9 +62,12 @@ export function LimpaNomeView({ onBack }: LimpaNomeViewProps) {
   const listByStatus = (status: string) =>
     filtered.filter((r) => r.status === status);
 
+  if (showAddView) {
+    return <AddNomeView onBack={() => setShowAddView(false)} />;
+  }
+
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-6">
-      {/* Header */}
       <div className="flex items-center gap-2 mb-5">
         <Button variant="ghost" size="icon" onClick={onBack} aria-label="Voltar">
           <ArrowLeft className="h-5 w-5" />
@@ -105,7 +108,7 @@ export function LimpaNomeView({ onBack }: LimpaNomeViewProps) {
                 size="icon"
                 variant="ghost"
                 className="h-8 w-8 rounded-full bg-primary/10 hover:bg-primary/20"
-                onClick={() => setAddOpen(true)}
+                onClick={() => setShowAddView(true)}
                 aria-label="Adicionar nome"
               >
                 <Plus className="h-4 w-4 text-primary" />
@@ -146,7 +149,7 @@ export function LimpaNomeView({ onBack }: LimpaNomeViewProps) {
         )}
       </div>
 
-      <AddNomeDialog open={addOpen} onOpenChange={setAddOpen} />
+      {/* AddNomeDialog removed - now using AddNomeView */}
     </div>
   );
 }

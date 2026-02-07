@@ -729,6 +729,41 @@ export type Database = {
           },
         ]
       }
+      limpa_nome_documents: {
+        Row: {
+          created_at: string
+          doc_type: string
+          file_name: string | null
+          id: string
+          request_id: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          doc_type: string
+          file_name?: string | null
+          id?: string
+          request_id: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          doc_type?: string
+          file_name?: string | null
+          id?: string
+          request_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "limpa_nome_documents_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "limpa_nome_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       limpa_nome_requests: {
         Row: {
           created_at: string
@@ -739,6 +774,7 @@ export type Database = {
           status: Database["public"]["Enums"]["limpa_nome_status"]
           updated_at: string
           user_id: string
+          whatsapp: string | null
         }
         Insert: {
           created_at?: string
@@ -749,6 +785,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["limpa_nome_status"]
           updated_at?: string
           user_id: string
+          whatsapp?: string | null
         }
         Update: {
           created_at?: string
@@ -759,6 +796,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["limpa_nome_status"]
           updated_at?: string
           user_id?: string
+          whatsapp?: string | null
         }
         Relationships: []
       }

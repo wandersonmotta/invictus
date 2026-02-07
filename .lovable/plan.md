@@ -1,88 +1,106 @@
 
 
-## Funcionalidade "Limpa Nome" - Painel de Gestao de Nomes
+## Formulario "Adicionar Nome" - Tela Completa
 
-Ao clicar em "Limpa Nome" dentro de "Reabilitacao de Credito", o usuario vera um painel completo para gerenciar solicitacoes de limpeza de nome, identico a referencia enviada.
+Quando o usuario clicar no botao "+" no card Aberto, em vez de abrir um dialog pequeno, vai abrir uma tela completa identica a referencia enviada.
 
-### Layout da tela
+### Layout da tela (conforme referencia)
 
-1. **Barra superior**: Seta voltar + filtros em chips: Todos (verde, ativo por padrao), Aberto, Em andamento, Finalizado
-2. **Tres cards de status**:
-   - **Aberto** (icone verde) - "Total enviado" + contagem + "Sem encerramento" + botao "+" para adicionar nomes
-   - **Em andamento** (icone laranja/amarelo) - "Total em andamento" + contagem + "Sem atualizacao"
-   - **Finalizado** (icone azul/roxo) - "Total finalizados" + contagem + "Sem atualizacao"
-3. **Listas expansiveis**: Em andamento e Finalizado terao seta para expandir e ver a lista de nomes
+1. **Topo**: Botao "Voltar" com seta
+2. **Header**: "Cadastre no campo abaixo"
+3. **Formulario** dentro de um card:
+   - **Nome | Nome Fantasia*** - campo de texto com icone de pessoa
+   - **CPF | CNPJ*** - campo com mascara e icone de documento
+   - **WhatsApp*** - campo com prefixo "+55" e icone da bandeira do Brasil
+4. **Secao de documentos**: "Faca o envio dos documentos abaixo para ativar a garantia"
+   - Dois botoes de upload lado a lado: "Ficha associativa" e "Identidade ou Cartao CNPJ"
+5. **Botao "Adicionar a lista"** (roxo/primary, largura total)
+6. **Card "Lista de nomes"**: Mostra contagem de nomes e valor total (R$)
+7. **Botao "Ir para pagamento"** (vermelho/rosa, largura total)
 
 ### O que sera feito
 
-1. **Banco de dados**: Criar tabela `limpa_nome_requests` para armazenar os nomes enviados pelo usuario, com status (aberto, em_andamento, finalizado)
-2. **Componente novo**: `LimpaNomeView` com todo o layout do painel
-3. **Dialog de adicionar**: Formulario simples para o usuario enviar um novo nome (campo nome + CPF/documento)
-4. **Integracao na pagina Servicos**: Quando o usuario clicar em "Limpa Nome", abrir essa view em vez de nao fazer nada
+**Banco de dados** - Adicionar colunas na tabela `limpa_nome_requests`:
+- `whatsapp` (text, nullable) - numero de WhatsApp
+- Criar bucket de storage `limpa-nome-docs` para os arquivos enviados
 
----
+Adicionar tabela `limpa_nome_documents` para armazenar metadados dos arquivos:
+- `id`, `request_id` (FK), `doc_type` (ficha_associativa / identidade), `storage_path`, `file_name`, `created_at`
+
+**Novo componente** - `AddNomeView.tsx` substituindo o `AddNomeDialog.tsx`:
+- Tela completa (nao dialog) com o layout da referencia
+- Campos com validacao: nome obrigatorio, CPF/CNPJ com mascara e validacao, WhatsApp obrigatorio
+- Upload de documentos usando file storage
+- Lista de nomes adicionados na sessao com contagem e valor
+- Botao "Ir para pagamento" (por enquanto apenas visual, sem integracao de pagamento)
+
+**Modificar `LimpaNomeView.tsx`**:
+- Quando clicar no "+", em vez de abrir dialog, navegar para a nova view `AddNomeView`
+- Adicionar estado para controlar a navegacao entre as views
 
 ### Detalhes tecnicos
 
-**Migracao SQL - Nova tabela:**
+**Migracao SQL:**
 
 ```sql
-CREATE TYPE limpa_nome_status AS ENUM ('aberto', 'em_andamento', 'finalizado');
+ALTER TABLE public.limpa_nome_requests
+  ADD COLUMN whatsapp text;
 
-CREATE TABLE public.limpa_nome_requests (
+CREATE TABLE public.limpa_nome_documents (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  person_name text NOT NULL,
-  document text,
-  status limpa_nome_status NOT NULL DEFAULT 'aberto',
-  notes text,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+  request_id uuid NOT NULL REFERENCES public.limpa_nome_requests(id) ON DELETE CASCADE,
+  doc_type text NOT NULL,
+  storage_path text NOT NULL,
+  file_name text,
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE public.limpa_nome_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.limpa_nome_documents ENABLE ROW LEVEL SECURITY;
 
--- Usuarios veem apenas seus proprios pedidos
-CREATE POLICY "Users can view own requests"
-  ON public.limpa_nome_requests FOR SELECT
-  USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own docs"
+  ON public.limpa_nome_documents FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM limpa_nome_requests r
+    WHERE r.id = request_id AND r.user_id = auth.uid()
+  ));
 
--- Usuarios podem inserir pedidos
-CREATE POLICY "Users can insert own requests"
-  ON public.limpa_nome_requests FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can insert own docs"
+  ON public.limpa_nome_documents FOR INSERT
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM limpa_nome_requests r
+    WHERE r.id = request_id AND r.user_id = auth.uid()
+  ));
 
--- Admins podem gerenciar todos
-CREATE POLICY "Admins manage all requests"
-  ON public.limpa_nome_requests FOR ALL
+CREATE POLICY "Admins manage all docs"
+  ON public.limpa_nome_documents FOR ALL
   USING (has_role(auth.uid(), 'admin'::app_role))
   WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
 ```
 
-**Novos arquivos:**
+Criar bucket de storage:
+```sql
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('limpa-nome-docs', 'limpa-nome-docs', false);
 
-- `src/components/servicos/LimpaNomeView.tsx` — Componente principal com:
-  - Filtros em chips (Todos / Aberto / Em andamento / Finalizado)
-  - Tres cards de status com contagens dinamicas do banco
-  - Listas expansiveis (Collapsible) nos cards Em andamento e Finalizado
-  - Botao "+" no card Aberto para abrir dialog de adicionar
+CREATE POLICY "Users upload own docs"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'limpa-nome-docs' AND auth.uid()::text = (storage.foldername(name))[1]);
 
-- `src/components/servicos/AddNomeDialog.tsx` — Dialog com formulario:
-  - Campo "Nome completo"
-  - Campo "CPF/Documento" (opcional)
-  - Botao enviar que insere na tabela `limpa_nome_requests`
-
-**Arquivos a modificar:**
-
-- `src/pages/Servicos.tsx` — Adicionar estado `selectedItemId`, e quando o item clicado for "Limpa Nome", renderizar o `LimpaNomeView` em vez da lista de items
-- `src/components/servicos/ServiceItemCard.tsx` — Tornar os cards clicaveis (adicionar prop `onClick`)
-
-### Fluxo de navegacao
-
-```text
-Servicos -> Reabilitacao de Credito -> Limpa Nome -> Painel com cards de status
-                                                      |
-                                                      +-> Botao "+" abre dialog para adicionar nome
-                                                      +-> Seta nos cards expande lista de nomes
+CREATE POLICY "Users view own docs"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'limpa-nome-docs' AND auth.uid()::text = (storage.foldername(name))[1]);
 ```
 
+**Novos/modificados arquivos:**
+
+- `src/components/servicos/AddNomeView.tsx` - Tela completa com formulario identico a referencia
+- `src/components/servicos/LimpaNomeView.tsx` - Trocar dialog por navegacao para AddNomeView
+- Remover uso do `AddNomeDialog.tsx` (pode manter o arquivo mas nao sera mais usado)
+
+**Componentes do formulario:**
+- Campo Nome com icone User
+- Campo CPF/CNPJ com mascara automatica (usa `formatCPF` existente)
+- Campo WhatsApp com prefixo "+55" fixo e mascara de telefone
+- Dois botoes de upload de arquivo com icone de upload
+- Lista de nomes adicionados com contagem e valor
+- Botoes "Adicionar a lista" e "Ir para pagamento"

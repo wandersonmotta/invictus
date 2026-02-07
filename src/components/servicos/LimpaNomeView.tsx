@@ -73,13 +73,13 @@ export function LimpaNomeView({ onBack }: LimpaNomeViewProps) {
       </div>
 
       {/* Filter chips */}
-      <div className="grid grid-cols-4 gap-1.5 mb-6">
+      <div className="grid grid-cols-4 gap-1 mb-6">
         {filters.map((f) => (
           <button
             key={f.key}
             onClick={() => setActiveFilter(f.key)}
             className={cn(
-              "px-1 py-1.5 rounded-full text-[11px] sm:text-sm font-medium transition-colors border text-center",
+              "py-1.5 rounded-full text-[10px] sm:text-sm font-medium transition-colors border text-center leading-tight",
               activeFilter === f.key
                 ? "bg-primary text-primary-foreground border-primary"
                 : "bg-card text-muted-foreground border-border hover:border-primary/40"

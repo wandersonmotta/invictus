@@ -230,7 +230,7 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
 
         {/* Nome */}
         <div className="mb-4">
-          <label className="text-sm text-muted-foreground mb-1.5 block">Nome | Nome Fantasia*</label>
+          <label className="text-sm text-muted-foreground mb-1.5 block">Nome | Razão Social*</label>
           <div className="flex items-center gap-2 border-b border-border pb-2">
             <User className="h-4 w-4 text-muted-foreground shrink-0" />
             <input

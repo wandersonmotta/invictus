@@ -1099,6 +1099,7 @@ export type Database = {
           contact_info: string | null
           created_at: string
           description: string | null
+          icon_name: string | null
           id: string
           image_url: string | null
           name: string
@@ -1112,6 +1113,7 @@ export type Database = {
           contact_info?: string | null
           created_at?: string
           description?: string | null
+          icon_name?: string | null
           id?: string
           image_url?: string | null
           name: string
@@ -1125,6 +1127,7 @@ export type Database = {
           contact_info?: string | null
           created_at?: string
           description?: string | null
+          icon_name?: string | null
           id?: string
           image_url?: string | null
           name?: string

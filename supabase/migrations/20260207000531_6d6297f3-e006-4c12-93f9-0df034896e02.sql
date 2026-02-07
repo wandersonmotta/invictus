@@ -1,0 +1,1 @@
+ALTER TABLE public.service_items ADD COLUMN IF NOT EXISTS icon_name text;

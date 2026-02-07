@@ -1,106 +1,90 @@
 
 
-## Formulario "Adicionar Nome" - Tela Completa
+## Validacao de CPF/CNPJ com auto-preenchimento do nome
 
-Quando o usuario clicar no botao "+" no card Aberto, em vez de abrir um dialog pequeno, vai abrir uma tela completa identica a referencia enviada.
+### Problema atual
 
-### Layout da tela (conforme referencia)
+As APIs brasileiras (BrasilAPI, Invertexto, Nuvem Fiscal) bloqueiam requisicoes vindas de IPs fora do Brasil. As Edge Functions rodam em servidores europeus, entao as consultas falham. A solucao atual no cliente (`validateCpfClient.ts`) ja roda no navegador do usuario (IP brasileiro), mas ainda nao esta integrada ao formulario de "Adicionar Nome".
 
-1. **Topo**: Botao "Voltar" com seta
-2. **Header**: "Cadastre no campo abaixo"
-3. **Formulario** dentro de um card:
-   - **Nome | Nome Fantasia*** - campo de texto com icone de pessoa
-   - **CPF | CNPJ*** - campo com mascara e icone de documento
-   - **WhatsApp*** - campo com prefixo "+55" e icone da bandeira do Brasil
-4. **Secao de documentos**: "Faca o envio dos documentos abaixo para ativar a garantia"
-   - Dois botoes de upload lado a lado: "Ficha associativa" e "Identidade ou Cartao CNPJ"
-5. **Botao "Adicionar a lista"** (roxo/primary, largura total)
-6. **Card "Lista de nomes"**: Mostra contagem de nomes e valor total (R$)
-7. **Botao "Ir para pagamento"** (vermelho/rosa, largura total)
+### Solucao
+
+Usar a validacao **direto do navegador do usuario** (que tem IP brasileiro) para consultar as APIs da Receita Federal. Quando o usuario terminar de digitar o CPF ou CNPJ completo, o sistema:
+
+1. Valida matematicamente os digitos verificadores
+2. Consulta as APIs brasileiras **a partir do navegador** (IP brasileiro)
+3. Se encontrar o nome da pessoa/empresa, preenche automaticamente o campo "Nome"
+4. Mostra feedback visual (carregando, valido, invalido)
+
+Para **CNPJ**, adicionar consulta a BrasilAPI (`/cnpj/v1/{cnpj}`) que retorna razao social e nome fantasia.
 
 ### O que sera feito
 
-**Banco de dados** - Adicionar colunas na tabela `limpa_nome_requests`:
-- `whatsapp` (text, nullable) - numero de WhatsApp
-- Criar bucket de storage `limpa-nome-docs` para os arquivos enviados
+**1. Atualizar `src/lib/validateCpfClient.ts`**
+- Renomear para um modulo mais generico de validacao de documentos
+- Adicionar funcao `validateCnpjFromBrowser` que consulta `https://brasilapi.com.br/api/cnpj/v1/{digits}` (funciona do browser com IP BR)
+- Retornar razao social e nome fantasia do CNPJ
+- Adicionar validacao matematica de CNPJ (digitos verificadores)
 
-Adicionar tabela `limpa_nome_documents` para armazenar metadados dos arquivos:
-- `id`, `request_id` (FK), `doc_type` (ficha_associativa / identidade), `storage_path`, `file_name`, `created_at`
+**2. Criar `src/lib/cnpj.ts`**
+- Funcao `isValidCNPJ` para validacao matematica dos digitos verificadores do CNPJ
+- Funcao `formatCNPJ` (mover do AddNomeView para reutilizacao)
 
-**Novo componente** - `AddNomeView.tsx` substituindo o `AddNomeDialog.tsx`:
-- Tela completa (nao dialog) com o layout da referencia
-- Campos com validacao: nome obrigatorio, CPF/CNPJ com mascara e validacao, WhatsApp obrigatorio
-- Upload de documentos usando file storage
-- Lista de nomes adicionados na sessao com contagem e valor
-- Botao "Ir para pagamento" (por enquanto apenas visual, sem integracao de pagamento)
+**3. Atualizar `src/components/servicos/AddNomeView.tsx`**
+- Adicionar debounce de 500ms no campo CPF/CNPJ
+- Quando o documento estiver completo (11 digitos para CPF, 14 para CNPJ):
+  - Mostrar indicador de "Validando..." abaixo do campo
+  - Chamar `validateCpfFromBrowser` ou `validateCnpjFromBrowser` conforme o tipo
+  - Se valido e nome encontrado: preencher automaticamente o campo "Nome | Nome Fantasia"
+  - Se valido mas sem nome: permitir digitacao manual
+  - Se invalido: mostrar erro "CPF/CNPJ invalido" em vermelho
+- O campo Nome fica editavel mesmo apos auto-preenchimento
+- O botao "Adicionar a lista" so fica habilitado se o documento foi validado
 
-**Modificar `LimpaNomeView.tsx`**:
-- Quando clicar no "+", em vez de abrir dialog, navegar para a nova view `AddNomeView`
-- Adicionar estado para controlar a navegacao entre as views
+### Fluxo do usuario
+
+```text
+Usuario digita CPF/CNPJ
+        |
+        v
+  Digitos completos? (11 ou 14)
+        |
+       Sim
+        |
+        v
+  Validacao matematica
+        |
+    Valido?
+   /       \
+  Nao       Sim
+  |          |
+  v          v
+Erro      Consulta APIs do browser (IP BR)
+vermelho     |
+          Nome encontrado?
+         /          \
+       Sim           Nao
+        |             |
+        v             v
+  Preenche nome   Campo nome vazio
+  automaticamente (digitacao manual)
+```
 
 ### Detalhes tecnicos
 
-**Migracao SQL:**
+**Novo arquivo `src/lib/cnpj.ts`:**
+- `isValidCNPJ(cnpj: string): boolean` - validacao matematica
+- `formatCNPJ(value: string): string` - formatacao visual
 
-```sql
-ALTER TABLE public.limpa_nome_requests
-  ADD COLUMN whatsapp text;
+**Atualizar `src/lib/validateCpfClient.ts`:**
+- Adicionar `validateCnpjFromBrowser(digits: string)` que consulta `https://brasilapi.com.br/api/cnpj/v1/{digits}`
+- Retorna `{ valid: true, name: string | null, tradeName: string | null, fallback: boolean }`
 
-CREATE TABLE public.limpa_nome_documents (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  request_id uuid NOT NULL REFERENCES public.limpa_nome_requests(id) ON DELETE CASCADE,
-  doc_type text NOT NULL,
-  storage_path text NOT NULL,
-  file_name text,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+**Atualizar `src/components/servicos/AddNomeView.tsx`:**
+- Novos estados: `docStatus` (idle/validating/valid/invalid), `docName` (nome retornado)
+- useEffect com debounce no campo `document`
+- Feedback visual: spinner ao validar, check verde se valido, X vermelho se invalido
+- Auto-preenchimento do campo `personName` quando nome e retornado
+- Importar `isValidCPF` de `src/lib/cpf.ts` e `isValidCNPJ` do novo `src/lib/cnpj.ts`
 
-ALTER TABLE public.limpa_nome_documents ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own docs"
-  ON public.limpa_nome_documents FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM limpa_nome_requests r
-    WHERE r.id = request_id AND r.user_id = auth.uid()
-  ));
-
-CREATE POLICY "Users can insert own docs"
-  ON public.limpa_nome_documents FOR INSERT
-  WITH CHECK (EXISTS (
-    SELECT 1 FROM limpa_nome_requests r
-    WHERE r.id = request_id AND r.user_id = auth.uid()
-  ));
-
-CREATE POLICY "Admins manage all docs"
-  ON public.limpa_nome_documents FOR ALL
-  USING (has_role(auth.uid(), 'admin'::app_role))
-  WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
-```
-
-Criar bucket de storage:
-```sql
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('limpa-nome-docs', 'limpa-nome-docs', false);
-
-CREATE POLICY "Users upload own docs"
-  ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'limpa-nome-docs' AND auth.uid()::text = (storage.foldername(name))[1]);
-
-CREATE POLICY "Users view own docs"
-  ON storage.objects FOR SELECT
-  USING (bucket_id = 'limpa-nome-docs' AND auth.uid()::text = (storage.foldername(name))[1]);
-```
-
-**Novos/modificados arquivos:**
-
-- `src/components/servicos/AddNomeView.tsx` - Tela completa com formulario identico a referencia
-- `src/components/servicos/LimpaNomeView.tsx` - Trocar dialog por navegacao para AddNomeView
-- Remover uso do `AddNomeDialog.tsx` (pode manter o arquivo mas nao sera mais usado)
-
-**Componentes do formulario:**
-- Campo Nome com icone User
-- Campo CPF/CNPJ com mascara automatica (usa `formatCPF` existente)
-- Campo WhatsApp com prefixo "+55" fixo e mascara de telefone
-- Dois botoes de upload de arquivo com icone de upload
-- Lista de nomes adicionados com contagem e valor
-- Botoes "Adicionar a lista" e "Ir para pagamento"
+**Nao sera alterado:**
+- A Edge Function `validate-cpf` permanece como fallback, mas o fluxo principal sera 100% client-side (browser com IP brasileiro)

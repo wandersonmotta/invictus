@@ -34,6 +34,7 @@ const Reconhecimento = React.lazy(() => import("@/pages/Reconhecimento"));
 const Pontos = React.lazy(() => import("@/pages/Pontos"));
 const Servicos = React.lazy(() => import("@/pages/Servicos"));
 const PagamentoSucesso = React.lazy(() => import("@/pages/PagamentoSucesso"));
+const Pagamentos = React.lazy(() => import("@/pages/Pagamentos"));
 
 // Financeiro pages
 const FinanceiroAuth = React.lazy(() => import("@/pages/financeiro/FinanceiroAuth"));
@@ -177,6 +178,16 @@ export function HostRouter() {
             <RequireAuth>
               <AppLayout>
                 <Buscar />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/pagamentos"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Pagamentos />
               </AppLayout>
             </RequireAuth>
           }
@@ -471,6 +482,16 @@ export function HostRouter() {
           <RequireAuth>
             <AppLayout>
               <Buscar />
+            </AppLayout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/pagamentos"
+        element={
+          <RequireAuth>
+            <AppLayout>
+              <Pagamentos />
             </AppLayout>
           </RequireAuth>
         }

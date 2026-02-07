@@ -67,6 +67,7 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
     pix_code: string;
     expires_at: number;
   } | null>(null);
+  const [servicePaymentId, setServicePaymentId] = useState<string | null>(null);
   const [personName, setPersonName] = useState("");
   const [document, setDocument] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
@@ -205,6 +206,25 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
         throw new Error(data?.error || error?.message || "Erro ao gerar Pix");
       }
 
+      // Save to service_payments for the Pagamentos page
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user) {
+        const spResult = await (supabase.from("service_payments" as any) as any).insert({
+          user_id: userData.user.id,
+          service_type: "limpa_nome",
+          status: "pending",
+          amount_cents: addedNames.length * 15000,
+          item_count: addedNames.length,
+          items_snapshot: namesPayload,
+          payment_provider: "stripe",
+          payment_external_id: data.payment_intent_id,
+          pix_qr_code_url: data.pix_qr_code_url,
+          pix_code: data.pix_code,
+          expires_at: new Date(data.expires_at * 1000).toISOString(),
+        }).select("id").single();
+        if (spResult?.data?.id) setServicePaymentId(spResult.data.id);
+      }
+
       setPaymentData(data);
     } catch (err: any) {
       console.error(err);
@@ -229,6 +249,7 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
         totalAmount={addedNames.length * 150}
         onBack={() => setPaymentData(null)}
         onComplete={onBack}
+        servicePaymentId={servicePaymentId || undefined}
       />
     );
   }

@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
 
     const name = type === "cpf"
       ? (data.nome ?? null)
-      : (data.razao_social ?? data.nome ?? null);
+      : (data.razao ?? data.fantasia ?? data.nome ?? null);
 
     return json({ valid: true, name, fallback: false });
   } catch {

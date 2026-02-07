@@ -57,9 +57,10 @@ async function tryNuvemFiscal(digits: string): Promise<{ name: string | null } |
   }
 }
 
-export interface CpfValidationResult {
+export interface DocValidationResult {
   valid: true;
   name: string | null;
+  tradeName?: string | null;
   fallback: boolean;
 }
 
@@ -67,7 +68,7 @@ export interface CpfValidationResult {
  * Sequentially tries free Brazilian APIs from the browser.
  * Returns result with name (if available) or fallback flag.
  */
-export async function validateCpfFromBrowser(digits: string): Promise<CpfValidationResult> {
+export async function validateCpfFromBrowser(digits: string): Promise<DocValidationResult> {
   const sources = [tryBrasilAPI, tryInvertexto, tryNuvemFiscal];
 
   for (const source of sources) {
@@ -78,5 +79,32 @@ export async function validateCpfFromBrowser(digits: string): Promise<CpfValidat
   }
 
   // All sources failed — accept with math-only validation
+  return { valid: true, name: null, fallback: true };
+}
+
+/**
+ * Validates a CNPJ by querying BrasilAPI from the browser (Brazilian IP).
+ * Returns razão social and nome fantasia when available.
+ */
+export async function validateCnpjFromBrowser(digits: string): Promise<DocValidationResult> {
+  try {
+    const res = await fetchWithTimeout(`https://brasilapi.com.br/api/cnpj/v1/${digits}`);
+    if (res.ok) {
+      const data = await res.json();
+      const razaoSocial: string | null = data.razao_social ?? null;
+      const nomeFantasia: string | null = data.nome_fantasia ?? null;
+      return {
+        valid: true,
+        name: nomeFantasia || razaoSocial,
+        tradeName: nomeFantasia,
+        fallback: false,
+      };
+    }
+    await res.text();
+  } catch {
+    // Network error — fall through
+  }
+
+  // Fallback: accept with math-only validation
   return { valid: true, name: null, fallback: true };
 }

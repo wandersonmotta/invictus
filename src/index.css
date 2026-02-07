@@ -478,6 +478,28 @@ All colors MUST be HSL.
 }
 
 /* ═══════════════════════════════════════════════════
+   Radix ScrollArea thumb (used by Sidebar, etc.)
+   ═══════════════════════════════════════════════════ */
+
+.invictus-scroll-thumb {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--gold-soft) / 0.70),
+    hsl(var(--gold-hot) / 0.85)
+  ) !important;
+  box-shadow: 0 0 8px 1px hsl(var(--gold-hot) / 0.35);
+}
+
+.dark .invictus-scroll-thumb {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--gold-soft)),
+    hsl(var(--gold-hot))
+  ) !important;
+  box-shadow: 0 0 12px 2px hsl(var(--gold-hot) / 0.60);
+}
+
+/* ═══════════════════════════════════════════════════
    Invictus Premium Scrollbar — OUTSIDE @layer
    ═══════════════════════════════════════════════════ */
 

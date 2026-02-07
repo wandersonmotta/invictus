@@ -1,38 +1,24 @@
 
 
-## Redesign da pagina Carteira seguindo a referencia
+## Ajustes na Carteira para ficar identico a referencia
 
-### O que muda
+### Diferencas identificadas
 
-Ajustar o layout da Carteira para corresponder a referencia: card de saldo em barra larga escura com o botao "Sacar" alinhado a direita na mesma linha, e layout mais amplo no desktop.
+1. **Cabecalho**: Na referencia, "Ola," e o nome aparecem na mesma linha, com o nome em negrito, e ha uma seta de voltar a esquerda. Hoje esta em duas linhas separadas sem seta.
+2. **Botao "Sacar"**: Na referencia, o fundo e rosa claro (quase branco-rosado) com texto rosa/vermelho. Hoje esta com fundo escuro (`bg-red-950/40`), que nao corresponde.
+3. **Texto do botao**: Na referencia mostra "Sacar" com um icone de check/seta ao lado (horizontal). Hoje esta empilhado verticalmente com icone em cima e texto embaixo.
 
 ### Arquivos a modificar
 
 **1. `src/pages/Carteira.tsx`**
 
-- Aumentar a largura maxima do container de `max-w-md` para `max-w-3xl`, permitindo que o conteudo ocupe mais espaco no desktop (como na referencia)
-- O restante da logica permanece igual
+- Alterar o header para uma unica linha: seta de voltar + "Ola, **Nome**"
+- Formato: `<ArrowLeft /> Ola, <strong>{displayName}</strong>` tudo alinhado horizontalmente
+- A seta de voltar usa `useNavigate(-1)` ou volta para `/home`
 
 **2. `src/components/carteira/WalletBalanceCard.tsx`**
 
-Redesenhar para uma unica linha horizontal:
-
-```text
-+--------------------------------------------------+----------+
-|  Saldo atual                              [icone] |          |
-|  R$ 0,00                                         | Sacar -> |
-+--------------------------------------------------+----------+
-```
-
-- Trocar o layout de `flex-col` (card em cima, botao embaixo) para `flex-row` (card + botao lado a lado)
-- O card de saldo: fundo escuro solido (`bg-foreground text-background`), label "Saldo atual" em cima, valor embaixo, icone de carteira no canto direito do card
-- O botao "Sacar": posicionado a direita, fora do card escuro, com estilo rosa/claro suave (como na referencia: `bg-red-50 text-red-500` ou similar), incluindo icone de seta
-- No mobile: manter lado a lado mas o botao fica menor
-
-### Detalhes visuais
-
-- Label do saldo muda de "Bonus atual" para "Saldo atual" (como na referencia)
-- Card com cantos arredondados (`rounded-2xl`), sem gradiente, fundo solido escuro
-- Botao "Sacar" com fundo rosa claro, texto avermelhado, e icone de check/seta (como na referencia)
-- Layout responsivo: ambos elementos ficam na mesma linha em todos os tamanhos
+- Mudar o botao "Sacar" de fundo escuro para fundo rosa claro: `bg-red-100 text-red-500 hover:bg-red-200`
+- Mudar o layout do botao de vertical (icone em cima, texto embaixo) para horizontal (texto + icone lado a lado)
+- Aumentar levemente o gap entre o card de saldo e o botao
 

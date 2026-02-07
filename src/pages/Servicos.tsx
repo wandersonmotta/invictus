@@ -90,7 +90,6 @@ export default function Servicos() {
                 <ServiceItemCard
                   key={item.id}
                   name={item.name}
-                  description={item.description}
                   iconName={item.icon_name}
                   compact
                 />
@@ -102,7 +101,6 @@ export default function Servicos() {
                 <ServiceItemCard
                   key={item.id}
                   name={item.name}
-                  description={item.description}
                   iconName={item.icon_name}
                 />
               ))}

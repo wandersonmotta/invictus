@@ -29,9 +29,9 @@ serve(async (req) => {
       });
     }
 
-    const { session_id } = await req.json();
-    if (!session_id) {
-      return new Response(JSON.stringify({ error: "session_id obrigatório" }), {
+    const { payment_intent_id } = await req.json();
+    if (!payment_intent_id) {
+      return new Response(JSON.stringify({ error: "payment_intent_id obrigatório" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -41,32 +41,31 @@ serve(async (req) => {
       apiVersion: "2025-08-27.basil",
     });
 
-    const session = await stripe.checkout.sessions.retrieve(session_id);
+    const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
 
-    if (session.payment_status !== "paid") {
+    if (paymentIntent.status !== "succeeded") {
       return new Response(
-        JSON.stringify({ error: "Pagamento não confirmado", status: session.payment_status }),
+        JSON.stringify({ error: "Pagamento não confirmado", status: paymentIntent.status }),
         { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // Verify the session belongs to the user
-    const metaUserId = session.metadata?.user_id;
+    // Verify the payment belongs to the user
+    const metaUserId = paymentIntent.metadata?.user_id;
     if (metaUserId !== user.id) {
-      return new Response(JSON.stringify({ error: "Sessão não pertence a este usuário" }), {
+      return new Response(JSON.stringify({ error: "Pagamento não pertence a este usuário" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     // Reconstruct names from metadata
-    let namesJson = session.metadata?.names;
+    let namesJson = paymentIntent.metadata?.names;
     if (!namesJson) {
-      // Reconstruct from chunks
       const chunks: string[] = [];
       let i = 0;
-      while (session.metadata?.[`names_${i}`]) {
-        chunks.push(session.metadata[`names_${i}`]);
+      while (paymentIntent.metadata?.[`names_${i}`]) {
+        chunks.push(paymentIntent.metadata[`names_${i}`]);
         i++;
       }
       namesJson = chunks.join("");

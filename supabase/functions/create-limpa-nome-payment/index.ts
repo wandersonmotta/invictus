@@ -41,57 +41,58 @@ serve(async (req) => {
       apiVersion: "2025-08-27.basil",
     });
 
-    // Find or skip customer
+    // Find or create customer
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    const customerId = customers.data.length > 0 ? customers.data[0].id : undefined;
+    const customerId = customers.data.length > 0
+      ? customers.data[0].id
+      : (await stripe.customers.create({ email: user.email })).id;
 
-    // Build metadata — Stripe limits metadata values to 500 chars,
-    // so we store a compact version of names data
+    // Build metadata (same chunking logic)
     const namesForMeta = names.map((n: any) => ({
       n: n.person_name,
       d: n.document,
       w: n.whatsapp,
     }));
-
     const namesJson = JSON.stringify(namesForMeta);
-
-    // If metadata is too large, we chunk it
     const metadataObj: Record<string, string> = {
       user_id: user.id,
       count: String(names.length),
     };
-
-    // Stripe metadata value limit is 500 chars per key
     if (namesJson.length <= 500) {
       metadataObj.names = namesJson;
     } else {
-      // Split into chunks
       const chunkSize = 490;
       for (let i = 0; i < namesJson.length; i += chunkSize) {
         metadataObj[`names_${Math.floor(i / chunkSize)}`] = namesJson.slice(i, i + chunkSize);
       }
     }
 
-    const origin = req.headers.get("origin") || "https://eewrwerwrw.lovable.app";
-
-    const session = await stripe.checkout.sessions.create({
+    // Create PaymentIntent with Pix, confirmed server-side
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: names.length * 15000, // R$ 150 per name in centavos
+      currency: "brl",
+      payment_method_types: ["pix"],
+      payment_method_data: { type: "pix" },
+      confirm: true,
       customer: customerId,
-      customer_email: customerId ? undefined : user.email,
-      // Let Stripe use whatever payment methods are enabled on the account
-      // To enable Pix, the user must activate it in the Stripe Dashboard
-      line_items: [
-        {
-          price: "price_1Sy1ZrCToDEEMd24LH6duIuw",
-          quantity: names.length,
-        },
-      ],
-      mode: "payment",
       metadata: metadataObj,
-      success_url: `${origin}/pagamento-sucesso?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/servicos`,
     });
 
-    return new Response(JSON.stringify({ url: session.url }), {
+    // Extract Pix QR code data from next_action
+    const pixAction = (paymentIntent as any).next_action?.pix_display_qr_code;
+    if (!pixAction) {
+      return new Response(JSON.stringify({ error: "Pix não disponível. Verifique se o Pix está ativado na sua conta Stripe." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({
+      payment_intent_id: paymentIntent.id,
+      pix_qr_code_url: pixAction.image_url_png || pixAction.image_url_svg,
+      pix_code: pixAction.data,
+      expires_at: pixAction.expires_at,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: any) {

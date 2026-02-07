@@ -147,7 +147,7 @@ export default function Carteira() {
     <main className="invictus-page mx-auto w-full max-w-3xl px-4 py-6 pb-24 sm:px-6">
       {/* Header */}
       <header className="mb-6 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="text-muted-foreground hover:text-foreground transition-colors">
+        <button onClick={() => navigate("/home")} className="text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="size-5" />
         </button>
         <p className="text-base text-muted-foreground">

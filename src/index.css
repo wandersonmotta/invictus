@@ -476,3 +476,84 @@ All colors MUST be HSL.
     display: none;  /* Chrome, Safari, Opera */
   }
 }
+
+/* ═══════════════════════════════════════════════════
+   Invictus Premium Scrollbar — OUTSIDE @layer so it
+   wins over Tailwind preflight and any library resets.
+   ═══════════════════════════════════════════════════ */
+
+html {
+  overflow: hidden !important;
+}
+
+::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 20px !important;
+  background: linear-gradient(
+    180deg,
+    hsl(var(--gold-soft) / 0.85),
+    hsl(var(--gold-hot))
+  ) !important;
+  box-shadow: 0 0 8px 1px hsl(var(--gold-hot) / 0.45) !important;
+  min-height: 40px !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--gold-soft)),
+    hsl(var(--gold-hot))
+  ) !important;
+  box-shadow: 0 0 14px 2px hsl(var(--gold-hot) / 0.65) !important;
+}
+
+:root ::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--gold-soft) / 0.65),
+    hsl(var(--gold-hot) / 0.80)
+  ) !important;
+  box-shadow: 0 0 6px 0px hsl(var(--gold-hot) / 0.30) !important;
+}
+
+:root ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--gold-soft) / 0.85),
+    hsl(var(--gold-hot) / 0.95)
+  ) !important;
+  box-shadow: 0 0 10px 1px hsl(var(--gold-hot) / 0.45) !important;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--gold-soft) / 0.90),
+    hsl(var(--gold-hot))
+  ) !important;
+  box-shadow: 0 0 10px 2px hsl(var(--gold-hot) / 0.55) !important;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  box-shadow: 0 0 16px 3px hsl(var(--gold-hot) / 0.75) !important;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+
+@-moz-document url-prefix() {
+  * {
+    scrollbar-width: thin !important;
+    scrollbar-color: hsl(var(--gold-soft)) transparent !important;
+  }
+}

@@ -58,10 +58,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <div
             className={`flex-1 overflow-x-hidden invictus-scrollable animate-fade-in ${
               isMobileOrTablet
-                ? "overflow-y-auto p-4 sm:p-5 pb-24"
+                ? "overflow-y-scroll p-4 sm:p-5 pb-24"
                 : isFullHeightRoute
                   ? "overflow-y-hidden p-4 lg:p-5"
-                  : "overflow-y-auto p-4 sm:p-5 lg:p-6"
+                  : "overflow-y-scroll p-4 sm:p-5 lg:p-6"
             }`}
           >
             {children}

@@ -141,7 +141,7 @@ export default function Carteira() {
   };
 
   return (
-    <main className="invictus-page mx-auto w-full max-w-md px-4 py-6 pb-24 sm:px-6">
+    <main className="invictus-page mx-auto w-full max-w-3xl px-4 py-6 pb-24 sm:px-6">
       {/* Header */}
       <header className="invictus-page-header">
         <p className="text-sm text-muted-foreground">Olá,</p>

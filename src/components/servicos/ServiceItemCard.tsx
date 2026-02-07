@@ -20,7 +20,6 @@ function resolveIcon(name?: string | null): LucideIcon | null {
 
 interface ServiceItemCardProps {
   name: string;
-  description?: string | null;
   iconName?: string | null;
   /** true = compact list row (mobile) */
   compact?: boolean;
@@ -28,7 +27,6 @@ interface ServiceItemCardProps {
 
 export function ServiceItemCard({
   name,
-  description,
   iconName,
   compact = false,
 }: ServiceItemCardProps) {
@@ -42,12 +40,7 @@ export function ServiceItemCard({
             <Icon className="h-4 w-4 text-primary" />
           </div>
         )}
-        <div className="min-w-0">
-          <p className="font-medium text-foreground text-sm">{name}</p>
-          {description && (
-            <p className="text-xs text-muted-foreground line-clamp-1">{description}</p>
-          )}
-        </div>
+        <p className="font-medium text-foreground text-sm">{name}</p>
       </div>
     );
   }
@@ -60,9 +53,6 @@ export function ServiceItemCard({
         </div>
       )}
       <h4 className="font-semibold text-foreground text-sm leading-tight">{name}</h4>
-      {description && (
-        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{description}</p>
-      )}
     </Card>
   );
 }

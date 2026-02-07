@@ -1,20 +1,34 @@
 /* ═══════════════════════════════════════════════════
    Invictus Premium Scrollbar
-   Ultra-thin, golden, luminous
+   Cross-platform: uses scrollbar-color (modern standard)
+   + ::-webkit-scrollbar (desktop fallback)
    ═══════════════════════════════════════════════════ */
 
-/* WebKit / Blink (Chrome, Safari, Edge) */
-::-webkit-scrollbar {
-  width: 3px !important;
-  height: 3px !important;
+/* ─── Modern Standard (Chrome 121+, Safari 17.4+, Firefox 64+) ─── */
+/* This works on MOBILE browsers too (colors the overlay scrollbar) */
+
+.invictus-scrollable {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(42 92% 55%) transparent;
+}
+
+.dark .invictus-scrollable {
+  scrollbar-color: hsl(44 98% 54%) transparent;
+}
+
+/* ─── WebKit / Blink fallback (desktop Chrome, Safari, Edge) ─── */
+
+.invictus-scrollable::-webkit-scrollbar {
+  width: 5px !important;
+  height: 5px !important;
   background: transparent !important;
 }
 
-::-webkit-scrollbar-track {
+.invictus-scrollable::-webkit-scrollbar-track {
   background: transparent !important;
 }
 
-::-webkit-scrollbar-thumb {
+.invictus-scrollable::-webkit-scrollbar-thumb {
   border-radius: 20px !important;
   background: linear-gradient(
     180deg,
@@ -25,7 +39,7 @@
   min-height: 30px !important;
 }
 
-::-webkit-scrollbar-thumb:hover {
+.invictus-scrollable::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(
     180deg,
     hsl(var(--gold-soft)),
@@ -34,27 +48,12 @@
   box-shadow: 0 0 16px 3px hsl(var(--gold-hot) / 0.70) !important;
 }
 
-/* Light mode */
-:root ::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    180deg,
-    hsl(var(--gold-soft) / 0.70),
-    hsl(var(--gold-hot) / 0.85)
-  ) !important;
-  box-shadow: 0 0 8px 1px hsl(var(--gold-hot) / 0.35) !important;
+.invictus-scrollable::-webkit-scrollbar-corner {
+  background: transparent !important;
 }
 
-:root ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(
-    180deg,
-    hsl(var(--gold-soft) / 0.90),
-    hsl(var(--gold-hot))
-  ) !important;
-  box-shadow: 0 0 12px 2px hsl(var(--gold-hot) / 0.50) !important;
-}
-
-/* Dark mode */
-.dark ::-webkit-scrollbar-thumb {
+/* Dark mode glow boost */
+.dark .invictus-scrollable::-webkit-scrollbar-thumb {
   background: linear-gradient(
     180deg,
     hsl(var(--gold-soft)),
@@ -63,18 +62,6 @@
   box-shadow: 0 0 12px 2px hsl(var(--gold-hot) / 0.60) !important;
 }
 
-.dark ::-webkit-scrollbar-thumb:hover {
+.dark .invictus-scrollable::-webkit-scrollbar-thumb:hover {
   box-shadow: 0 0 18px 4px hsl(var(--gold-hot) / 0.80) !important;
-}
-
-::-webkit-scrollbar-corner {
-  background: transparent !important;
-}
-
-/* Firefox */
-@-moz-document url-prefix() {
-  * {
-    scrollbar-width: thin !important;
-    scrollbar-color: hsl(var(--gold-soft)) transparent !important;
-  }
 }

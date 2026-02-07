@@ -56,7 +56,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
           {/* Main content area */}
           <div
-            className={`flex-1 overflow-x-hidden invictus-scrollable animate-fade-in ${
+            className={`flex-1 overflow-x-hidden animate-fade-in ${
               isMobileOrTablet
                 ? "overflow-y-scroll p-4 sm:p-5 pb-24"
                 : isFullHeightRoute

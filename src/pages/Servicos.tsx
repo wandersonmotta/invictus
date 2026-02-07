@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ServiceCategoryCard } from "@/components/servicos/ServiceCategoryCard";
 import { ServiceItemCard } from "@/components/servicos/ServiceItemCard";
+import { LimpaNomeView } from "@/components/servicos/LimpaNomeView";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ServiceCategory {
@@ -30,6 +31,7 @@ interface ServiceItem {
 
 export default function Servicos() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedItemSlug, setSelectedItemSlug] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   const { data: categories = [], isLoading: loadingCategories } = useQuery({
@@ -59,6 +61,22 @@ export default function Servicos() {
       return (data ?? []) as unknown as ServiceItem[];
     },
   });
+
+  const handleItemClick = (name: string) => {
+    const slug = name.toLowerCase().replace(/\s+/g, "-");
+    if (slug === "limpa-nome") {
+      setSelectedItemSlug("limpa-nome");
+    }
+  };
+
+  // If a special item view is active, render it
+  if (selectedItemSlug === "limpa-nome") {
+    return (
+      <LimpaNomeView
+        onBack={() => setSelectedItemSlug(null)}
+      />
+    );
+  }
 
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-6">
@@ -92,6 +110,7 @@ export default function Servicos() {
                   name={item.name}
                   iconName={item.icon_name}
                   compact
+                  onClick={() => handleItemClick(item.name)}
                 />
               ))}
             </div>
@@ -102,6 +121,7 @@ export default function Servicos() {
                   key={item.id}
                   name={item.name}
                   iconName={item.icon_name}
+                  onClick={() => handleItemClick(item.name)}
                 />
               ))}
             </div>

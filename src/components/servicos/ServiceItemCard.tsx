@@ -23,18 +23,20 @@ interface ServiceItemCardProps {
   iconName?: string | null;
   /** true = compact list row (mobile) */
   compact?: boolean;
+  onClick?: () => void;
 }
 
 export function ServiceItemCard({
   name,
   iconName,
   compact = false,
+  onClick,
 }: ServiceItemCardProps) {
   const Icon = resolveIcon(iconName);
 
   if (compact) {
     return (
-      <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
+      <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 cursor-pointer" onClick={onClick}>
         {Icon && (
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
             <Icon className="h-4 w-4 text-primary" />
@@ -46,7 +48,7 @@ export function ServiceItemCard({
   }
 
   return (
-    <Card className="flex flex-col items-center justify-center aspect-square rounded-2xl p-4 text-center hover:shadow-md transition-shadow">
+    <Card className="flex flex-col items-center justify-center aspect-square rounded-2xl p-4 text-center hover:shadow-md transition-shadow cursor-pointer" onClick={onClick}>
       {Icon && (
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 mb-3">
           <Icon className="h-7 w-7 text-primary" />

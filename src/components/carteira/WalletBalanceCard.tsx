@@ -28,12 +28,12 @@ export function WalletBalanceCard({ balance, canWithdraw, onWithdraw }: WalletBa
 
       {/* Withdraw Button */}
       <Button
-        className="flex h-auto flex-col items-center justify-center gap-1 rounded-2xl bg-red-950/40 px-5 text-red-400 hover:bg-red-950/60 hover:text-red-300 border border-red-900/30"
+        className="flex h-auto items-center justify-center gap-2 rounded-2xl bg-red-100 px-5 py-4 text-red-500 hover:bg-red-200 hover:text-red-600 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/50 dark:hover:text-red-300 border border-red-200 dark:border-red-900/30"
         onClick={onWithdraw}
         disabled={!canWithdraw}
       >
-        <ArrowUpRight className="size-5" />
-        <span className="text-xs font-semibold">Sacar</span>
+        <span className="text-sm font-semibold">Sacar</span>
+        <ArrowUpRight className="size-4" />
       </Button>
     </div>
   );

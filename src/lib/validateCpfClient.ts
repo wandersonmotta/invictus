@@ -1,5 +1,5 @@
 /**
- * Client-side CPF validation against free Brazilian APIs.
+ * Client-side CPF/CNPJ validation against free Brazilian APIs.
  * Runs from the user's browser (Brazilian IP) so geo-blocked APIs respond normally.
  */
 
@@ -13,44 +13,19 @@ async function fetchWithTimeout(url: string, timeoutMs = 5000): Promise<Response
   }
 }
 
-async function tryBrasilAPI(digits: string): Promise<{ name: string | null } | null> {
-  try {
-    const res = await fetchWithTimeout(`https://brasilapi.com.br/api/cpf/v1/${digits}`);
-    if (res.ok) {
-      const data = await res.json();
-      return { name: data.nome ?? null };
-    }
-    await res.text();
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-async function tryInvertexto(digits: string): Promise<{ name: string | null } | null> {
+/**
+ * Validates CPF existence via Ministry of Health (SCPA) API.
+ * Does NOT return the person's name — only confirms the CPF is registered.
+ */
+async function trySCPA(digits: string): Promise<{ name: string | null } | null> {
   try {
     const res = await fetchWithTimeout(
-      `https://api.invertexto.com/v1/validator?value=${digits}&token=free`,
+      `https://scpa-backend.saude.gov.br/public/scpa-usuario/validacao-cpf/${digits}`,
     );
     if (res.ok) {
       const data = await res.json();
-      if (data.valid === true) return { name: null };
+      if (!data?.error) return { name: null };
     }
-    await res.text();
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-async function tryNuvemFiscal(digits: string): Promise<{ name: string | null } | null> {
-  try {
-    const res = await fetchWithTimeout(`https://api.nuvemfiscal.com.br/cpf/${digits}`);
-    if (res.ok) {
-      const data = await res.json();
-      return { name: data.nome ?? data.name ?? null };
-    }
-    await res.text();
     return null;
   } catch {
     return null;
@@ -65,44 +40,56 @@ export interface DocValidationResult {
 }
 
 /**
- * Sequentially tries free Brazilian APIs from the browser.
- * Returns result with name (if available) or fallback flag.
+ * Validates a CPF from the browser (Brazilian IP).
+ * Uses SCPA to confirm existence. Name must be entered manually.
  */
 export async function validateCpfFromBrowser(digits: string): Promise<DocValidationResult> {
-  const sources = [tryBrasilAPI, tryInvertexto, tryNuvemFiscal];
-
-  for (const source of sources) {
-    const result = await source(digits);
-    if (result) {
-      return { valid: true, name: result.name, fallback: false };
-    }
+  const result = await trySCPA(digits);
+  if (result) {
+    return { valid: true, name: null, fallback: false };
   }
-
-  // All sources failed — accept with math-only validation
+  // Fallback: accept with math-only validation
   return { valid: true, name: null, fallback: true };
 }
 
 /**
- * Validates a CNPJ by querying BrasilAPI from the browser (Brazilian IP).
- * Returns razão social and nome fantasia when available.
+ * Validates a CNPJ by querying BrasilAPI then ReceitaWS from the browser.
+ * Returns razão social.
  */
 export async function validateCnpjFromBrowser(digits: string): Promise<DocValidationResult> {
+  // Source 1: BrasilAPI
   try {
     const res = await fetchWithTimeout(`https://brasilapi.com.br/api/cnpj/v1/${digits}`);
     if (res.ok) {
       const data = await res.json();
       const razaoSocial: string | null = data.razao_social ?? null;
-      const nomeFantasia: string | null = data.nome_fantasia ?? null;
       return {
         valid: true,
-        name: nomeFantasia || razaoSocial,
-        tradeName: nomeFantasia,
+        name: razaoSocial,
         fallback: false,
       };
     }
     await res.text();
   } catch {
-    // Network error — fall through
+    // fall through to next source
+  }
+
+  // Source 2: ReceitaWS
+  try {
+    const res = await fetchWithTimeout(`https://receitaws.com.br/v1/cnpj/${digits}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.status !== "ERROR") {
+        return {
+          valid: true,
+          name: data.nome ?? null,
+          fallback: false,
+        };
+      }
+    }
+    await res.text();
+  } catch {
+    // fall through
   }
 
   // Fallback: accept with math-only validation

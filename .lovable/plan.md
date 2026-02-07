@@ -1,90 +1,95 @@
 
 
-## Validacao de CPF/CNPJ com auto-preenchimento do nome
+## Corrigir validacao de CPF/CNPJ e auto-preenchimento de nome
 
-### Problema atual
+### Problema identificado
 
-As APIs brasileiras (BrasilAPI, Invertexto, Nuvem Fiscal) bloqueiam requisicoes vindas de IPs fora do Brasil. As Edge Functions rodam em servidores europeus, entao as consultas falham. A solucao atual no cliente (`validateCpfClient.ts`) ja roda no navegador do usuario (IP brasileiro), mas ainda nao esta integrada ao formulario de "Adicionar Nome".
+Nos logs de rede, as tres APIs de CPF estao falhando:
+- **BrasilAPI** `/cpf/v1/` retorna **404** (endpoint foi removido)
+- **Invertexto** retorna **401** (token "free" nao funciona mais)
+- **NuvemFiscal** retorna **401** (requer autenticacao)
+
+Como todas falham, o sistema cai no fallback (validacao matematica apenas) e nunca retorna o nome.
+
+Para CNPJ, o usuario quer apenas a **razao social** (nao nome fantasia).
 
 ### Solucao
 
-Usar a validacao **direto do navegador do usuario** (que tem IP brasileiro) para consultar as APIs da Receita Federal. Quando o usuario terminar de digitar o CPF ou CNPJ completo, o sistema:
+**1. CPF - Adicionar nova fonte: API do Ministerio da Saude (SCPA)**
 
-1. Valida matematicamente os digitos verificadores
-2. Consulta as APIs brasileiras **a partir do navegador** (IP brasileiro)
-3. Se encontrar o nome da pessoa/empresa, preenche automaticamente o campo "Nome"
-4. Mostra feedback visual (carregando, valido, invalido)
-
-Para **CNPJ**, adicionar consulta a BrasilAPI (`/cnpj/v1/{cnpj}`) que retorna razao social e nome fantasia.
-
-### O que sera feito
-
-**1. Atualizar `src/lib/validateCpfClient.ts`**
-- Renomear para um modulo mais generico de validacao de documentos
-- Adicionar funcao `validateCnpjFromBrowser` que consulta `https://brasilapi.com.br/api/cnpj/v1/{digits}` (funciona do browser com IP BR)
-- Retornar razao social e nome fantasia do CNPJ
-- Adicionar validacao matematica de CNPJ (digitos verificadores)
-
-**2. Criar `src/lib/cnpj.ts`**
-- Funcao `isValidCNPJ` para validacao matematica dos digitos verificadores do CNPJ
-- Funcao `formatCNPJ` (mover do AddNomeView para reutilizacao)
-
-**3. Atualizar `src/components/servicos/AddNomeView.tsx`**
-- Adicionar debounce de 500ms no campo CPF/CNPJ
-- Quando o documento estiver completo (11 digitos para CPF, 14 para CNPJ):
-  - Mostrar indicador de "Validando..." abaixo do campo
-  - Chamar `validateCpfFromBrowser` ou `validateCnpjFromBrowser` conforme o tipo
-  - Se valido e nome encontrado: preencher automaticamente o campo "Nome | Nome Fantasia"
-  - Se valido mas sem nome: permitir digitacao manual
-  - Se invalido: mostrar erro "CPF/CNPJ invalido" em vermelho
-- O campo Nome fica editavel mesmo apos auto-preenchimento
-- O botao "Adicionar a lista" so fica habilitado se o documento foi validado
-
-### Fluxo do usuario
-
-```text
-Usuario digita CPF/CNPJ
-        |
-        v
-  Digitos completos? (11 ou 14)
-        |
-       Sim
-        |
-        v
-  Validacao matematica
-        |
-    Valido?
-   /       \
-  Nao       Sim
-  |          |
-  v          v
-Erro      Consulta APIs do browser (IP BR)
-vermelho     |
-          Nome encontrado?
-         /          \
-       Sim           Nao
-        |             |
-        v             v
-  Preenche nome   Campo nome vazio
-  automaticamente (digitacao manual)
+Existe uma API gratuita e funcional que valida se o CPF esta registrado na Receita Federal:
 ```
+GET https://scpa-backend.saude.gov.br/public/scpa-usuario/validacao-cpf/{cpf}
+```
+
+Essa API **confirma que o CPF existe** na base da Receita Federal, porem **nao retorna o nome** (nenhuma API gratuita retorna o nome do CPF atualmente). O campo Nome ficara para preenchimento manual pelo usuario quando for CPF.
+
+**2. CNPJ - Corrigir para retornar razao social + adicionar ReceitaWS como fallback**
+
+- Trocar a prioridade: usar `razao_social` ao inves de `nome_fantasia`
+- Adicionar ReceitaWS como segunda fonte: `GET https://receitaws.com.br/v1/cnpj/{cnpj}` (retorna campo `nome` = razao social)
+- BrasilAPI continua como primeira tentativa
+
+**3. Limpar fontes mortas**
+
+Remover `tryInvertexto` e `tryNuvemFiscal` (ambas retornam 401 permanentemente). Substituir `tryBrasilAPI` para CPF pelo SCPA.
+
+### Arquivos a modificar
+
+**`src/lib/validateCpfClient.ts`**:
+- Remover `tryBrasilAPI` (para CPF), `tryInvertexto`, `tryNuvemFiscal`
+- Adicionar `trySCPA(digits)` que chama a API do Ministerio da Saude para validar CPF
+- Atualizar `validateCpfFromBrowser` para usar SCPA (valida existencia, sem nome)
+- Atualizar `validateCnpjFromBrowser`:
+  - Priorizar `razao_social` no retorno
+  - Adicionar ReceitaWS como segunda fonte para CNPJ
+
+**`src/components/servicos/AddNomeView.tsx`**:
+- Ajustar label do campo Nome para "Nome | Razao Social*" (refletir que CNPJ retorna razao social)
+- Quando for CPF e nao houver nome retornado, manter campo editavel com placeholder "Informe o nome completo"
 
 ### Detalhes tecnicos
 
-**Novo arquivo `src/lib/cnpj.ts`:**
-- `isValidCNPJ(cnpj: string): boolean` - validacao matematica
-- `formatCNPJ(value: string): string` - formatacao visual
+Nova funcao SCPA para CPF:
+```typescript
+async function trySCPA(digits: string): Promise<{ name: string | null } | null> {
+  const res = await fetchWithTimeout(
+    `https://scpa-backend.saude.gov.br/public/scpa-usuario/validacao-cpf/${digits}`
+  );
+  if (res.ok) {
+    const data = await res.json();
+    // API retorna objeto se CPF existe, ou erro se nao
+    if (!data?.error) return { name: null }; // CPF valido, sem nome
+  }
+  return null;
+}
+```
 
-**Atualizar `src/lib/validateCpfClient.ts`:**
-- Adicionar `validateCnpjFromBrowser(digits: string)` que consulta `https://brasilapi.com.br/api/cnpj/v1/{digits}`
-- Retorna `{ valid: true, name: string | null, tradeName: string | null, fallback: boolean }`
+ReceitaWS fallback para CNPJ:
+```typescript
+async function tryReceitaWS(digits: string): Promise<{ razaoSocial: string | null } | null> {
+  const res = await fetchWithTimeout(
+    `https://receitaws.com.br/v1/cnpj/${digits}`
+  );
+  if (res.ok) {
+    const data = await res.json();
+    if (data.status !== "ERROR") {
+      return { razaoSocial: data.nome ?? null };
+    }
+  }
+  return null;
+}
+```
 
-**Atualizar `src/components/servicos/AddNomeView.tsx`:**
-- Novos estados: `docStatus` (idle/validating/valid/invalid), `docName` (nome retornado)
-- useEffect com debounce no campo `document`
-- Feedback visual: spinner ao validar, check verde se valido, X vermelho se invalido
-- Auto-preenchimento do campo `personName` quando nome e retornado
-- Importar `isValidCPF` de `src/lib/cpf.ts` e `isValidCNPJ` do novo `src/lib/cnpj.ts`
+CNPJ corrigido para priorizar razao social:
+```typescript
+// Antes: name: nomeFantasia || razaoSocial
+// Depois: name: razaoSocial
+```
 
-**Nao sera alterado:**
-- A Edge Function `validate-cpf` permanece como fallback, mas o fluxo principal sera 100% client-side (browser com IP brasileiro)
+### Resultado esperado
+
+- **CPF**: Valida se o CPF existe na Receita Federal (via SCPA). Mostra "Documento valido". Usuario preenche o nome manualmente.
+- **CNPJ**: Busca e preenche automaticamente a **razao social** da empresa. Mostra "Documento valido" com nome auto-preenchido.
+- Ambos mostram feedback visual (spinner, check verde, X vermelho).
+

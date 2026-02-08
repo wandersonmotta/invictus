@@ -1,27 +1,14 @@
 
-# Ajustes no Chat Flutuante de Suporte
+# Limpar tickets de suporte de teste
 
-## O que muda
+## O que sera feito
+Apagar todos os registros de teste do sistema de suporte:
+- **4 tickets** na tabela `support_tickets`
+- **8 mensagens** na tabela `support_messages`
 
-### 1. Icone flutuante funciona como toggle (abrir/fechar)
-- Clicar no icone abre o chat
-- Clicar novamente no icone fecha o chat (em vez de so poder fechar pelo X)
-- O icone permanece visivel mesmo com o chat aberto (remover o `hidden` quando `chatOpen`)
-- O X dentro do chat continua funcionando normalmente tambem
+## Ordem de execucao
+1. Primeiro apagar as mensagens (dependem dos tickets)
+2. Depois apagar os tickets
 
-### 2. Badge de notificacao no icone
-- Ja existe no codigo atual e funciona via realtime (linhas 60-64 do SupportChatBubble)
-- Nenhuma alteracao necessaria nesse ponto
-
-### 3. Nome alterado para "Ana - Suporte Invictus"
-- No header do chat, trocar "Suporte Invictus" para "Ana - Suporte Invictus"
-
-## Detalhes tecnicos
-
-### Arquivo: `src/components/suporte/SupportChatBubble.tsx`
-1. Mudar `handleClick` para fazer toggle: `setChatOpen(prev => !prev)` em vez de so `setChatOpen(true)`
-2. Zerar unread apenas ao abrir (nao ao fechar)
-3. Remover a classe `chatOpen && !isMobile && "hidden"` para que o icone fique sempre visivel
-
-### Arquivo: `src/components/suporte/SupportAIChatPopup.tsx`
-1. Linha 196: trocar `Suporte Invictus` para `Ana - Suporte Invictus`
+## Como
+Usando o comando DELETE direto no banco de dados, sem filtro (apaga todos os registros de ambas as tabelas).

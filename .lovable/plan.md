@@ -1,41 +1,32 @@
 
-# Protecao Anti-Copia do Site
 
-## O que e possivel fazer
+# Ajustes: Logo Maior na Cortina + Barra Dourada no Mobile
 
-E importante ser transparente: **nenhuma protecao no front-end e 100% inviolavel** -- um desenvolvedor experiente sempre consegue contornar. Porem, podemos criar **barreiras significativas** que impedem a copia casual (usuarios comuns, concorrentes sem conhecimento tecnico). Isso cobre 95% dos casos.
+## 1. Logo maior na cortina de abertura
 
-## Camadas de protecao que vamos implementar
+A logo atual usa `w-32` (128px) no mobile e `w-40` (160px) no desktop. Ainda esta pequena para o impacto cinematografico desejado. Vou aumentar significativamente:
 
-### 1. Bloquear clique direito (context menu)
-Impedir o menu "Inspecionar Elemento" / "Salvar imagem como" / "Ver codigo fonte" pelo clique direito.
+- Mobile: `w-44` (176px)
+- Tablet: `w-52` (208px)  
+- Desktop: `w-60` (240px)
 
-### 2. Bloquear selecao de texto
-Impedir que o usuario selecione e copie textos da landing page com CSS `user-select: none`.
+O drop-shadow dourado tambem sera intensificado para acompanhar o tamanho maior.
 
-### 3. Bloquear atalhos de teclado
-Interceptar `Ctrl+U` (ver fonte), `Ctrl+S` (salvar pagina), `Ctrl+Shift+I` (DevTools), `Ctrl+Shift+J` (console), `F12`, `Ctrl+C` (copiar), `Ctrl+A` (selecionar tudo).
+**Arquivo**: `src/components/landing/HeroIntro.tsx`
+- Linha 49: classe `w-32 sm:w-36 md:w-40` passa para `w-44 sm:w-52 md:w-60`
 
-### 4. Bloquear arrastar imagens
-CSS `pointer-events` e atributo `draggable=false` nas imagens para impedir download por drag-and-drop.
+## 2. Barra dourada de scroll (ScrollProgress) no mobile
 
-### 5. Aviso de propriedade intelectual
-Exibir um aviso discreto no console do navegador (como o Facebook faz) alertando que o conteudo e protegido.
+A barra dourada no topo da pagina que acompanha o scroll nao esta aparecendo no mobile. O problema e que com apenas `2px` de altura, ela fica praticamente invisivel em telas de alta densidade (retina). Alem disso, o `z-50` pode estar sendo coberto por outros elementos fixos.
 
-### 6. Ofuscacao de imagens via CSS
-Servir imagens de fundo via `background-image` ao inves de `<img>` onde possivel, dificultando o "Salvar imagem como".
+**Correcoes** no `src/components/landing/ScrollProgress.tsx`:
+- Aumentar altura de `h-[2px]` para `h-[3px]` (mais visivel em telas retina)
+- Aumentar z-index para `z-[60]` para garantir que fique acima de tudo
+- Adicionar uma sombra dourada (`box-shadow`) para dar mais presenca visual
 
 ## Detalhes tecnicos
 
-### Arquivos que serao CRIADOS
-- `src/hooks/useCopyProtection.ts` -- Hook que aplica todas as protecoes JS (bloquear context menu, atalhos, arrastar, aviso no console). Sera chamado apenas na landing page.
+Apenas 2 arquivos modificados:
+- `src/components/landing/HeroIntro.tsx` -- Logo maior
+- `src/components/landing/ScrollProgress.tsx` -- Barra visivel no mobile
 
-### Arquivos que serao MODIFICADOS
-- `src/pages/Landing.tsx` -- Importar e ativar o hook `useCopyProtection`
-- `src/index.css` -- Adicionar regra `.invictus-landing-body` com `user-select: none` e `-webkit-user-drag: none` para bloquear selecao e arraste na landing
-
-### Escopo limitado a landing page
-As protecoes serao aplicadas **apenas na landing page publica**, sem afetar o app autenticado (onde o usuario precisa selecionar texto, copiar dados, etc).
-
-### Nenhuma dependencia externa
-Tudo com CSS nativo + event listeners em um unico hook React.

@@ -1,41 +1,35 @@
 
+# Animacao "Sweeping Gold Shine" na Frase Final
 
-# Aviso Final -- Destaque Premium de Alto Impacto
+## O que muda
 
-## Conceito
+A frase **"Isso e INVICTUS. Isso e Fraternidade. Isso e decisao."** vai deixar de usar o `GoldHoverText` (efeito que segue o mouse) e vai ganhar uma **animacao automatica de brilho dourado varrendo o texto** -- como um reflexo de luz passando por uma superficie metalica premium. O efeito roda em loop infinito, sem precisar de interacao do usuario.
 
-Inspirado em marcas de luxo como Rolls-Royce, Audemars Piguet e convites exclusivos de memberships premium (Soho House, Amex Centurion), o "Aviso Final" vai se tornar um **momento cinematografico** na pagina -- um bloco que "quebra" o ritmo visual e forca o visitante a parar e ler.
+## Referencia visual
 
-Referencia: sites de relojoaria de luxo usam um "statement card" isolado com moldura dourada mais intensa, tipografia maior e um efeito de luz que diferencia aquele bloco de todo o resto da pagina. Vamos aplicar essa tecnica aqui.
-
-## O que muda visualmente
-
-1. **Moldura dourada reforçada** -- O card atual usa `invictus-auth-surface invictus-frame` (sutil). Vai passar a usar `invictus-auth-surface invictus-auth-frame`, que e a moldura dourada mais intensa do sistema (borda champagne com glow always-on), a mesma usada na tela de login.
-
-2. **Linhas douradas decorativas** -- Duas linhas horizontais douradas (gradiente 90deg) acima e abaixo do card, animadas com reveal (scaleX de 0 a 1), criando um efeito de "moldura aberta" que emoldura o bloco no espaço.
-
-3. **Titulo com gradiente dourado** -- O "Aviso final" passa de `text-xl font-semibold` branco para um texto com gradiente dourado via `background-clip: text`, maior (`text-2xl sm:text-3xl`) e com tracking mais aberto para sensacao de exclusividade.
-
-4. **Frase final em destaque dourado** -- A ultima frase ("Isso e INVICTUS...") usa o componente `GoldHoverText` com o efeito dourado que segue o mouse, ja existente no projeto.
-
-5. **Animacao de reveal dedicada** -- O bloco inteiro usa `useRevealOnScroll` para aparecer com fade-in + translateY suave, dando peso ao momento.
-
-6. **Eyebrow label** -- Um badge "INVICTUS" discreto acima do titulo (como nas outras secoes), usando o token `--gold-hot` para manter consistencia.
+Pense em logotipos gravados em metal dourado onde um reflexo de luz percorre a superficie de ponta a ponta, como se houvesse um spot de luz passando. O texto base fica com um gradiente dourado estatico, e um "flash" branco-dourado mais intenso desliza da esquerda para a direita a cada ~4 segundos.
 
 ## Detalhes tecnicos
 
+### Novo componente: `src/components/landing/GoldSweepText.tsx`
+
+Um componente dedicado que aplica:
+- Texto base com gradiente dourado fixo (`--gold-hot` / `--gold-soft`) via `background-clip: text`
+- Uma camada de brilho animada usando `background-position` com `@keyframes` que desliza um highlight branco-dourado da esquerda para a direita
+- Animacao em loop com pausa natural (aceleracao no meio, pausa de ~2s entre ciclos usando porcentagens do keyframe)
+- Sutil `text-shadow` dourado para dar profundidade
+
 ### Arquivo modificado: `src/components/landing/ManifestoSections.tsx`
 
-Apenas a funcao `FinalWarning` sera reescrita:
+- Substituir `<GoldHoverText>` por `<GoldSweepText>` na frase final
+- Importar o novo componente
 
-- Importar `useRevealOnScroll` e `GoldHoverText`
-- Adicionar linhas douradas decorativas (divs com gradiente animado)
-- Trocar classe do Card de `invictus-frame` para `invictus-auth-frame` (moldura mais intensa)
-- Titulo com gradiente dourado via estilo inline (`background-clip: text`)
-- Aumentar tipografia do titulo para `text-2xl sm:text-3xl`
-- Frase final com `GoldHoverText`
-- Padding mais generoso (`p-8 sm:p-10 lg:p-12`)
-- Wrap com `useRevealOnScroll` para animacao de entrada
+### Keyframe da animacao
 
-Nenhum arquivo CSS novo. Nenhuma dependencia nova. Apenas reutilizando os tokens e classes premium que ja existem no design system.
+```text
+0%    -> brilho posicionado fora da esquerda
+40%   -> brilho percorre ate a direita
+100%  -> pausa (brilho fora da tela, espera antes do proximo ciclo)
+```
 
+Duracao total: ~4s, criando um ritmo elegante sem ser excessivo.

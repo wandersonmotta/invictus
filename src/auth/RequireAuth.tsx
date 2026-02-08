@@ -3,6 +3,8 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { useRestrictedRole } from "@/hooks/useRestrictedRole";
+import { isLovableHost, getFinanceiroOrigin, getSuporteOrigin } from "@/lib/appOrigin";
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
@@ -62,6 +64,39 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
   if (!session) {
     return <Navigate to="/auth" replace state={{ from: location.pathname }} />;
+  }
+
+  // --- Block restricted-role users from the member app ---
+  const roleQuery = useRestrictedRole(session?.user.id);
+
+  if (roleQuery.isLoading) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="text-sm text-muted-foreground">Carregando…</div>
+      </div>
+    );
+  }
+
+  if (roleQuery.data) {
+    const { isFinanceiro, isSuporte, isAdmin } = roleQuery.data;
+
+    // Financeiro-only user → redirect to financeiro area
+    if (isFinanceiro && !isAdmin) {
+      if (isLovableHost(window.location.hostname)) {
+        return <Navigate to="/financeiro/dashboard" replace />;
+      }
+      window.location.href = `${getFinanceiroOrigin()}/dashboard`;
+      return null;
+    }
+
+    // Suporte-only user → redirect to suporte area
+    if (isSuporte && !isAdmin) {
+      if (isLovableHost(window.location.hostname)) {
+        return <Navigate to="/suporte-backoffice/dashboard" replace />;
+      }
+      window.location.href = `${getSuporteOrigin()}/dashboard`;
+      return null;
+    }
   }
 
   if (profileQuery.isLoading) {

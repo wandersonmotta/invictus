@@ -1,5 +1,6 @@
-import { Bot, User, Headset, Check, CheckCheck, FileText, Image as ImageIcon } from "lucide-react";
+import { User, Headset, Check, CheckCheck, FileText, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AI_SUPPORT_AVATAR_URL } from "@/config/supportAvatar";
 
 interface Attachment {
   id: string;
@@ -39,13 +40,14 @@ export function SupportMessageBubble({
   });
 
   const icon =
-    senderType === "ai" ? (
-      <Bot className="h-4 w-4 text-primary" />
-    ) : senderType === "agent" ? (
+    senderType === "agent" ? (
       <Headset className="h-4 w-4 text-emerald-400" />
     ) : (
       <User className="h-4 w-4 text-muted-foreground" />
     );
+
+  // AI uses avatar image instead of icon
+  const aiAvatar = senderType === "ai";
 
   const label =
     senderType === "ai"
@@ -69,6 +71,12 @@ export function SupportMessageBubble({
           <img
             src={senderAvatar}
             alt={label}
+            className="h-7 w-7 rounded-full object-cover border border-border"
+          />
+        ) : aiAvatar ? (
+          <img
+            src={AI_SUPPORT_AVATAR_URL}
+            alt="Assistente IA"
             className="h-7 w-7 rounded-full object-cover border border-border"
           />
         ) : (

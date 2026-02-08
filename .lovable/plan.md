@@ -1,56 +1,103 @@
 
-# Corrigir texto estranho ("thoughtful wheel 16 waves") na resposta da IA
+# Plano: Cargo de Gerente de Suporte + Transferencia de Tickets
 
-## Problema
+## Resumo
 
-O modelo Gemini esta vazando "tokens de pensamento" (thinking tokens) no inicio da resposta. O texto "thoughtful wheel 16 waves" nao e uma resposta real da Ana -- e um artefato interno do modelo que aparece antes da mensagem de verdade.
+Duas funcionalidades combinadas: (1) ao cadastrar um membro na equipe de suporte, poder escolher entre "Atendente" e "Gerente de Suporte"; (2) gerentes e admins podem transferir tickets entre atendentes.
 
-Alem disso, a base de conhecimento esta sendo injetada com headers markdown (`## Base de Conhecimento`, `### titulo`), o que contradiz a regra de "nada de markdown" e pode confundir o modelo.
+## Permissoes por cargo
 
-## O que sera feito
+| Funcionalidade | Atendente | Gerente | Admin |
+|----------------|-----------|---------|-------|
+| Ver propria fila de tickets | Sim | Sim | Sim |
+| Ver TODOS os tickets | Nao | Sim | Sim |
+| Transferir tickets | Nao | Sim | Sim |
+| Ver avaliacoes | Nao | Sim | Sim |
+| Gerenciar equipe (add/remove) | Nao | Sim | Sim |
+| Treinamento da IA | Nao | Nao | Sim |
 
-### 1. Filtrar tokens de pensamento no backend
+## Etapas
 
-Adicionar logica na Edge Function para detectar e remover o campo `reasoning_content` ou tokens de "thought" que o Gemini pode retornar antes do conteudo real. O modelo as vezes retorna um campo separado de "thinking" -- vamos ignora-lo completamente.
+### 1. Migration SQL
 
-### 2. Filtrar no frontend tambem (dupla protecao)
+Adicionar `suporte_gerente` ao enum `app_role` existente.
 
-Antes de exibir a primeira resposta da IA, aplicar um filtro que remove qualquer texto que apareca antes da saudacao real. Se o conteudo acumulado comecar com palavras sem sentido (nao portugues), limpar ate encontrar texto valido.
+### 2. Criar hook `useIsSuporteGerente`
 
-### 3. Corrigir a injecao da base de conhecimento
+Hook simples que usa `has_role` com `suporte_gerente`, seguindo o mesmo padrao do `useIsAdmin`.
 
-Trocar os headers markdown (`## Base de Conhecimento`, `### titulo`) por texto simples, alinhado com a regra de proibir markdown no prompt.
+### 3. Atualizar Edge Function `manage-support-agents`
 
-### 4. Forcar modelo a nao "pensar em voz alta"
+- Aceitar campo `position` ("atendente" ou "gerente") na acao `create`
+- Se gerente: atribuir as duas roles (`suporte` + `suporte_gerente`)
+- Na acao `remove`: remover ambas as roles
+- Na acao `list`: retornar flag `is_gerente` para cada agente
+- Permitir que `suporte_gerente` (alem de admin) execute acoes de gerenciamento
 
-Adicionar instrucao explicita no system prompt: "NUNCA inclua pensamentos internos, rascunhos ou texto aleatorio antes da sua resposta. Comece SEMPRE diretamente com sua mensagem para o membro."
+### 4. Atualizar tela de Equipe (`SuporteEquipe.tsx`)
 
-## Arquivos a serem modificados
+- Adicionar seletor de cargo no formulario de cadastro ("Atendente" ou "Gerente de Suporte")
+- Mostrar badge de cargo em cada card de agente
+- Permitir acesso para quem tem `suporte_gerente` (nao so admin)
 
-| Arquivo | Mudanca |
-|---------|---------|
-| `supabase/functions/support-chat-ephemeral/index.ts` | Remover markdown da injecao de conhecimento, adicionar instrucao anti-thinking no prompt, filtrar thinking tokens do stream |
-| `src/components/suporte/SupportAIChatPopup.tsx` | Adicionar filtro de seguranca no frontend para limpar tokens estranhos do inicio da resposta |
+### 5. Atualizar Layout e Navegacao
+
+Nos componentes `SuporteLayout.tsx` e `SuporteBottomNav.tsx`:
+- Equipe e Avaliacoes ficam visiveis para admin OU gerente
+- IA (treinamento) continua exclusivo para admin
+
+### 6. Atualizar guards de acesso
+
+- `useIsSuporte.ts`: aceitar `suporte_gerente` tambem como role valida para acessar o back-office
+- `useRestrictedRole.ts`: incluir `suporte_gerente` na lista de roles restritas
+
+### 7. Transferencia de tickets (`SuporteAtendimento.tsx`)
+
+- Botao "Transferir" no header (visivel para admin e gerente)
+- Dialog com lista de atendentes disponiveis (vem da Edge Function, acao `list`)
+- Ao selecionar: atualiza `assigned_to` do ticket e muda status para `escalated`
+- Toast de confirmacao
 
 ## Detalhes Tecnicos
 
-### Edge Function - Mudancas no prompt e injecao
+### Migration
 
 ```text
-// Injecao de conhecimento SEM markdown:
-// Antes: "## Base de Conhecimento\n\n### Titulo (categoria)\nconteudo"
-// Depois: "BASE DE CONHECIMENTO:\n\nTitulo (categoria): conteudo"
-
-// Nova instrucao no prompt:
-// "NUNCA inclua pensamentos, rascunhos, palavras aleatorias ou qualquer texto
-//  antes da sua resposta. Sua primeira palavra deve ser SEMPRE parte da
-//  mensagem para o membro."
+ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'suporte_gerente';
 ```
 
-### Edge Function - Filtro de thinking tokens no stream
+### Logica de acesso nos componentes
 
-Ao processar o stream SSE antes de retornar ao cliente, interceptar cada chunk e ignorar deltas que contenham `reasoning_content` ou que venham marcados como "thinking". Tambem passar `temperature: 0.7` para reduzir aleatoriedade.
+```text
+const showManagerFeatures = isAdmin || isSuporteGerente;  // Equipe, Avaliacoes, Transferir
+const showIAFeatures = isAdmin;                            // IA somente admin
+```
 
-### Frontend - Filtro de seguranca
+### Edge Function - permissao do caller
 
-Aplicar um regex simples no conteudo acumulado da IA para detectar e remover prefixos sem sentido (palavras em ingles aleatorias como "thoughtful wheel waves") antes de exibir.
+Hoje so admin pode chamar. Sera atualizado para aceitar tambem quem tem `suporte_gerente`:
+
+```text
+const canManage = roles.includes("admin") || roles.includes("suporte_gerente");
+```
+
+### Transferencia - fluxo
+
+1. Gerente/Admin clica "Transferir" no header do atendimento
+2. Dialog lista atendentes (excluindo o atual assigned_to)
+3. Ao confirmar: UPDATE support_tickets SET assigned_to = novo, status = 'escalated'
+4. Toast: "Ticket transferido para [Nome]"
+
+### Arquivos a serem criados/modificados
+
+| Arquivo | Acao |
+|---------|------|
+| Migration SQL | Criar -- `suporte_gerente` no enum |
+| `src/hooks/useIsSuporteGerente.ts` | Criar |
+| `supabase/functions/manage-support-agents/index.ts` | Modificar |
+| `src/pages/suporte-backoffice/SuporteEquipe.tsx` | Modificar |
+| `src/components/suporte-backoffice/SuporteLayout.tsx` | Modificar |
+| `src/components/suporte-backoffice/SuporteBottomNav.tsx` | Modificar |
+| `src/pages/suporte-backoffice/SuporteAtendimento.tsx` | Modificar |
+| `src/hooks/useIsSuporte.ts` | Modificar |
+| `src/hooks/useRestrictedRole.ts` | Modificar |

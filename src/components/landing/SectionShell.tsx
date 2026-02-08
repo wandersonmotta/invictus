@@ -10,7 +10,6 @@ type SectionShellProps = {
 
 export function SectionShell({ id, title, children }: SectionShellProps) {
   const reveal = useRevealOnScroll<HTMLElement>({
-    // Desktop: viewport maior = precisamos “segurar” o reveal um pouco
     rootMargin: "0px 0px -18% 0px",
     threshold: 0.22,
     once: true,
@@ -33,7 +32,10 @@ export function SectionShell({ id, title, children }: SectionShellProps) {
             <p className="invictus-section-eyebrow">INVICTUS</p>
             <h2 className="invictus-landing-title text-balance text-2xl font-semibold sm:text-3xl">{title}</h2>
           </div>
-          <div className="invictus-section-separator hidden sm:block" aria-hidden="true" />
+          <div
+            className={`invictus-section-separator hidden sm:block ${reveal.visible ? "invictus-separator-animate" : ""}`}
+            aria-hidden="true"
+          />
         </header>
         <div className="invictus-landing-panel">{children}</div>
       </div>

@@ -3,6 +3,8 @@ import { Card } from "@/components/ui/card";
 import { EditorialMedia } from "@/components/landing/EditorialMedia";
 import { SectionShell } from "@/components/landing/SectionShell";
 import { BulletList } from "@/components/landing/BulletList";
+import { RevealText } from "@/components/landing/RevealText";
+import { useTilt3D } from "@/hooks/useTilt3D";
 import { Eye, Shield, Target, Zap, Layers, Cpu, Briefcase } from "lucide-react";
 
 import manifestoMedia from "@/assets/invictus-landing-manifesto-media-color.jpg";
@@ -38,11 +40,20 @@ const bullets = {
   ],
 } as const;
 
+function TiltCard({ children, className }: { children: React.ReactNode; className?: string }) {
+  const tiltRef = useTilt3D<HTMLDivElement>(4);
+  return (
+    <div ref={tiltRef} className={className}>
+      {children}
+    </div>
+  );
+}
+
 export function Manifesto() {
   return (
     <SectionShell title="O que é a Fraternidade Invictus" id="manifesto">
       <div className="invictus-stagger grid gap-8 lg:grid-cols-2">
-        <div className="invictus-stagger space-y-5">
+        <RevealText className="invictus-stagger space-y-5">
           <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
             A Fraternidade Invictus nasce para formar homens e mulheres indestrutíveis — mentalidade de liderança,
             disciplina inegociável e obsessão por resultado.
@@ -54,25 +65,26 @@ export function Manifesto() {
           <p className="text-pretty text-sm leading-relaxed">
             <GoldHoverText>INVICTUS não é sobre motivação.</GoldHoverText> É sobre transformação real.
           </p>
-        </div>
+        </RevealText>
 
         <div className="invictus-stagger space-y-5">
-          {/* Vídeo decorativo: menor no mobile, maior no desktop */}
           <EditorialMedia
             src={manifestoMedia}
             className="sm:max-w-[420px]"
             loading="eager"
           />
           <h3 className="invictus-subtitle">Nossa visão</h3>
-          <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
-            Criar uma elite capaz de dominar o próprio destino financeiro, operar negócios reais com clareza e estratégia,
-            construir patrimônio, legado e liberdade — e viver acima da média, sem depender de ninguém.
-          </p>
-          <div className="h-px w-full bg-border/60" />
-          <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
-            A visão é simples e brutalmente honesta: quem entra aqui para crescer, cresce. Quem entra esperando facilidade,
-            sai.
-          </p>
+          <RevealText className="space-y-4">
+            <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
+              Criar uma elite capaz de dominar o próprio destino financeiro, operar negócios reais com clareza e estratégia,
+              construir patrimônio, legado e liberdade — e viver acima da média, sem depender de ninguém.
+            </p>
+            <div className="h-px w-full bg-border/60" />
+            <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
+              A visão é simples e brutalmente honesta: quem entra aqui para crescer, cresce. Quem entra esperando facilidade,
+              sai.
+            </p>
+          </RevealText>
         </div>
       </div>
     </SectionShell>
@@ -107,7 +119,7 @@ export function Pillars() {
     <SectionShell title="Nossa mentalidade (pilares)">
       <div className="invictus-stagger invictus-stagger--lr grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {pillars.map(({ title, Icon, desc }) => (
-          <div key={title} className="invictus-landing-card invictus-landing-card--lift p-4">
+          <TiltCard key={title} className="invictus-landing-card invictus-landing-card--lift p-4">
             <div className="flex items-center gap-2">
               <span className="invictus-icon-plate inline-flex h-8 w-8 items-center justify-center" aria-hidden="true">
                 <Icon className="h-4 w-4 text-primary/85" />
@@ -115,7 +127,7 @@ export function Pillars() {
               <p className="text-sm font-medium leading-snug">{title}</p>
             </div>
             <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{desc}</p>
-          </div>
+          </TiltCard>
         ))}
       </div>
     </SectionShell>
@@ -133,7 +145,7 @@ export function WhatYouFindHere() {
     <SectionShell title="O que você encontra aqui">
       <div className="invictus-stagger invictus-stagger--lr grid gap-6 lg:grid-cols-3">
         {groups.map(({ title, Icon, items }) => (
-          <div key={title} className="invictus-landing-card invictus-landing-card--lift p-4">
+          <TiltCard key={title} className="invictus-landing-card invictus-landing-card--lift p-4">
             <div className="flex items-center gap-2">
               <span className="invictus-icon-plate inline-flex h-8 w-8 items-center justify-center" aria-hidden="true">
                 <Icon className="h-4 w-4 text-primary/85" />
@@ -148,7 +160,7 @@ export function WhatYouFindHere() {
                 </div>
               ))}
             </div>
-          </div>
+          </TiltCard>
         ))}
       </div>
     </SectionShell>
@@ -179,7 +191,7 @@ export function LeadershipAndRule() {
   return (
     <SectionShell title="Liderança e regra de permanência">
       <div className="invictus-stagger grid gap-8 lg:grid-cols-2">
-        <div className="space-y-4">
+        <RevealText className="space-y-4">
           <h3 className="invictus-subtitle">Liderança</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
             A liderança da INVICTUS não promete. Mostra.
@@ -189,15 +201,15 @@ export function LeadershipAndRule() {
             Não passa a mão na cabeça. Entrega direção.
           </p>
           <p className="text-sm leading-relaxed text-muted-foreground">Aqui você é tratado como adulto. Porque adulto constrói.</p>
-        </div>
+        </RevealText>
 
-        <div className="space-y-4">
+        <RevealText className="space-y-4">
           <h3 className="invictus-subtitle">Regra de permanência</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
             Só permanece quem prospera. Não por exclusão, mas porque o ritmo elimina quem não acompanha.
           </p>
           <p className="text-sm leading-relaxed text-muted-foreground">Resultado é regra. Evolução é obrigação.</p>
-        </div>
+        </RevealText>
       </div>
     </SectionShell>
   );
@@ -209,11 +221,11 @@ export function FinalWarning() {
       <div className="mx-auto w-full max-w-6xl">
         <Card className="invictus-auth-surface invictus-frame border-0 p-6 sm:p-8">
           <h2 className="text-xl font-semibold">Aviso final</h2>
-          <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
+          <RevealText className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>Se você chegou até aqui e sentiu desconforto, provavelmente não é para você.</p>
             <p>Se você leu tudo isso e sentiu clareza, bem-vindo ao próximo nível.</p>
             <p className="text-foreground">Isso é INVICTUS. Isso é Fraternidade. Isso é decisão.</p>
-          </div>
+          </RevealText>
         </Card>
       </div>
     </section>

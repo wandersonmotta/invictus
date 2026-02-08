@@ -46,7 +46,7 @@ export function HeroIntro({ onComplete }: { onComplete?: () => void }) {
       <img
         src={logo}
         alt=""
-        className="w-20 select-none sm:w-24"
+        className="w-32 select-none sm:w-36 md:w-40"
         draggable={false}
         style={{
           filter: "drop-shadow(0 0 20px hsl(var(--primary) / 0.4))",
@@ -54,8 +54,12 @@ export function HeroIntro({ onComplete }: { onComplete?: () => void }) {
         }}
       />
       <span
-        className="mt-3 text-xs font-semibold tracking-[0.35em] text-foreground/80"
+        className="mt-3 text-xs font-semibold tracking-[0.35em]"
         style={{
+          background: "linear-gradient(135deg, hsl(43 74% 62%), hsl(43 74% 49%), hsl(43 74% 62%))",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
           animation: "invictus-intro-text 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 200ms both",
         }}
       >

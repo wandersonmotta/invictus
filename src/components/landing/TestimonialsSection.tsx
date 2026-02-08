@@ -57,10 +57,9 @@ function TiltCard({ children, className, style }: { children: React.ReactNode; c
 
 export function TestimonialsSection() {
   const counterReveal = useRevealOnScroll<HTMLDivElement>({
-    rootMargin: "0px 0px -10% 0px",
-    threshold: 0.3,
+    rootMargin: "0px 0px 0px 0px",
+    threshold: 0.1,
     once: true,
-    enterDelayMs: 200,
     disableClasses: true,
   });
 

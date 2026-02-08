@@ -26,11 +26,11 @@ export function GoldSweepText({
           linear-gradient(
             105deg,
             transparent 0%,
-            transparent 35%,
-            hsl(50 100% 95% / 0.7) 45%,
+            transparent 30%,
+            hsl(50 100% 95% / 0.7) 42%,
             hsl(45 100% 85% / 0.9) 50%,
-            hsl(50 100% 95% / 0.7) 55%,
-            transparent 65%,
+            hsl(50 100% 95% / 0.7) 58%,
+            transparent 70%,
             transparent 100%
           )
         `,
@@ -38,15 +38,15 @@ export function GoldSweepText({
         backgroundClip: "text",
         WebkitBackgroundClip: "text",
         WebkitTextFillColor: "transparent",
-        animation: "gold-sweep 4s ease-in-out infinite",
+        animation: "gold-sweep 3s ease-in-out infinite",
       }}
     >
       {children}
       <style>{`
         @keyframes gold-sweep {
-          0%   { background-position: 0% center, 150% center; }
-          40%  { background-position: 0% center, -50% center; }
-          100% { background-position: 0% center, -50% center; }
+          0%   { background-position: 0% center, 200% center; }
+          60%  { background-position: 0% center, -100% center; }
+          100% { background-position: 0% center, -100% center; }
         }
       `}</style>
     </span>

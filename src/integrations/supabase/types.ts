@@ -1487,8 +1487,47 @@ export type Database = {
           },
         ]
       }
+      support_ratings: {
+        Row: {
+          agent_id: string | null
+          created_at: string
+          id: string
+          rating_agent: number
+          rating_resolved: number
+          ticket_id: string
+          user_id: string
+        }
+        Insert: {
+          agent_id?: string | null
+          created_at?: string
+          id?: string
+          rating_agent: number
+          rating_resolved: number
+          ticket_id: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string | null
+          created_at?: string
+          id?: string
+          rating_agent?: number
+          rating_resolved?: number
+          ticket_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ratings_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: true
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_tickets: {
         Row: {
+          ai_summary: string | null
           assigned_to: string | null
           created_at: string
           escalated_at: string | null
@@ -1500,6 +1539,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ai_summary?: string | null
           assigned_to?: string | null
           created_at?: string
           escalated_at?: string | null
@@ -1511,6 +1551,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ai_summary?: string | null
           assigned_to?: string | null
           created_at?: string
           escalated_at?: string | null

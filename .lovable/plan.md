@@ -1,52 +1,56 @@
 
-# Plano: Humanizar a IA do Suporte Invictus
+# Corrigir texto estranho ("thoughtful wheel 16 waves") na resposta da IA
 
 ## Problema
 
-A IA do suporte responde de forma robotica, usando formatacao markdown (negrito com `**`, listas com `-`, etc.) e linguagem formal demais, como se fosse uma FAQ automatizada. O objetivo e que ela converse como uma pessoa real — uma atendente simpática que conhece bem a plataforma.
+O modelo Gemini esta vazando "tokens de pensamento" (thinking tokens) no inicio da resposta. O texto "thoughtful wheel 16 waves" nao e uma resposta real da Ana -- e um artefato interno do modelo que aparece antes da mensagem de verdade.
+
+Alem disso, a base de conhecimento esta sendo injetada com headers markdown (`## Base de Conhecimento`, `### titulo`), o que contradiz a regra de "nada de markdown" e pode confundir o modelo.
 
 ## O que sera feito
 
-### 1. Reescrever o system prompt completo
+### 1. Filtrar tokens de pensamento no backend
 
-O prompt atual instrui a IA a "usar markdown quando util" e ser "conciso mas completo", o que gera respostas mecanicas. O novo prompt vai:
+Adicionar logica na Edge Function para detectar e remover o campo `reasoning_content` ou tokens de "thought" que o Gemini pode retornar antes do conteudo real. O modelo as vezes retorna um campo separado de "thinking" -- vamos ignora-lo completamente.
 
-- **Proibir qualquer formatacao markdown** (sem negrito, italico, listas, titulos)
-- Instruir a IA a escrever como se fosse uma mensagem de WhatsApp/chat real
-- Usar linguagem natural, informal mas profissional (como uma atendente real falaria)
-- Usar emojis com moderacao (como uma pessoa real faria)
-- Responder de forma curta e direta, como numa conversa de chat
-- Nunca listar funcionalidades de forma mecanica — falar sobre elas naturalmente
-- Ter uma personalidade: simpática, acolhedora, que chama o membro pelo nome quando possivel
-- Incorporar a base de conhecimento de forma natural, sem parecer que esta lendo um manual
+### 2. Filtrar no frontend tambem (dupla protecao)
 
-### 2. Novo prompt proposto
+Antes de exibir a primeira resposta da IA, aplicar um filtro que remove qualquer texto que apareca antes da saudacao real. Se o conteudo acumulado comecar com palavras sem sentido (nao portugues), limpar ate encontrar texto valido.
 
-O novo prompt vai incluir instrucoes como:
+### 3. Corrigir a injecao da base de conhecimento
 
-- "Voce e a Ana, atendente da Fraternidade Invictus"
-- "Escreva como se estivesse conversando pelo WhatsApp com um amigo profissional"
-- "NUNCA use formatacao markdown: nada de **, ##, -, *, listas numeradas"
-- "Use frases curtas e naturais. Quebre em paragrafos curtos como numa conversa de chat"
-- "Use emojis com moderacao e naturalidade (ex: 😊, 👋, ✅) mas sem exagero"
-- "Quando mencionar funcionalidades, fale como se estivesse explicando para um amigo, nao lendo um manual"
-- "Adapte seu tom ao do membro: se ele for mais formal, seja um pouco mais formal; se for descontraido, seja descontraida tambem"
+Trocar os headers markdown (`## Base de Conhecimento`, `### titulo`) por texto simples, alinhado com a regra de proibir markdown no prompt.
 
-### 3. Arquivo a ser modificado
+### 4. Forcar modelo a nao "pensar em voz alta"
+
+Adicionar instrucao explicita no system prompt: "NUNCA inclua pensamentos internos, rascunhos ou texto aleatorio antes da sua resposta. Comece SEMPRE diretamente com sua mensagem para o membro."
+
+## Arquivos a serem modificados
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `supabase/functions/support-chat-ephemeral/index.ts` | Reescrever `BASE_SYSTEM_PROMPT` com prompt humanizado, proibir markdown, dar personalidade |
-
-### 4. Nenhuma mudanca no frontend
-
-O frontend ja renderiza texto puro (whitespace-pre-wrap). Ao remover o markdown das respostas, o resultado visual ja sera limpo automaticamente.
+| `supabase/functions/support-chat-ephemeral/index.ts` | Remover markdown da injecao de conhecimento, adicionar instrucao anti-thinking no prompt, filtrar thinking tokens do stream |
+| `src/components/suporte/SupportAIChatPopup.tsx` | Adicionar filtro de seguranca no frontend para limpar tokens estranhos do inicio da resposta |
 
 ## Detalhes Tecnicos
 
-A mudanca e exclusivamente no system prompt da Edge Function `support-chat-ephemeral`. O novo prompt tera aproximadamente 3x mais instrucoes de estilo/tom para garantir que o modelo realmente se comporte como uma pessoa, incluindo:
+### Edge Function - Mudancas no prompt e injecao
 
-- Exemplos concretos de como responder (few-shot)
-- Proibicao explicita de padroes roboticos
-- Instrucoes para adaptar tom ao contexto
-- Nome e personalidade definidos para a atendente
+```text
+// Injecao de conhecimento SEM markdown:
+// Antes: "## Base de Conhecimento\n\n### Titulo (categoria)\nconteudo"
+// Depois: "BASE DE CONHECIMENTO:\n\nTitulo (categoria): conteudo"
+
+// Nova instrucao no prompt:
+// "NUNCA inclua pensamentos, rascunhos, palavras aleatorias ou qualquer texto
+//  antes da sua resposta. Sua primeira palavra deve ser SEMPRE parte da
+//  mensagem para o membro."
+```
+
+### Edge Function - Filtro de thinking tokens no stream
+
+Ao processar o stream SSE antes de retornar ao cliente, interceptar cada chunk e ignorar deltas que contenham `reasoning_content` ou que venham marcados como "thinking". Tambem passar `temperature: 0.7` para reduzir aleatoriedade.
+
+### Frontend - Filtro de seguranca
+
+Aplicar um regex simples no conteudo acumulado da IA para detectar e remover prefixos sem sentido (palavras em ingles aleatorias como "thoughtful wheel waves") antes de exibir.

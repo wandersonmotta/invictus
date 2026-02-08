@@ -138,14 +138,30 @@ serve(async (req) => {
         });
       }
 
+      // Exclude users who also have admin role
+      const { data: adminRoles } = await supabaseService
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin")
+        .in("user_id", userIds);
+
+      const adminIds = new Set((adminRoles || []).map((r: any) => r.user_id));
+      const filteredIds = userIds.filter((uid: string) => !adminIds.has(uid));
+
+      if (filteredIds.length === 0) {
+        return new Response(JSON.stringify({ agents: [] }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const { data: profiles } = await supabaseService
         .from("profiles")
         .select("user_id, display_name, avatar_url, first_name, last_name")
-        .in("user_id", userIds);
+        .in("user_id", filteredIds);
 
       // Get emails from auth
       const agents = await Promise.all(
-        userIds.map(async (uid: string) => {
+        filteredIds.map(async (uid: string) => {
           const profile = (profiles || []).find((p: any) => p.user_id === uid);
           const { data: { user: authUser } } = await supabaseService.auth.admin.getUserById(uid);
           return {

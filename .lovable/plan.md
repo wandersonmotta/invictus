@@ -1,70 +1,32 @@
 
+# Ajustes na Landing Page -- Logo, Cor Dourada e Counter
 
-# Upgrade Premium v2 -- Timing, Footer e Refinamentos
+## 1. Logo maior na cortina de abertura
 
-## Problemas identificados
+A logo atualmente usa `w-20` (80px) no mobile e `w-24` (96px) no desktop. Vou aumentar para `w-32` (128px) no mobile e `w-40` (160px) no desktop, mantendo responsividade com breakpoints intermediarios.
 
-### 1. Animacoes disparando cedo demais
-O `useRevealOnScroll` usa `rootMargin: "0px 0px -10% 0px"` e `threshold: 0.15` por padrao. Isso significa que o elemento comeca a revelar quando apenas 15% dele esta visivel, com a margem inferior de apenas 10%. Na pratica, o conteudo "aparece" antes do usuario realmente chegar naquela area. O `SectionShell` usa `-18%` e `0.22`, o que e um pouco melhor mas ainda nao e suficiente.
+**Arquivo**: `src/components/landing/HeroIntro.tsx`
+- Classe da img: `w-20 sm:w-24` passa para `w-32 sm:w-36 md:w-40`
+- O texto "FRATERNIDADE" mantem o mesmo tamanho (`text-xs tracking-[0.35em]`)
 
-**Correcao**: Aumentar o `rootMargin` inferior para `-25%` a `-30%` e o `threshold` para `0.3` nos componentes principais (`SectionShell`, `EditorialMedia`, `RevealText`). Isso garante que a animacao so dispara quando o elemento esta realmente visivel e centralizado na tela.
+## 2. Texto "FRATERNIDADE" com cor dourada
 
-### 2. Footer com link "Entrar" desnecessario
-O footer tem um link "Entrar" que o usuario quer remover, mantendo apenas o da topbar.
+Trocar a cor de `text-foreground/80` para o gradiente dourado da identidade visual, usando `background-clip: text` com o gradiente primary da marca.
 
-### 3. Oportunidades premium ainda nao exploradas
+**Arquivo**: `src/components/landing/HeroIntro.tsx`
+- Remover `text-foreground/80`
+- Aplicar estilo inline com gradiente dourado (`linear-gradient` usando as cores primary do tema) e `background-clip: text` / `color: transparent`
 
-Analisando referências de sites como Apple, Stripe, Linear e Porsche Design, identifico 5 melhorias que dariam um salto real de qualidade:
+## 3. Corrigir AnimatedNumber nos depoimentos
 
-**a) Cursor Glow (Spotlight que segue o mouse)**
-Um brilho dourado sutil que segue o cursor sobre os paineis/cards. Nao e um circulo obvio -- e uma luz difusa que ilumina a area ao redor do mouse, como se voce estivesse passando uma lanterna por cima de uma superficie metalica. Efeito usado pela Stripe e Linear.
+O counter nao esta disparando porque o `useRevealOnScroll` com `disableClasses: true` funciona corretamente para `visible`, mas o `rootMargin: "0px 0px -10% 0px"` combinado com a posicao da secao no final da pagina pode nao intersectar adequadamente. Vou ajustar para usar `rootMargin: "0px"` e `threshold: 0.1` para garantir que o counter dispare quando a secao de depoimentos entrar na viewport.
 
-**b) Magnetic Hover nos botoes CTA**
-O botao "Quero fazer parte" se move sutilmente na direcao do cursor quando o mouse se aproxima (dentro de ~40px de distancia). Cria sensacao de que o botao "te puxa". Efeito usado por Apple e agencias premium.
-
-**c) Texto com mascara de gradiente no scroll (Gradient Wipe)**
-Os titulos principais de cada secao revelam com um gradiente dourado que "varre" da esquerda para a direita, ao inves de um simples fade-up. O texto comeca com cor transparent e a mascara dourada passa revelando as letras. Efeito inspirado em Apple e Linear.
-
-**d) Scroll Progress Indicator**
-Uma linha dourada fina no topo da pagina que cresce conforme o usuario desce, mostrando o progresso. Sutil, elegante, e reforça a identidade gold.
-
-**e) Footer com animacao de entrada propria**
-O footer ganha um reveal mais ceremonioso: a linha dourada "acende" de ponta a ponta, depois o conteudo aparece com fade. Sem o link "Entrar".
+**Arquivo**: `src/components/landing/TestimonialsSection.tsx`
+- Ajustar `rootMargin` para `"0px 0px 0px 0px"` e `threshold` para `0.1`
+- Remover `enterDelayMs` que pode estar atrasando o trigger
 
 ## Detalhes tecnicos
 
-### Arquivos que serao CRIADOS
-- `src/hooks/useCursorGlow.ts` -- Hook que rastreia o mouse e aplica uma variavel CSS com a posicao do cursor em elementos, criando o efeito de spotlight
-- `src/hooks/useMagneticHover.ts` -- Hook que aplica deslocamento magnetico (translateX/Y) em um elemento quando o cursor se aproxima
-- `src/components/landing/ScrollProgress.tsx` -- Barra fina dourada no topo que mostra progresso do scroll
-
-### Arquivos que serao MODIFICADOS
-- `src/components/landing/SectionShell.tsx` -- Aumentar threshold/rootMargin do reveal para disparar mais tarde; integrar cursor glow no painel
-- `src/components/landing/EditorialMedia.tsx` -- Aumentar threshold/rootMargin
-- `src/components/landing/RevealText.tsx` -- Aumentar threshold/rootMargin
-- `src/components/landing/ManifestoSections.tsx` -- Aplicar gradient wipe nos titulos principais
-- `src/components/landing/WaitlistHero.tsx` -- Aplicar magnetic hover no CTA "Quero fazer parte"
-- `src/components/landing/LandingFooter.tsx` -- Remover link "Entrar"; adicionar reveal animado proprio
-- `src/pages/Landing.tsx` -- Integrar ScrollProgress
-- `src/styles/invictus-auth.css` -- Novos keyframes (gradient-wipe, cursor-glow radial)
-
-### Performance
-- Cursor glow usa CSS custom properties (`--mx`, `--my`) atualizadas via `mousemove` com rAF -- zero repaints extras, apenas repaint do radial-gradient via GPU
-- Magnetic hover usa transform (GPU) e so ativa em `(hover: hover) and (pointer: fine)`
-- Gradient wipe e CSS puro com `background-clip: text` e animacao de `background-position`
-- Scroll progress usa `scrollY / scrollHeight` com rAF, atualiza uma unica variavel CSS
-- Todos desabilitados com `prefers-reduced-motion`
-- Todos desabilitados no mobile (touch)
-
-### Sem dependencias externas
-Tudo com CSS + hooks React nativos.
-
-### Ordem de implementacao
-1. Corrigir timing dos reveals (impacto imediato na experiencia)
-2. Remover "Entrar" do footer
-3. Scroll progress indicator
-4. Cursor glow nos paineis
-5. Gradient wipe nos titulos
-6. Magnetic hover no CTA
-7. Footer com reveal proprio
-
+Apenas 2 arquivos serao modificados:
+- `src/components/landing/HeroIntro.tsx` -- Logo maior + texto dourado
+- `src/components/landing/TestimonialsSection.tsx` -- Fix do counter

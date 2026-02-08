@@ -574,3 +574,22 @@ All colors MUST be HSL.
     scrollbar-color: hsl(var(--gold-soft)) transparent !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════
+   Anti-copy protection (landing page only)
+   ═══════════════════════════════════════════════════ */
+.invictus-landing-body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.invictus-landing-body img {
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+.invictus-landing-body video {
+  -webkit-user-drag: none;
+  pointer-events: none;
+}

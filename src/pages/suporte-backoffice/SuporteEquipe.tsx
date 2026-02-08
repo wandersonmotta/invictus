@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { Navigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/auth/AuthProvider";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,11 +14,21 @@ import { Plus, Trash2, User, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function SuporteEquipe() {
+  const { user } = useAuth();
+  const { data: isAdmin, isLoading: adminLoading } = useIsAdmin(user?.id);
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+
+  // Block non-admins
+  if (adminLoading) {
+    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+  if (!isAdmin) {
+    return <Navigate to="/suporte-backoffice/dashboard" replace />;
+  }
 
   const callManageAgents = async (body: any) => {
     const session = (await supabase.auth.getSession()).data.session;

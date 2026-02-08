@@ -2469,6 +2469,7 @@ export type Database = {
         | "financeiro"
         | "suporte"
         | "suporte_gerente"
+        | "financeiro_gerente"
       conversation_folder: "inbox" | "requests"
       conversation_type: "direct" | "group"
       invoice_status: "pending" | "paid" | "overdue"
@@ -2621,6 +2622,7 @@ export const Constants = {
         "financeiro",
         "suporte",
         "suporte_gerente",
+        "financeiro_gerente",
       ],
       conversation_folder: ["inbox", "requests"],
       conversation_type: ["direct", "group"],

@@ -40,21 +40,22 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Check caller has admin role
+    // Check caller has admin or financeiro_gerente role
     const { data: callerRoles } = await supabaseService
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id);
 
     const roles = (callerRoles || []).map((r: any) => r.role);
-    if (!roles.includes("admin")) {
-      return new Response(JSON.stringify({ error: "Forbidden – admin only" }), {
+    const canManage = roles.includes("admin") || roles.includes("financeiro_gerente");
+    if (!canManage) {
+      return new Response(JSON.stringify({ error: "Forbidden – admin or gerente only" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { action, email, password, fullName, targetUserId } = await req.json();
+    const { action, email, password, fullName, targetUserId, position } = await req.json();
 
     if (action === "create") {
       if (!email || !password || !fullName) {
@@ -89,10 +90,19 @@ serve(async (req) => {
         approved_by: user.id,
       });
 
+      // Always assign financeiro role
       await supabaseService.from("user_roles").insert({
         user_id: newUserId,
         role: "financeiro",
       });
+
+      // If position is "gerente", also assign financeiro_gerente role
+      if (position === "gerente") {
+        await supabaseService.from("user_roles").insert({
+          user_id: newUserId,
+          role: "financeiro_gerente",
+        });
+      }
 
       return new Response(JSON.stringify({ success: true, userId: newUserId }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -107,11 +117,12 @@ serve(async (req) => {
         });
       }
 
+      // Remove both financeiro and financeiro_gerente roles
       await supabaseService
         .from("user_roles")
         .delete()
         .eq("user_id", targetUserId)
-        .eq("role", "financeiro");
+        .in("role", ["financeiro", "financeiro_gerente"]);
 
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -148,6 +159,15 @@ serve(async (req) => {
         });
       }
 
+      // Check which ones also have financeiro_gerente role
+      const { data: gerenteRoles } = await supabaseService
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "financeiro_gerente")
+        .in("user_id", filteredIds);
+
+      const gerenteIds = new Set((gerenteRoles || []).map((r: any) => r.user_id));
+
       const { data: profiles } = await supabaseService
         .from("profiles")
         .select("user_id, display_name, avatar_url, first_name, last_name")
@@ -164,6 +184,7 @@ serve(async (req) => {
             avatar_url: profile?.avatar_url || null,
             first_name: profile?.first_name || "",
             last_name: profile?.last_name || "",
+            is_gerente: gerenteIds.has(uid),
           };
         })
       );

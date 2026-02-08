@@ -12,6 +12,7 @@ import { FinanceiroBottomNav } from "./FinanceiroBottomNav";
 import { SuporteProfileSetup } from "@/components/suporte-backoffice/SuporteProfileSetup";
 import { useAuth } from "@/auth/AuthProvider";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useIsFinanceiroGerente } from "@/hooks/useIsFinanceiroGerente";
 
 interface FinanceiroLayoutProps {
   children: ReactNode;
@@ -23,6 +24,8 @@ export function FinanceiroLayout({ children }: FinanceiroLayoutProps) {
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
   const { data: isAdmin } = useIsAdmin(user?.id);
+  const { data: isGerente } = useIsFinanceiroGerente(user?.id);
+  const canManageTeam = isAdmin || isGerente;
 
   const [profileComplete, setProfileComplete] = useState<boolean | null>(null);
 
@@ -87,7 +90,7 @@ export function FinanceiroLayout({ children }: FinanceiroLayoutProps) {
           <NavItem to={`${basePath}/carteira`} active={location.pathname.includes("carteira")} icon={<Wallet className="h-4 w-4" />}>
             Carteira
           </NavItem>
-          {isAdmin && (
+          {canManageTeam && (
             <NavItem to={`${basePath}/equipe`} active={location.pathname.includes("equipe")} icon={<Users className="h-4 w-4" />}>
               Equipe
             </NavItem>

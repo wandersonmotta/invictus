@@ -16,8 +16,9 @@ export function useRestrictedRole(userId: string | null | undefined) {
     queryFn: async () => {
       if (!userId) return { isFinanceiro: false, isSuporte: false, isSuporteGerente: false, isAdmin: false };
 
-      const [fin, sup, supGer, adm] = await Promise.all([
+      const [fin, finGer, sup, supGer, adm] = await Promise.all([
         rpcUntyped<boolean>("has_role", { _user_id: userId, _role: "financeiro" }),
+        rpcUntyped<boolean>("has_role", { _user_id: userId, _role: "financeiro_gerente" }),
         rpcUntyped<boolean>("has_role", { _user_id: userId, _role: "suporte" }),
         rpcUntyped<boolean>("has_role", { _user_id: userId, _role: "suporte_gerente" }),
         rpcUntyped<boolean>("has_role", { _user_id: userId, _role: "admin" }),
@@ -25,6 +26,7 @@ export function useRestrictedRole(userId: string | null | undefined) {
 
       return {
         isFinanceiro: !fin.error && fin.data === true,
+        isFinanceiroGerente: !finGer.error && finGer.data === true,
         isSuporte: !sup.error && sup.data === true,
         isSuporteGerente: !supGer.error && supGer.data === true,
         isAdmin: !adm.error && adm.data === true,

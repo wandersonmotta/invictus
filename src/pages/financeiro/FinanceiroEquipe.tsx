@@ -4,12 +4,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useIsFinanceiroGerente } from "@/hooks/useIsFinanceiroGerente";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, User, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { isLovableHost } from "@/lib/appOrigin";
@@ -17,12 +20,15 @@ import { isLovableHost } from "@/lib/appOrigin";
 export default function FinanceiroEquipe() {
   const { user } = useAuth();
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin(user?.id);
+  const { data: isGerente, isLoading: gerenteLoading } = useIsFinanceiroGerente(user?.id);
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [position, setPosition] = useState<"auditor" | "gerente">("auditor");
 
+  const canManage = isAdmin || isGerente;
   const basePath = isLovableHost(window.location.hostname) ? "/financeiro" : "";
 
   const callManageAgents = async (body: any) => {
@@ -48,11 +54,11 @@ export default function FinanceiroEquipe() {
     queryKey: ["financeiro-agents"],
     queryFn: () => callManageAgents({ action: "list" }),
     select: (d) => d.agents || [],
-    enabled: !!isAdmin,
+    enabled: !!canManage,
   });
 
   const createMutation = useMutation({
-    mutationFn: () => callManageAgents({ action: "create", email, password, fullName }),
+    mutationFn: () => callManageAgents({ action: "create", email, password, fullName, position }),
     onSuccess: () => {
       toast.success("Membro cadastrado!");
       queryClient.invalidateQueries({ queryKey: ["financeiro-agents"] });
@@ -60,6 +66,7 @@ export default function FinanceiroEquipe() {
       setEmail("");
       setPassword("");
       setFullName("");
+      setPosition("auditor");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -73,10 +80,10 @@ export default function FinanceiroEquipe() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  if (adminLoading) {
+  if (adminLoading || gerenteLoading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
-  if (!isAdmin) {
+  if (!canManage) {
     return <Navigate to={`${basePath}/dashboard`} replace />;
   }
 
@@ -93,7 +100,7 @@ export default function FinanceiroEquipe() {
               <Plus className="h-4 w-4" /> Novo Membro
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto mx-auto">
             <DialogHeader>
               <DialogTitle>Cadastrar Membro</DialogTitle>
             </DialogHeader>
@@ -115,6 +122,23 @@ export default function FinanceiroEquipe() {
               <div className="space-y-2">
                 <Label>Senha</Label>
                 <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} placeholder="Mínimo 6 caracteres" />
+              </div>
+              <div className="space-y-2">
+                <Label>Cargo</Label>
+                <Select value={position} onValueChange={(v) => setPosition(v as "auditor" | "gerente")}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auditor">Auditor</SelectItem>
+                    <SelectItem value="gerente">Gerente Financeiro</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  {position === "gerente"
+                    ? "Gerentes podem gerenciar a equipe e possuem acesso privilegiado ao painel."
+                    : "Auditores realizam a verificação e aprovação de saques."}
+                </p>
               </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>
                 {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
@@ -145,7 +169,12 @@ export default function FinanceiroEquipe() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{agent.display_name || "Sem nome"}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium truncate">{agent.display_name || "Sem nome"}</p>
+                    <Badge variant={agent.is_gerente ? "default" : "secondary"} className="text-[10px] shrink-0">
+                      {agent.is_gerente ? "Gerente" : "Auditor"}
+                    </Badge>
+                  </div>
                   <p className="text-xs text-muted-foreground truncate">{agent.email}</p>
                 </div>
                 <Button

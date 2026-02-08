@@ -24,6 +24,7 @@ import { isLovableHost } from "@/lib/appOrigin";
 import invictusLogo from "@/assets/INVICTUS-GOLD_1.png";
 import { useAuth } from "@/auth/AuthProvider";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useIsFinanceiroGerente } from "@/hooks/useIsFinanceiroGerente";
  
  interface FinanceiroMenuSheetProps {
    open: boolean;
@@ -41,9 +42,11 @@ export function FinanceiroMenuSheet({ open, onOpenChange }: FinanceiroMenuSheetP
    const location = useLocation();
    const { theme, setTheme } = useTheme();
    const { user } = useAuth();
-   const { data: isAdmin } = useIsAdmin(user?.id);
- 
-   const basePath = isLovableHost(window.location.hostname) ? "/financeiro" : "";
+    const { data: isAdmin } = useIsAdmin(user?.id);
+    const { data: isGerente } = useIsFinanceiroGerente(user?.id);
+    const canManageTeam = isAdmin || isGerente;
+  
+    const basePath = isLovableHost(window.location.hostname) ? "/financeiro" : "";
  
    const menuItems: MenuItem[] = [
       { title: "Fila de Auditoria", url: `${basePath}/dashboard`, icon: ListChecks },
@@ -53,9 +56,9 @@ export function FinanceiroMenuSheet({ open, onOpenChange }: FinanceiroMenuSheetP
        { title: "Carteira", url: `${basePath}/carteira`, icon: Wallet },
     ];
 
-   const adminItems: MenuItem[] = isAdmin
-     ? [{ title: "Equipe", url: `${basePath}/equipe`, icon: Users }]
-     : [];
+   const adminItems: MenuItem[] = canManageTeam
+      ? [{ title: "Equipe", url: `${basePath}/equipe`, icon: Users }]
+      : [];
  
    const handleNavigate = (item: MenuItem) => {
      navigate(item.url);

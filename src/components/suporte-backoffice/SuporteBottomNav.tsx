@@ -5,6 +5,7 @@ import { useIsMobileOrTablet } from "@/hooks/use-mobile";
 import { isLovableHost } from "@/lib/appOrigin";
 import { useAuth } from "@/auth/AuthProvider";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useIsSuporteGerente } from "@/hooks/useIsSuporteGerente";
 
 export function SuporteBottomNav() {
   const isMobile = useIsMobileOrTablet();
@@ -12,6 +13,10 @@ export function SuporteBottomNav() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: isAdmin } = useIsAdmin(user?.id);
+  const { data: isGerente } = useIsSuporteGerente(user?.id);
+
+  const showManagerFeatures = isAdmin || isGerente;
+  const showIAFeatures = isAdmin;
 
   if (!isMobile) return null;
 
@@ -19,9 +24,11 @@ export function SuporteBottomNav() {
 
   const items = [
     { id: "dashboard", label: "Tickets", icon: ListChecks, url: `${basePath}/dashboard` },
-    ...(isAdmin ? [
+    ...(showManagerFeatures ? [
       { id: "equipe", label: "Equipe", icon: Users, url: `${basePath}/equipe` },
       { id: "avaliacoes", label: "Avaliações", icon: Star, url: `${basePath}/avaliacoes` },
+    ] : []),
+    ...(showIAFeatures ? [
       { id: "ia", label: "IA", icon: Brain, url: `${basePath}/ia` },
     ] : []),
   ];

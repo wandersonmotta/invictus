@@ -385,7 +385,7 @@ export function SupportChatView({ ticketId }: Props) {
               createdAt={msg.created_at}
               perspective="user"
               readAt={msg.read_at}
-              senderName={msg.sender_type === "user" ? (myProfile?.display_name || "Você") : agentProfile?.name}
+              senderName={msg.sender_type === "user" ? "Você" : agentProfile?.name}
               senderAvatar={msg.sender_type === "user" ? (myProfile?.avatar_url || undefined) : (agentProfile?.avatar || undefined)}
               attachments={attachments[msg.id]}
             />

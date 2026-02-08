@@ -22,9 +22,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { isLovableHost } from "@/lib/appOrigin";
 import invictusLogo from "@/assets/INVICTUS-GOLD_1.png";
-import { useAuth } from "@/auth/AuthProvider";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { useIsFinanceiroGerente } from "@/hooks/useIsFinanceiroGerente";
+import { useFinanceiroRole } from "@/hooks/useFinanceiroRole";
  
  interface FinanceiroMenuSheetProps {
    open: boolean;
@@ -41,24 +39,25 @@ export function FinanceiroMenuSheet({ open, onOpenChange }: FinanceiroMenuSheetP
    const navigate = useNavigate();
    const location = useLocation();
    const { theme, setTheme } = useTheme();
-   const { user } = useAuth();
-    const { data: isAdmin } = useIsAdmin(user?.id);
-    const { data: isGerente } = useIsFinanceiroGerente(user?.id);
-    const canManageTeam = isAdmin || isGerente;
-  
-    const basePath = isLovableHost(window.location.hostname) ? "/financeiro" : "";
+    const { isManager } = useFinanceiroRole();
+   
+     const basePath = isLovableHost(window.location.hostname) ? "/financeiro" : "";
  
-   const menuItems: MenuItem[] = [
-      { title: "Fila de Auditoria", url: `${basePath}/dashboard`, icon: ListChecks },
-      { title: "Histórico", url: `${basePath}/historico`, icon: FileText },
-       { title: "Relatórios", url: `${basePath}/relatorios`, icon: BarChart3 },
-       { title: "Pagamentos", url: `${basePath}/pagamentos`, icon: CreditCard },
-       { title: "Carteira", url: `${basePath}/carteira`, icon: Wallet },
-    ];
+    const menuItems: MenuItem[] = isManager
+      ? [
+          { title: "Fila de Auditoria", url: `${basePath}/dashboard`, icon: ListChecks },
+          { title: "Histórico", url: `${basePath}/historico`, icon: FileText },
+          { title: "Relatórios", url: `${basePath}/relatorios`, icon: BarChart3 },
+          { title: "Pagamentos", url: `${basePath}/pagamentos`, icon: CreditCard },
+          { title: "Carteira", url: `${basePath}/carteira`, icon: Wallet },
+        ]
+      : [
+          { title: "Fila de Auditoria", url: `${basePath}/dashboard`, icon: ListChecks },
+        ];
 
-   const adminItems: MenuItem[] = canManageTeam
-      ? [{ title: "Equipe", url: `${basePath}/equipe`, icon: Users }]
-      : [];
+    const adminItems: MenuItem[] = isManager
+       ? [{ title: "Equipe", url: `${basePath}/equipe`, icon: Users }]
+       : [];
  
    const handleNavigate = (item: MenuItem) => {
      navigate(item.url);

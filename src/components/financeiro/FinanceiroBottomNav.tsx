@@ -2,9 +2,10 @@
  import { useLocation, useNavigate } from "react-router-dom";
  import { ListChecks, FileText, BarChart3, Wallet, CreditCard, Menu } from "lucide-react";
  
- import { useIsMobileOrTablet } from "@/hooks/use-mobile";
- import { isLovableHost } from "@/lib/appOrigin";
- import { FinanceiroMenuSheet } from "./FinanceiroMenuSheet";
+import { useIsMobileOrTablet } from "@/hooks/use-mobile";
+import { isLovableHost } from "@/lib/appOrigin";
+import { FinanceiroMenuSheet } from "./FinanceiroMenuSheet";
+import { useFinanceiroRole } from "@/hooks/useFinanceiroRole";
  
  interface NavItem {
    id: string;
@@ -18,16 +19,21 @@
    const isMobileOrTablet = useIsMobileOrTablet();
    const location = useLocation();
    const navigate = useNavigate();
-   const [menuOpen, setMenuOpen] = useState(false);
- 
-   const basePath = isLovableHost(window.location.hostname) ? "/financeiro" : "";
- 
-   const navItems: NavItem[] = [
-      { id: "auditoria", label: "Auditoria", icon: ListChecks, action: "navigate", url: `${basePath}/dashboard` },
-      { id: "historico", label: "Histórico", icon: FileText, action: "navigate", url: `${basePath}/historico` },
-       { id: "pagamentos", label: "Pagamentos", icon: CreditCard, action: "navigate", url: `${basePath}/pagamentos` },
-       { id: "menu", label: "Menu", icon: Menu, action: "menu" },
-   ];
+    const [menuOpen, setMenuOpen] = useState(false);
+    const { isManager } = useFinanceiroRole();
+  
+    const basePath = isLovableHost(window.location.hostname) ? "/financeiro" : "";
+
+    const navItems: NavItem[] = isManager
+      ? [
+          { id: "auditoria", label: "Auditoria", icon: ListChecks, action: "navigate", url: `${basePath}/dashboard` },
+          { id: "historico", label: "Histórico", icon: FileText, action: "navigate", url: `${basePath}/historico` },
+          { id: "pagamentos", label: "Pagamentos", icon: CreditCard, action: "navigate", url: `${basePath}/pagamentos` },
+          { id: "menu", label: "Menu", icon: Menu, action: "menu" },
+        ]
+      : [
+          { id: "auditoria", label: "Auditoria", icon: ListChecks, action: "navigate", url: `${basePath}/dashboard` },
+        ];
  
    // Render only on mobile AND tablets (< 1024px)
    if (!isMobileOrTablet) return null;

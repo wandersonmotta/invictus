@@ -11,8 +11,7 @@ import { isLovableHost } from "@/lib/appOrigin";
 import { FinanceiroBottomNav } from "./FinanceiroBottomNav";
 import { SuporteProfileSetup } from "@/components/suporte-backoffice/SuporteProfileSetup";
 import { useAuth } from "@/auth/AuthProvider";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { useIsFinanceiroGerente } from "@/hooks/useIsFinanceiroGerente";
+import { useFinanceiroRole } from "@/hooks/useFinanceiroRole";
 
 interface FinanceiroLayoutProps {
   children: ReactNode;
@@ -23,9 +22,7 @@ export function FinanceiroLayout({ children }: FinanceiroLayoutProps) {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
-  const { data: isAdmin } = useIsAdmin(user?.id);
-  const { data: isGerente } = useIsFinanceiroGerente(user?.id);
-  const canManageTeam = isAdmin || isGerente;
+  const { isManager } = useFinanceiroRole();
 
   const [profileComplete, setProfileComplete] = useState<boolean | null>(null);
 
@@ -78,22 +75,24 @@ export function FinanceiroLayout({ children }: FinanceiroLayoutProps) {
           <NavItem to={`${basePath}/dashboard`} active={location.pathname.includes("dashboard")} icon={<ListChecks className="h-4 w-4" />}>
             Fila de Auditoria
           </NavItem>
-          <NavItem to={`${basePath}/historico`} active={location.pathname.includes("historico")} icon={<FileText className="h-4 w-4" />}>
-            Histórico
-          </NavItem>
-          <NavItem to={`${basePath}/relatorios`} active={location.pathname.includes("relatorios")} icon={<BarChart3 className="h-4 w-4" />}>
-            Relatórios
-          </NavItem>
-          <NavItem to={`${basePath}/pagamentos`} active={location.pathname.includes("pagamentos")} icon={<CreditCard className="h-4 w-4" />}>
-            Pagamentos
-          </NavItem>
-          <NavItem to={`${basePath}/carteira`} active={location.pathname.includes("carteira")} icon={<Wallet className="h-4 w-4" />}>
-            Carteira
-          </NavItem>
-          {canManageTeam && (
-            <NavItem to={`${basePath}/equipe`} active={location.pathname.includes("equipe")} icon={<Users className="h-4 w-4" />}>
-              Equipe
-            </NavItem>
+          {isManager && (
+            <>
+              <NavItem to={`${basePath}/historico`} active={location.pathname.includes("historico")} icon={<FileText className="h-4 w-4" />}>
+                Histórico
+              </NavItem>
+              <NavItem to={`${basePath}/relatorios`} active={location.pathname.includes("relatorios")} icon={<BarChart3 className="h-4 w-4" />}>
+                Relatórios
+              </NavItem>
+              <NavItem to={`${basePath}/pagamentos`} active={location.pathname.includes("pagamentos")} icon={<CreditCard className="h-4 w-4" />}>
+                Pagamentos
+              </NavItem>
+              <NavItem to={`${basePath}/carteira`} active={location.pathname.includes("carteira")} icon={<Wallet className="h-4 w-4" />}>
+                Carteira
+              </NavItem>
+              <NavItem to={`${basePath}/equipe`} active={location.pathname.includes("equipe")} icon={<Users className="h-4 w-4" />}>
+                Equipe
+              </NavItem>
+            </>
           )}
         </nav>
 

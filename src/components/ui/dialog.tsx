@@ -37,13 +37,13 @@ const DialogContent = React.forwardRef<
       Stabilize positioning: avoid translateY(-50%) centering, which can cause visible "jumping"
       when dialog content height changes (validation errors, virtual keyboard, autofill, etc.).
     */}
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
           "relative grid w-full max-w-lg gap-4 border bg-background p-6 shadow-lg duration-200",
-          "mt-[10vh] sm:mt-24",
-          "max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-h-[calc(100vh-3rem)]",
+          "max-h-[85vh] overflow-y-auto sm:max-h-[calc(100vh-3rem)]",
+          "rounded-lg",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",

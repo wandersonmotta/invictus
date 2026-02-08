@@ -1,169 +1,73 @@
 
-# Plano: Chat IA Flutuante sem Ticket + Treinamento de IA no Back-office
+# Plano: Equipe Financeira (mesmo padrao do Suporte)
 
-## Resumo das Mudancas
+## Resumo
 
-O fluxo de suporte muda fundamentalmente:
-
-1. **Botao flutuante abre um popup/drawer de chat com a IA** -- nao navega para /suporte e nao cria ticket
-2. **Conversa com IA e efemera** -- sem historico, sem ticket, sem persistencia
-3. **Ticket so e criado quando a IA escala para atendente** -- a IA decide quando oferecer atendente humano
-4. **Remover botao "Falar com atendente"** do header do chat do usuario
-5. **Pagina /suporte mostra apenas tickets reais** (escalados) -- sem botao "Iniciar chat"
-6. **Nova secao "IA" no back-office (admin only)** para inserir treinamentos/knowledge base
+Criar a secao "Equipe" no painel financeiro, seguindo exatamente o mesmo padrao ja implementado no back-office de suporte. Apenas o admin pode visualizar e gerenciar membros da equipe financeira. Novos membros precisam completar um setup de perfil obrigatorio (nome, sobrenome, foto) no primeiro acesso.
 
 ---
 
-## Bloco 1 -- Chat Flutuante com IA (Popup/Drawer)
+## O que sera feito
 
-### O que muda no `SupportChatBubble`
-Atualmente o botao flutuante navega para `/suporte`. Agora ele vai abrir um popup (desktop) ou drawer (mobile) com um mini-chat inline.
+### 1. Edge Function: `manage-financeiro-agents`
 
-### Novo componente: `SupportAIChatPopup`
-- **Desktop**: Popover/dialog fixo no canto inferior direito (~400x500px), estilo WhatsApp Web
-- **Mobile**: Drawer (vaul) subindo da parte de baixo, ~90vh de altura
-- Chat completamente efemero: mensagens ficam apenas no state React (useState)
-- Sem criar ticket, sem persistir no banco
-- Input + mensagens + indicador "IA digitando..."
-- Ao fechar, o historico some
+Copia do `manage-support-agents`, mas operando com a role `financeiro` em vez de `suporte`:
 
-### Comunicacao com a IA
-- Cria uma nova edge function `support-chat-ephemeral` que:
-  - NAO cria ticket
-  - NAO salva mensagens no banco
-  - Recebe o array de mensagens no body (historico vem do client state)
-  - Tambem recebe treinamentos do banco (busca `ai_training_entries` ativas e injeta no system prompt)
-  - Faz streaming SSE da resposta igual ao `support-chat` atual
-  - Se a resposta contem `[ESCALATE]`, retorna um header especial ou campo no SSE indicando escalacao
-- Quando IA escala:
-  - O frontend cria o ticket automaticamente (`support_tickets` com status `escalated`)
-  - Salva todas as mensagens efemeras no banco como historico do ticket
-  - Navega para `/suporte/{ticketId}`
-  - O atendente no back-office ve todo o contexto da conversa com a IA
+- **create**: Cria usuario via admin API, cria perfil com `access_status = 'approved'`, atribui role `financeiro`
+- **remove**: Remove role `financeiro` do usuario
+- **list**: Lista usuarios com role `financeiro`, excluindo admins, retornando perfil + email
 
-### System prompt atualizado
-- Remover a regra de "se o membro pedir para falar com atendente"
-- A IA tenta resolver sozinha
-- Apos 3-4 tentativas sem sucesso, a IA pergunta se o membro gostaria de falar com um especialista
-- Se o membro confirmar, a IA retorna `[ESCALATE]`
-- A IA nunca sugere atendente humano logo de cara
+### 2. Pagina: `FinanceiroEquipe.tsx`
 
----
+Copia do `SuporteEquipe.tsx` adaptada para o contexto financeiro:
 
-## Bloco 2 -- Pagina /suporte (Apenas Tickets Reais)
+- Titulo: "Equipe Financeira"
+- Usa `useIsAdmin` para restringir acesso
+- Chama `manage-financeiro-agents` em vez de `manage-support-agents`
+- Formulario para cadastrar novo membro (nome, email, senha)
+- Lista de membros com avatar, nome, email e botao de remover
+- Redireciona nao-admins para `/financeiro/dashboard` (ou `/dashboard` em producao)
 
-### Mudancas em `Suporte.tsx`
-- Remover botao "Iniciar chat" (nao cria mais ticket manualmente)
-- Lista apenas tickets com status `escalated`, `assigned` ou `resolved`
-- Filtrar tickets `ai_handling` da lista (se algum existir por legado)
-- Mensagem vazia: "Nenhum atendimento registrado" (em vez de "clique em iniciar chat")
+### 3. Setup de Perfil Obrigatorio
 
----
+Reutilizar o `SuporteProfileSetup` existente (ou criar `FinanceiroProfileSetup` identico) no `FinanceiroLayout`:
 
-## Bloco 3 -- Remover Escalacao Manual do SupportChatView
+- Ao carregar o layout, verificar se o usuario logado tem `first_name`, `last_name` e `avatar_url`
+- Se faltar algum, exibir tela de setup obrigatoria antes de mostrar o conteudo
+- Apos salvar, a tela some permanentemente
 
-### Mudancas em `SupportChatView.tsx`
-- Remover o botao "Falar com atendente" do header (o que tinha `handleEscalate`)
-- Manter botao "Encerrar" para tickets `assigned`/`escalated`
-- O chat view agora so e acessado quando ja existe um ticket real
+### 4. Navegacao
 
----
+Adicionar link "Equipe" na sidebar e bottom nav, visivel apenas para admin:
 
-## Bloco 4 -- Treinamento da IA (Admin Only no Back-office)
-
-### Banco de dados (migration)
-
-Nova tabela `ai_training_entries`:
-
-```text
-id            uuid PK
-title         text NOT NULL (titulo do treinamento)
-content       text NOT NULL (conteudo/instrucoes para a IA)
-category      text (ex: "plataforma", "servicos", "planos")
-active        boolean DEFAULT true
-created_at    timestamptz
-updated_at    timestamptz
-created_by    uuid (admin que criou)
-```
-
-RLS:
-- Admin pode CRUD completo
-- Ninguem mais acessa (a edge function usa service role)
-
-### Nova pagina: `SuporteIATreinamento.tsx`
-- Acessivel apenas por admin
-- Lista de treinamentos com titulo, categoria, status (ativo/inativo)
-- Botao para adicionar novo treinamento (dialog com titulo, categoria, conteudo textarea grande)
-- Opcao de editar e ativar/desativar cada entrada
-- Oculta para usuarios com role `suporte` (apenas admin ve)
-
-### Integracao com a IA
-- A edge function `support-chat-ephemeral` busca todos os `ai_training_entries` ativos
-- Concatena o conteudo no system prompt como secao "Base de Conhecimento"
-- A IA usa essas informacoes para responder com mais precisao
+- **Sidebar** (`FinanceiroLayout.tsx`): Novo `NavItem` com icone `Users` apos "Carteira", condicional ao admin
+- **Bottom Nav** (`FinanceiroBottomNav.tsx`): Nao adicionar item direto (ja tem Menu); incluir no `FinanceiroMenuSheet` como item admin-only
+- **Rota** (`HostRouter.tsx`): Adicionar rota `/equipe` no bloco financeiro (preview e producao)
 
 ---
 
 ## Detalhes Tecnicos
 
-### Migration SQL
+### Arquivos a criar
 
-```text
-CREATE TABLE public.ai_training_entries (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  title text NOT NULL,
-  content text NOT NULL,
-  category text DEFAULT 'geral',
-  active boolean NOT NULL DEFAULT true,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  created_by uuid
-);
+| Arquivo | Descricao |
+|---------|-----------|
+| `supabase/functions/manage-financeiro-agents/index.ts` | Edge function para CRUD de membros financeiros |
+| `src/pages/financeiro/FinanceiroEquipe.tsx` | Pagina de gestao da equipe |
 
-ALTER TABLE public.ai_training_entries ENABLE ROW LEVEL SECURITY;
+### Arquivos a modificar
 
-CREATE POLICY "Admins can manage training entries"
-  ON public.ai_training_entries FOR ALL
-  USING (has_role(auth.uid(), 'admin'::app_role))
-  WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
-```
-
-### Edge function: `support-chat-ephemeral`
-
-```text
-supabase/functions/support-chat-ephemeral/index.ts
-- Recebe { messages: [{role, content}] } no body
-- Autentica o usuario via JWT
-- Busca ai_training_entries ativas com service role
-- Monta system prompt = SYSTEM_PROMPT base + "\n\n## Base de Conhecimento\n" + conteudos
-- Chama Lovable AI com streaming
-- Retorna SSE stream para o client
-- Apos stream completo, verifica se contem [ESCALATE] e retorna trailer/final event
-```
-
-### Arquivos a criar/modificar
-
-| Arquivo | Acao |
-|---------|------|
-| Migration SQL | Tabela `ai_training_entries` |
-| `supabase/functions/support-chat-ephemeral/index.ts` | **Novo** -- chat IA efemero sem ticket |
-| `supabase/config.toml` | Adicionar config para `support-chat-ephemeral` |
-| `src/components/suporte/SupportAIChatPopup.tsx` | **Novo** -- popup/drawer de chat flutuante |
-| `src/components/suporte/SupportChatBubble.tsx` | Abrir popup em vez de navegar |
-| `src/pages/Suporte.tsx` | Remover botao "Iniciar chat", filtrar tickets ai_handling |
-| `src/components/suporte/SupportChatView.tsx` | Remover botao "Falar com atendente" |
-| `src/pages/suporte-backoffice/SuporteIATreinamento.tsx` | **Novo** -- painel de treinamento IA (admin) |
-| `src/components/suporte-backoffice/SuporteLayout.tsx` | Adicionar link "IA" (admin only) |
-| `src/components/suporte-backoffice/SuporteBottomNav.tsx` | Adicionar item "IA" (admin only) |
-| `src/routing/HostRouter.tsx` | Adicionar rota SuporteIATreinamento |
+| Arquivo | Mudanca |
+|---------|---------|
+| `supabase/config.toml` | Adicionar config `manage-financeiro-agents` |
+| `src/components/financeiro/FinanceiroLayout.tsx` | Verificar perfil incompleto (setup obrigatorio) + link "Equipe" admin-only na sidebar |
+| `src/components/financeiro/FinanceiroMenuSheet.tsx` | Adicionar item "Equipe" admin-only no menu mobile |
+| `src/routing/HostRouter.tsx` | Adicionar rota `/equipe` nos blocos financeiro (preview + producao) |
 
 ### Ordem de execucao
 
-1. Migration (tabela `ai_training_entries`)
-2. Edge function `support-chat-ephemeral` + config.toml + deploy
-3. `SupportAIChatPopup` (componente de chat flutuante efemero)
-4. `SupportChatBubble` (abrir popup em vez de navegar)
-5. `Suporte.tsx` (remover botao iniciar, filtrar lista)
-6. `SupportChatView.tsx` (remover botao "Falar com atendente")
-7. `SuporteIATreinamento.tsx` (painel admin)
-8. Navegacao + rotas (SuporteLayout, SuporteBottomNav, HostRouter)
+1. Criar edge function `manage-financeiro-agents` + config.toml + deploy
+2. Criar `FinanceiroEquipe.tsx`
+3. Modificar `FinanceiroLayout.tsx` (setup obrigatorio + link Equipe)
+4. Modificar `FinanceiroMenuSheet.tsx` (item Equipe admin)
+5. Adicionar rota em `HostRouter.tsx`

@@ -1862,6 +1862,24 @@ export type Database = {
           username: string
         }[]
       }
+      list_all_service_payments: {
+        Args: { p_limit?: number }
+        Returns: {
+          amount_cents: number
+          avatar_url: string
+          created_at: string
+          display_name: string
+          expires_at: string
+          item_count: number
+          paid_at: string
+          payment_id: string
+          payment_provider: string
+          service_type: string
+          status: string
+          user_id: string
+          username: string
+        }[]
+      }
       list_community_channels: {
         Args: never
         Returns: {

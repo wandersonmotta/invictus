@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
  import { supabase } from "@/integrations/supabase/client";
  import { Button } from "@/components/ui/button";
-import { LogOut, FileText, ListChecks, BarChart3, Wallet, Monitor, Sun, Moon } from "lucide-react";
+import { LogOut, FileText, ListChecks, BarChart3, Wallet, CreditCard, Monitor, Sun, Moon } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
  import invictusLogo from "@/assets/INVICTUS-GOLD_1.png";
 import { cn } from "@/lib/utils";
@@ -44,12 +44,15 @@ import { cn } from "@/lib/utils";
           <NavItem to={`${basePath}/historico`} active={location.pathname.includes("historico")} icon={<FileText className="h-4 w-4" />}>
              Histórico
            </NavItem>
-           <NavItem to={`${basePath}/relatorios`} active={location.pathname.includes("relatorios")} icon={<BarChart3 className="h-4 w-4" />}>
-              Relatórios
-            </NavItem>
-           <NavItem to={`${basePath}/carteira`} active={location.pathname.includes("carteira")} icon={<Wallet className="h-4 w-4" />}>
-              Carteira
-            </NavItem>
+            <NavItem to={`${basePath}/relatorios`} active={location.pathname.includes("relatorios")} icon={<BarChart3 className="h-4 w-4" />}>
+               Relatórios
+             </NavItem>
+            <NavItem to={`${basePath}/pagamentos`} active={location.pathname.includes("pagamentos")} icon={<CreditCard className="h-4 w-4" />}>
+               Pagamentos
+             </NavItem>
+            <NavItem to={`${basePath}/carteira`} active={location.pathname.includes("carteira")} icon={<Wallet className="h-4 w-4" />}>
+               Carteira
+             </NavItem>
          </nav>
  
           <div className="border-t border-border p-4 space-y-4">

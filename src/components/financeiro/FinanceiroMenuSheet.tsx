@@ -4,6 +4,7 @@
   ListChecks,
   FileText,
   BarChart3,
+  CreditCard,
   Wallet,
    ChevronRight,
    LogOut,
@@ -40,10 +41,11 @@
    const basePath = isLovableHost(window.location.hostname) ? "/financeiro" : "";
  
    const menuItems: MenuItem[] = [
-     { title: "Fila de Auditoria", url: `${basePath}/dashboard`, icon: ListChecks },
-     { title: "Histórico", url: `${basePath}/historico`, icon: FileText },
-      { title: "Relatórios", url: `${basePath}/relatorios`, icon: BarChart3 },
-      { title: "Carteira", url: `${basePath}/carteira`, icon: Wallet },
+      { title: "Fila de Auditoria", url: `${basePath}/dashboard`, icon: ListChecks },
+      { title: "Histórico", url: `${basePath}/historico`, icon: FileText },
+       { title: "Relatórios", url: `${basePath}/relatorios`, icon: BarChart3 },
+       { title: "Pagamentos", url: `${basePath}/pagamentos`, icon: CreditCard },
+       { title: "Carteira", url: `${basePath}/carteira`, icon: Wallet },
     ];
  
    const handleNavigate = (item: MenuItem) => {

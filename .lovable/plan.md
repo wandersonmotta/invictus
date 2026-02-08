@@ -1,108 +1,70 @@
 
 
-# Upgrade Premium da Landing Page -- Animacoes e Identidade Visual
+# Upgrade Premium v2 -- Timing, Footer e Refinamentos
 
-## Diagnostico Atual
+## Problemas identificados
 
-Analisei cada componente da landing e o sistema de animacoes. O que ja existe e bom:
-- Reveal on scroll com IntersectionObserver
-- Stagger lateral nos cards (slide da direita)
-- LED glow nos icones
-- Hover "pull forward" (3D lift) nos cards
-- Sheen no CTA (brilho deslizante no hover)
-- GoldHoverText (gradiente dourado seguindo o mouse)
+### 1. Animacoes disparando cedo demais
+O `useRevealOnScroll` usa `rootMargin: "0px 0px -10% 0px"` e `threshold: 0.15` por padrao. Isso significa que o elemento comeca a revelar quando apenas 15% dele esta visivel, com a margem inferior de apenas 10%. Na pratica, o conteudo "aparece" antes do usuario realmente chegar naquela area. O `SectionShell` usa `-18%` e `0.22`, o que e um pouco melhor mas ainda nao e suficiente.
 
-## O que FALTA para ser premium de verdade
+**Correcao**: Aumentar o `rootMargin` inferior para `-25%` a `-30%` e o `threshold` para `0.3` nos componentes principais (`SectionShell`, `EditorialMedia`, `RevealText`). Isso garante que a animacao so dispara quando o elemento esta realmente visivel e centralizado na tela.
 
-Hoje a landing tem cara de "template bonito" porque:
-1. A topbar aparece de forma plana, sem cerimonia
-2. O titulo principal nao tem entrada cinematografica (simplesmente aparece)
-3. As secoes todas usam o MESMO reveal (fade-up) -- monotono
-4. Nao existe parallax sutil entre camadas (fundo vs conteudo)
-5. Cards nao reagem ao mouse (nao "olham" pra voce)
-6. Nao existe uma "cortina de abertura" -- a pagina simplesmente carrega
-7. Textos longos nao revelam linha a linha -- aparecem de bloco
-8. O separador dourado e estatico -- poderia "acender" ao scroll
-9. O footer aparece sem cerimonia
+### 2. Footer com link "Entrar" desnecessario
+O footer tem um link "Entrar" que o usuario quer remover, mantendo apenas o da topbar.
 
-## Plano de Melhorias (7 upgrades)
+### 3. Oportunidades premium ainda nao exploradas
 
-### 1. Cortina de Abertura (Hero Cinematic Intro)
-Ao carregar a pagina, o logo aparece centralizado com fade + scale sutil, depois desliza pra cima enquanto o conteudo do Manifesto sobe por baixo. Dura ~1.2s. Elegante, sem exagero.
+Analisando referências de sites como Apple, Stripe, Linear e Porsche Design, identifico 5 melhorias que dariam um salto real de qualidade:
 
-**Onde**: Novo componente `HeroIntro` + CSS keyframes
-**Efeito**: Logo fade-in com scale 0.92->1.0, depois translateY para posicao final na topbar
+**a) Cursor Glow (Spotlight que segue o mouse)**
+Um brilho dourado sutil que segue o cursor sobre os paineis/cards. Nao e um circulo obvio -- e uma luz difusa que ilumina a area ao redor do mouse, como se voce estivesse passando uma lanterna por cima de uma superficie metalica. Efeito usado pela Stripe e Linear.
 
-### 2. Tilt 3D nos Cards (Mouse Tracking)
-Quando o mouse passa sobre os cards de pilares/depoimentos, o card inclina suavemente na direcao do cursor (perspective + rotateX/Y). Efeito sutil de 3-5 graus, nao exagerado.
+**b) Magnetic Hover nos botoes CTA**
+O botao "Quero fazer parte" se move sutilmente na direcao do cursor quando o mouse se aproxima (dentro de ~40px de distancia). Cria sensacao de que o botao "te puxa". Efeito usado por Apple e agencias premium.
 
-**Onde**: Novo hook `useTilt3D` aplicado nos cards
-**Performance**: Usa requestAnimationFrame, desabilitado no mobile
+**c) Texto com mascara de gradiente no scroll (Gradient Wipe)**
+Os titulos principais de cada secao revelam com um gradiente dourado que "varre" da esquerda para a direita, ao inves de um simples fade-up. O texto comeca com cor transparent e a mascara dourada passa revelando as letras. Efeito inspirado em Apple e Linear.
 
-### 3. Parallax Suave entre Camadas
-O background se move ~20% mais devagar que o conteudo ao scrollar, criando profundidade. Implementado com CSS transform no scroll (nao background-attachment: fixed que causa problemas).
+**d) Scroll Progress Indicator**
+Uma linha dourada fina no topo da pagina que cresce conforme o usuario desce, mostrando o progresso. Sutil, elegante, e reforça a identidade gold.
 
-**Onde**: Hook `useParallax` aplicado no `LandingBackground`
-**Performance**: CSS transform com will-change, throttled via rAF
+**e) Footer com animacao de entrada propria**
+O footer ganha um reveal mais ceremonioso: a linha dourada "acende" de ponta a ponta, depois o conteudo aparece com fade. Sem o link "Entrar".
 
-### 4. Texto Revelando Linha a Linha (Split Text Reveal)
-Os paragrafos principais do Manifesto revelam cada linha com um leve delay, criando efeito de "texto sendo escrito/revelado". Apenas nas 2-3 primeiras secoes para nao cansar.
-
-**Onde**: Novo componente `RevealText` que envolve paragrafos-chave
-**Efeito**: Cada linha com opacity 0->1 + translateY(8px) com 80ms de delay entre elas
-
-### 5. Separador Dourado Animado
-O separador entre titulo e conteudo de cada secao "acende" da esquerda pra direita quando a secao entra na viewport, como uma linha de luz se propagando.
-
-**Onde**: CSS animation no `.invictus-section-separator` dentro de `.invictus-revealed`
-**Efeito**: scaleX(0)->scaleX(1) com origin left, 800ms ease-out
-
-### 6. Topbar com Blur Progressivo ao Scroll
-A topbar comeca transparente e vai ganhando backdrop-blur + borda sutil conforme o usuario scrolla. Sticky com transicao suave.
-
-**Onde**: Atualizar `LandingTopbar` com hook de scroll position
-**Efeito**: Sticky top-0 com backdrop-blur crescente (0->20px) e borda bottom aparecendo
-
-### 7. Numero Contando (Counter) nos Depoimentos
-Quando a secao de depoimentos entra na viewport, numeros como "R$ 10 mil" fazem um count-up animado rapido. Cria impacto visual.
-
-**Onde**: Novo componente `AnimatedNumber` usado no texto do Lucas P.
-**Efeito**: Contagem de 0 ate 10.000 em ~1.5s com easing
-
-## Detalhes Tecnicos
+## Detalhes tecnicos
 
 ### Arquivos que serao CRIADOS
-- `src/hooks/useTilt3D.ts` -- Hook de inclinacao 3D por mouse tracking
-- `src/hooks/useParallax.ts` -- Hook de parallax suave no scroll
-- `src/components/landing/HeroIntro.tsx` -- Cortina de abertura cinematografica
-- `src/components/landing/RevealText.tsx` -- Texto revelando linha a linha
-- `src/components/landing/AnimatedNumber.tsx` -- Counter animado
-- `src/components/landing/StickyTopbar.tsx` -- Wrapper da topbar com blur progressivo
+- `src/hooks/useCursorGlow.ts` -- Hook que rastreia o mouse e aplica uma variavel CSS com a posicao do cursor em elementos, criando o efeito de spotlight
+- `src/hooks/useMagneticHover.ts` -- Hook que aplica deslocamento magnetico (translateX/Y) em um elemento quando o cursor se aproxima
+- `src/components/landing/ScrollProgress.tsx` -- Barra fina dourada no topo que mostra progresso do scroll
 
 ### Arquivos que serao MODIFICADOS
-- `src/styles/invictus-auth.css` -- Novos keyframes (separador animado, cortina)
-- `src/pages/Landing.tsx` -- Integrar HeroIntro e StickyTopbar
-- `src/components/landing/ManifestoSections.tsx` -- Aplicar RevealText, tilt nos cards
-- `src/components/landing/TestimonialsSection.tsx` -- Tilt nos cards, AnimatedNumber
-- `src/components/landing/SectionShell.tsx` -- Separador animado
-- `src/components/landing/LandingTopbar.tsx` -- Refatorar para usar StickyTopbar
-- `src/components/landing/LandingBackground.tsx` -- Integrar parallax
-
-### Sem dependencias externas
-Tudo feito com CSS puro + hooks React. Zero bibliotecas novas.
+- `src/components/landing/SectionShell.tsx` -- Aumentar threshold/rootMargin do reveal para disparar mais tarde; integrar cursor glow no painel
+- `src/components/landing/EditorialMedia.tsx` -- Aumentar threshold/rootMargin
+- `src/components/landing/RevealText.tsx` -- Aumentar threshold/rootMargin
+- `src/components/landing/ManifestoSections.tsx` -- Aplicar gradient wipe nos titulos principais
+- `src/components/landing/WaitlistHero.tsx` -- Aplicar magnetic hover no CTA "Quero fazer parte"
+- `src/components/landing/LandingFooter.tsx` -- Remover link "Entrar"; adicionar reveal animado proprio
+- `src/pages/Landing.tsx` -- Integrar ScrollProgress
+- `src/styles/invictus-auth.css` -- Novos keyframes (gradient-wipe, cursor-glow radial)
 
 ### Performance
-- Todos os efeitos usam `transform` e `opacity` (GPU accelerated)
-- Mobile: tilt 3D e parallax desabilitados automaticamente
-- `prefers-reduced-motion`: todos os efeitos desabilitados
-- `will-change` aplicado apenas durante a animacao
+- Cursor glow usa CSS custom properties (`--mx`, `--my`) atualizadas via `mousemove` com rAF -- zero repaints extras, apenas repaint do radial-gradient via GPU
+- Magnetic hover usa transform (GPU) e so ativa em `(hover: hover) and (pointer: fine)`
+- Gradient wipe e CSS puro com `background-clip: text` e animacao de `background-position`
+- Scroll progress usa `scrollY / scrollHeight` com rAF, atualiza uma unica variavel CSS
+- Todos desabilitados com `prefers-reduced-motion`
+- Todos desabilitados no mobile (touch)
+
+### Sem dependencias externas
+Tudo com CSS + hooks React nativos.
 
 ### Ordem de implementacao
-1. Cortina de abertura (impacto imediato)
-2. Topbar sticky com blur
-3. Separador animado
-4. Tilt 3D nos cards
-5. Parallax no background
-6. RevealText nos paragrafos
-7. Counter nos depoimentos
+1. Corrigir timing dos reveals (impacto imediato na experiencia)
+2. Remover "Entrar" do footer
+3. Scroll progress indicator
+4. Cursor glow nos paineis
+5. Gradient wipe nos titulos
+6. Magnetic hover no CTA
+7. Footer com reveal proprio
 

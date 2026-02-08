@@ -16,9 +16,11 @@ import { LandingBackground } from "@/components/landing/LandingBackground";
 import { HeroIntro } from "@/components/landing/HeroIntro";
 import { ScrollProgress } from "@/components/landing/ScrollProgress";
 import { useForceDark } from "@/hooks/useForceDark";
+import { useCopyProtection } from "@/hooks/useCopyProtection";
 
 export default function Landing() {
   useForceDark();
+  useCopyProtection();
   const [introComplete, setIntroComplete] = React.useState(false);
 
   React.useEffect(() => {

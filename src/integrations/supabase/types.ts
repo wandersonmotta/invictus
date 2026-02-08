@@ -2248,7 +2248,7 @@ export type Database = {
     }
     Enums: {
       access_status: "pending" | "approved" | "rejected"
-      app_role: "admin" | "moderator" | "user" | "financeiro"
+      app_role: "admin" | "moderator" | "user" | "financeiro" | "suporte"
       conversation_folder: "inbox" | "requests"
       conversation_type: "direct" | "group"
       invoice_status: "pending" | "paid" | "overdue"
@@ -2386,7 +2386,7 @@ export const Constants = {
   public: {
     Enums: {
       access_status: ["pending", "approved", "rejected"],
-      app_role: ["admin", "moderator", "user", "financeiro"],
+      app_role: ["admin", "moderator", "user", "financeiro", "suporte"],
       conversation_folder: ["inbox", "requests"],
       conversation_type: ["direct", "group"],
       invoice_status: ["pending", "paid", "overdue"],

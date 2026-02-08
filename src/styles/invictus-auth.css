@@ -737,4 +737,66 @@ body.invictus-landing-body {
     transform: scaleX(1) !important;
     transition: none !important;
   }
+  .invictus-gradient-wipe {
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    -webkit-text-fill-color: unset !important;
+  }
+  .invictus-cursor-glow::before {
+    display: none !important;
+  }
+}
+
+/* ========================================================
+   CURSOR GLOW - Spotlight dourado seguindo o mouse
+   ======================================================== */
+.invictus-cursor-glow {
+  --glow-x: 50%;
+  --glow-y: 50%;
+  --glow-opacity: 0;
+}
+
+.invictus-cursor-glow::before {
+  pointer-events: none;
+  background: radial-gradient(
+    420px circle at var(--glow-x) var(--glow-y),
+    hsl(var(--gold-hot) / 0.08),
+    transparent 60%
+  );
+  opacity: var(--glow-opacity);
+  transition: opacity 400ms ease;
+}
+
+/* ========================================================
+   GRADIENT WIPE - Título revela com gradiente dourado
+   ======================================================== */
+.invictus-gradient-wipe {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--foreground)) 0%,
+    hsl(var(--foreground)) 40%,
+    hsl(var(--gold-hot)) 50%,
+    hsl(var(--gold-soft)) 60%,
+    hsl(var(--foreground)) 70%,
+    hsl(var(--foreground)) 100%
+  );
+  background-size: 300% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.invictus-revealed .invictus-gradient-wipe {
+  animation: invictus-gradient-wipe 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation-delay: 100ms;
+}
+
+@keyframes invictus-gradient-wipe {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0% 0;
+  }
 }

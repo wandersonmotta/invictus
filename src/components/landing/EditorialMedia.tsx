@@ -30,8 +30,8 @@ export function EditorialMedia({
   const decorative = !alt;
   const fetchPriority = loading === "eager" ? "high" : "auto";
   const reveal = useRevealOnScroll<HTMLDivElement>({
-    rootMargin: "0px 0px -16% 0px",
-    threshold: 0.2,
+    rootMargin: "0px 0px -25% 0px",
+    threshold: 0.3,
     once: true,
     enterDelayMs: 44,
     disableClasses: true,

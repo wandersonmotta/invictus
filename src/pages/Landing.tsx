@@ -14,6 +14,7 @@ import {
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingBackground } from "@/components/landing/LandingBackground";
 import { HeroIntro } from "@/components/landing/HeroIntro";
+import { ScrollProgress } from "@/components/landing/ScrollProgress";
 import { useForceDark } from "@/hooks/useForceDark";
 
 export default function Landing() {
@@ -28,6 +29,7 @@ export default function Landing() {
   return (
     <>
       <HeroIntro onComplete={() => setIntroComplete(true)} />
+      {introComplete && <ScrollProgress />}
       <main
         className="invictus-landing-page min-h-svh"
         style={{

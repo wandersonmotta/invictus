@@ -3,11 +3,15 @@ import { ListChecks, LogOut, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobileOrTablet } from "@/hooks/use-mobile";
 import { isLovableHost } from "@/lib/appOrigin";
+import { useAuth } from "@/auth/AuthProvider";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 export function SuporteBottomNav() {
   const isMobile = useIsMobileOrTablet();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { data: isAdmin } = useIsAdmin(user?.id);
 
   if (!isMobile) return null;
 
@@ -15,7 +19,7 @@ export function SuporteBottomNav() {
 
   const items = [
     { id: "dashboard", label: "Tickets", icon: ListChecks, url: `${basePath}/dashboard` },
-    { id: "equipe", label: "Equipe", icon: Users, url: `${basePath}/equipe` },
+    ...(isAdmin ? [{ id: "equipe", label: "Equipe", icon: Users, url: `${basePath}/equipe` }] : []),
   ];
 
   return (

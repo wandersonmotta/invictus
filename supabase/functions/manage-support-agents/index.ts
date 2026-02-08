@@ -48,8 +48,8 @@ serve(async (req) => {
       .eq("user_id", user.id);
 
     const roles = (callerRoles || []).map((r: any) => r.role);
-    if (!roles.includes("admin") && !roles.includes("suporte")) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
+    if (!roles.includes("admin")) {
+      return new Response(JSON.stringify({ error: "Forbidden – admin only" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

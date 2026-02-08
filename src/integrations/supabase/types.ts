@@ -1441,6 +1441,27 @@ export type Database = {
         }
         Relationships: []
       }
+      support_agent_presence: {
+        Row: {
+          active_ticket_count: number
+          last_heartbeat: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          active_ticket_count?: number
+          last_heartbeat?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          active_ticket_count?: number
+          last_heartbeat?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       support_message_attachments: {
         Row: {
           content_type: string | null
@@ -1565,6 +1586,7 @@ export type Database = {
           created_at: string
           escalated_at: string | null
           id: string
+          priority: string | null
           resolved_at: string | null
           status: Database["public"]["Enums"]["support_ticket_status"]
           subject: string | null
@@ -1577,6 +1599,7 @@ export type Database = {
           created_at?: string
           escalated_at?: string | null
           id?: string
+          priority?: string | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["support_ticket_status"]
           subject?: string | null
@@ -1589,6 +1612,7 @@ export type Database = {
           created_at?: string
           escalated_at?: string | null
           id?: string
+          priority?: string | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["support_ticket_status"]
           subject?: string | null
@@ -2459,6 +2483,7 @@ export type Database = {
         | "escalated"
         | "assigned"
         | "resolved"
+        | "auto_assigned"
       wallet_transaction_type: "credit" | "debit"
       withdrawal_status: "pending" | "approved" | "rejected"
     }
@@ -2611,6 +2636,7 @@ export const Constants = {
         "escalated",
         "assigned",
         "resolved",
+        "auto_assigned",
       ],
       wallet_transaction_type: ["credit", "debit"],
       withdrawal_status: ["pending", "approved", "rejected"],

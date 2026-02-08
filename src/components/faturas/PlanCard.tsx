@@ -1,6 +1,5 @@
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import planInicialIcon from "@/assets/plan-inicial-icon.png";
 
 interface PlanFeature {
   id: string;
@@ -25,8 +24,8 @@ export function PlanCard({ name, priceCents, features, isCurrent }: PlanCardProp
   return (
     <div className="rounded-2xl bg-card border border-border p-6 space-y-5 flex flex-col">
       {/* Icon */}
-      <div className="mx-auto">
-        <img src={planInicialIcon} alt={name} className="h-16 w-16 rounded-xl object-contain" />
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/15">
+        <Zap className="h-7 w-7 text-primary" />
       </div>
 
       {/* Name & Price */}

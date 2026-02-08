@@ -42,13 +42,6 @@ export function GoldSweepText({
       }}
     >
       {children}
-      <style>{`
-        @keyframes gold-sweep {
-          0%   { background-position: 0% center, 200% center; }
-          60%  { background-position: 0% center, -100% center; }
-          100% { background-position: 0% center, -100% center; }
-        }
-      `}</style>
     </span>
   );
 }

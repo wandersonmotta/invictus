@@ -1,19 +1,27 @@
 
+# Ajustes no Chat Flutuante de Suporte
 
-# Corrigir chips de prioridade - layout responsivo sem scroll
+## O que muda
 
-## Problema
-Os chips de filtro (Todos, Urgente, Moderado, Baixo) estao usando `overflow-x-auto` que gera scroll horizontal. O usuario quer que todos aparecam lado a lado, sem scroll, ajustando o tamanho automaticamente.
+### 1. Icone flutuante funciona como toggle (abrir/fechar)
+- Clicar no icone abre o chat
+- Clicar novamente no icone fecha o chat (em vez de so poder fechar pelo X)
+- O icone permanece visivel mesmo com o chat aberto (remover o `hidden` quando `chatOpen`)
+- O X dentro do chat continua funcionando normalmente tambem
 
-## Solucao
-Trocar o container dos chips para usar `flex` com `flex-1` em cada chip, fazendo com que todos dividam o espaco disponivel igualmente. Remover `overflow-x-auto` e `no-scrollbar`. Reduzir o padding e tamanho do texto nos chips para que caibam confortavelmente em telas pequenas.
+### 2. Badge de notificacao no icone
+- Ja existe no codigo atual e funciona via realtime (linhas 60-64 do SupportChatBubble)
+- Nenhuma alteracao necessaria nesse ponto
 
-## Arquivo modificado
-`src/pages/suporte-backoffice/SuporteDashboard.tsx` - componente `PriorityChips`
+### 3. Nome alterado para "Ana - Suporte Invictus"
+- No header do chat, trocar "Suporte Invictus" para "Ana - Suporte Invictus"
 
-## Mudancas tecnicas
-1. Container: trocar de `flex gap-2 overflow-x-auto no-scrollbar` para `flex gap-1.5 w-full`
-2. Cada chip: adicionar `flex-1 justify-center` para distribuir igualmente e centralizar texto
-3. Reduzir padding de `px-3 py-1` para `px-1.5 py-1` e texto de `text-xs` para `text-[11px]` para garantir que caiba em telas de 320px
-4. Remover `whitespace-nowrap` se existir, para permitir adaptacao natural
+## Detalhes tecnicos
 
+### Arquivo: `src/components/suporte/SupportChatBubble.tsx`
+1. Mudar `handleClick` para fazer toggle: `setChatOpen(prev => !prev)` em vez de so `setChatOpen(true)`
+2. Zerar unread apenas ao abrir (nao ao fechar)
+3. Remover a classe `chatOpen && !isMobile && "hidden"` para que o icone fique sempre visivel
+
+### Arquivo: `src/components/suporte/SupportAIChatPopup.tsx`
+1. Linha 196: trocar `Suporte Invictus` para `Ana - Suporte Invictus`

@@ -1,64 +1,46 @@
 
-# Plano: Bloquear acesso de Financeiro/Suporte ao App de membros
+# Plano: Excluir membros de equipe (Financeiro/Suporte) da listagem de Membros no Admin
 
-## Problema atual
+## Problema
 
-Os usuarios criados nas equipes "Financeiro" e "Suporte" conseguem acessar `app.invictusfraternidade.com.br` porque o guard `RequireAuth` verifica apenas se existe uma sessao ativa e um perfil -- nao verifica se o usuario tem uma role restrita (`financeiro` ou `suporte`).
+A funcao RPC `admin_search_members` retorna todos os perfis com `access_status = 'approved'`, sem verificar se o usuario possui uma role restrita (`financeiro` ou `suporte`). Isso faz com que atendentes e membros da equipe financeira aparecam na aba "Membros" do painel admin como se fossem membros regulares da fraternidade.
 
 ## Solucao
 
-Adicionar uma verificacao de role dentro do `RequireAuth`. Se o usuario logado possuir APENAS a role `financeiro` ou `suporte` (sem ser admin ou membro regular), ele sera redirecionado para a pagina inicial do seu respectivo painel.
+Atualizar a funcao `admin_search_members` no banco de dados para excluir usuarios que possuam as roles `financeiro` ou `suporte` (exceto se tambem forem admin). Dessa forma, apenas membros reais da fraternidade aparecerao na listagem.
 
 ## O que sera feito
 
-### 1. Criar hook `useUserRoles`
+### 1. Migration: Atualizar `admin_search_members`
 
-Um novo hook que retorna todas as roles do usuario logado, consultando a tabela `user_roles`:
+Adicionar um filtro na query que exclui usuarios presentes na tabela `user_roles` com role `financeiro` ou `suporte`:
 
-- Retorna array de roles (ex: `['financeiro']`, `['suporte']`, `['admin']`, ou `[]` para membros normais)
-- Usa RPC `has_role` para checar `financeiro` e `suporte`
+```text
+WHERE p.access_status = 'approved'
+  AND NOT EXISTS (
+    SELECT 1 FROM public.user_roles ur
+    WHERE ur.user_id = p.user_id
+      AND ur.role IN ('financeiro', 'suporte')
+  )
+```
 
-### 2. Modificar `RequireAuth`
+Isso garante que:
+- Membros regulares continuam aparecendo normalmente
+- Admins que tambem sao financeiro/suporte continuam aparecendo (pois o filtro exclui quem tem APENAS essas roles)
+- Atendentes e equipe financeira nao aparecem na lista
 
-Apos confirmar que existe sessao, verificar se o usuario tem role `financeiro` ou `suporte`:
+### 2. Verificar `admin_list_pending_profiles_logged`
 
-- Se tem role `financeiro` (e nao e admin): redirecionar para `/financeiro/dashboard` (preview) ou o dominio `financeiro.` (producao)
-- Se tem role `suporte` (e nao e admin): redirecionar para `/suporte-backoffice/dashboard` (preview) ou o dominio `suporte.` (producao)
-- Se nao tem nenhuma dessas roles (membro normal ou admin): continua o fluxo atual normalmente
-
-### 3. Modificar `RequireFinanceiro` e `RequireSuporte`
-
-Garantir que esses guards tambem bloqueiem acesso cruzado:
-
-- `RequireFinanceiro`: se o usuario tem role `suporte` mas nao `financeiro`, redirecionar para area de suporte
-- `RequireSuporte`: se o usuario tem role `financeiro` mas nao `suporte`, redirecionar para area financeira
+Confirmar se a funcao de fila de aprovacao tambem precisa do mesmo filtro (provavelmente nao, pois membros de equipe sao criados com `access_status = 'approved'` e nunca ficam pendentes, mas vale garantir).
 
 ## Detalhes Tecnicos
 
-### Arquivos a modificar
+### Arquivo a criar
 
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/auth/RequireAuth.tsx` | Adicionar verificacao de roles `financeiro`/`suporte` e redirecionar para area correta |
-| `src/hooks/useIsFinanceiro.ts` | Reutilizado (ja existe) |
-| `src/hooks/useIsSuporte.ts` | Reutilizado (ja existe) |
+| Arquivo | Descricao |
+|---------|-----------|
+| `supabase/migrations/[timestamp].sql` | Migration com `CREATE OR REPLACE FUNCTION admin_search_members` atualizada |
 
-### Logica no RequireAuth
+### Nenhum arquivo de codigo frontend precisa ser alterado
 
-```text
-1. Sessao existe? Nao -> /auth
-2. Usuario tem role 'financeiro' (e nao admin)?
-   -> Redirecionar para /financeiro/dashboard (preview) ou financeiro.dominio (producao)
-3. Usuario tem role 'suporte' (e nao admin)?
-   -> Redirecionar para /suporte-backoffice/dashboard (preview) ou suporte.dominio (producao)
-4. Continuar fluxo normal (perfil, aprovacao, etc.)
-```
-
-### Tratamento por ambiente
-
-- **Preview (lovable.app)**: Redireciona internamente para `/financeiro/dashboard` ou `/suporte-backoffice/dashboard`
-- **Producao (dominio custom)**: Redireciona para `financeiro.invictusfraternidade.com.br` ou `suporte.invictusfraternidade.com.br`
-
-### Ordem de execucao
-
-1. Modificar `RequireAuth.tsx` para incluir verificacao de roles e redirecionamento
+A mudanca e inteiramente no banco de dados. O frontend ja chama `admin_search_members` e vai automaticamente parar de exibir esses usuarios.

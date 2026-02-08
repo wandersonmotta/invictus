@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, ListChecks, Monitor, Sun, Moon, Users, Star } from "lucide-react";
+import { LogOut, ListChecks, Monitor, Sun, Moon, Users, Star, Brain } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import invictusLogo from "@/assets/INVICTUS-GOLD_1.png";
 import { cn } from "@/lib/utils";
@@ -101,6 +101,16 @@ export function SuporteLayout({ children }: Props) {
               >
                 <Star className="h-4 w-4" />
                 Avaliações
+              </Link>
+              <Link
+                to={`${basePath}/ia`}
+                className={cn(
+                  "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
+                  location.pathname.includes("/ia") ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                )}
+              >
+                <Brain className="h-4 w-4" />
+                IA
               </Link>
             </>
           )}

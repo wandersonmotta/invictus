@@ -848,6 +848,44 @@ export type Database = {
         }
         Relationships: []
       }
+      member_subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string
+          current_period_start: string
+          id: string
+          plan_id: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string
+          current_period_start?: string
+          id?: string
+          plan_id: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string
+          current_period_start?: string
+          id?: string
+          plan_id?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_attachments: {
         Row: {
           content_type: string | null
@@ -965,6 +1003,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      plan_features: {
+        Row: {
+          id: string
+          included: boolean
+          label: string
+          plan_id: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          included?: boolean
+          label: string
+          plan_id: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          included?: boolean
+          label?: string
+          plan_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_features_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       point_balances: {
         Row: {
@@ -1264,6 +1334,77 @@ export type Database = {
           service_type?: string
           status?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      subscription_invoices: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          due_date: string
+          id: string
+          paid_at: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          subscription_id: string
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          due_date: string
+          id?: string
+          paid_at?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subscription_id: string
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          due_date?: string
+          id?: string
+          paid_at?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subscription_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_invoices_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "member_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_plans: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          interval_days: number
+          name: string
+          price_cents: number
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          interval_days?: number
+          name: string
+          price_cents: number
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          interval_days?: number
+          name?: string
+          price_cents?: number
+          sort_order?: number
         }
         Relationships: []
       }
@@ -2110,9 +2251,11 @@ export type Database = {
       app_role: "admin" | "moderator" | "user" | "financeiro"
       conversation_folder: "inbox" | "requests"
       conversation_type: "direct" | "group"
+      invoice_status: "pending" | "paid" | "overdue"
       limpa_nome_status: "aberto" | "em_andamento" | "finalizado"
       profile_visibility: "members" | "mutuals" | "private"
       redemption_status: "pending" | "approved" | "rejected" | "delivered"
+      subscription_status: "active" | "cancelled" | "past_due"
       wallet_transaction_type: "credit" | "debit"
       withdrawal_status: "pending" | "approved" | "rejected"
     }
@@ -2246,9 +2389,11 @@ export const Constants = {
       app_role: ["admin", "moderator", "user", "financeiro"],
       conversation_folder: ["inbox", "requests"],
       conversation_type: ["direct", "group"],
+      invoice_status: ["pending", "paid", "overdue"],
       limpa_nome_status: ["aberto", "em_andamento", "finalizado"],
       profile_visibility: ["members", "mutuals", "private"],
       redemption_status: ["pending", "approved", "rejected", "delivered"],
+      subscription_status: ["active", "cancelled", "past_due"],
       wallet_transaction_type: ["credit", "debit"],
       withdrawal_status: ["pending", "approved", "rejected"],
     },

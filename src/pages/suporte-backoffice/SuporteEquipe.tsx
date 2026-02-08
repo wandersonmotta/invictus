@@ -22,14 +22,6 @@ export default function SuporteEquipe() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
 
-  // Block non-admins
-  if (adminLoading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
-  }
-  if (!isAdmin) {
-    return <Navigate to="/suporte-backoffice/dashboard" replace />;
-  }
-
   const callManageAgents = async (body: any) => {
     const session = (await supabase.auth.getSession()).data.session;
     if (!session) throw new Error("Not authenticated");
@@ -53,6 +45,7 @@ export default function SuporteEquipe() {
     queryKey: ["support-agents"],
     queryFn: () => callManageAgents({ action: "list" }),
     select: (d) => d.agents || [],
+    enabled: !!isAdmin,
   });
 
   const createMutation = useMutation({
@@ -76,6 +69,15 @@ export default function SuporteEquipe() {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  // Block non-admins (after all hooks)
+  if (adminLoading) {
+    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+  if (!isAdmin) {
+    return <Navigate to="/suporte-backoffice/dashboard" replace />;
+  }
+
 
   return (
     <div className="space-y-6">

@@ -39,12 +39,12 @@ function PriorityChips({ tickets, filter, onFilter }: { tickets: any[]; filter: 
   ];
 
   return (
-    <div className="flex gap-2 overflow-x-auto no-scrollbar">
+    <div className="flex gap-1.5 w-full">
       {chips.map(({ key, label, className }) => (
         <button
           key={key}
           onClick={() => onFilter(key)}
-          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-all ${className} ${filter === key ? "ring-2 ring-primary/50 scale-105" : "opacity-70 hover:opacity-100"}`}
+          className={`flex-1 inline-flex items-center justify-center gap-1 rounded-full border px-1.5 py-1 text-[11px] font-semibold transition-all ${className} ${filter === key ? "ring-2 ring-primary/50 scale-105" : "opacity-70 hover:opacity-100"}`}
         >
           {label}
           <span className="tabular-nums">({counts[key]})</span>

@@ -98,7 +98,7 @@ export default function SuporteEquipe() {
               <Plus className="h-4 w-4" /> Novo Membro
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto mx-auto">
             <DialogHeader>
               <DialogTitle>Cadastrar Membro</DialogTitle>
             </DialogHeader>

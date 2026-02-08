@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Paperclip, Send, Loader2, X } from "lucide-react";
+import { ArrowLeft, Paperclip, Send, Loader2, X, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
+import { useMyProfile } from "@/hooks/useMyProfile";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { SupportMessageBubble } from "./SupportMessageBubble";
+import { SupportRatingDialog } from "./SupportRatingDialog";
 import { toast } from "sonner";
 
 interface Message {
@@ -33,16 +35,34 @@ interface Props {
 export function SupportChatView({ ticketId }: Props) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { data: myProfile } = useMyProfile(user?.id);
   const [messages, setMessages] = useState<Message[]>([]);
   const [attachments, setAttachments] = useState<Record<string, Attachment[]>>({});
   const [agentProfiles, setAgentProfiles] = useState<Record<string, { name: string; avatar: string | null }>>({});
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [ticketStatus, setTicketStatus] = useState<string>("ai_handling");
+  const [ticketAssignedTo, setTicketAssignedTo] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [ratingOpen, setRatingOpen] = useState(false);
+  const [hasRated, setHasRated] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check if already rated
+  useEffect(() => {
+    if (!ticketId || !user?.id) return;
+    (supabase as any)
+      .from("support_ratings")
+      .select("id")
+      .eq("ticket_id", ticketId)
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }: any) => {
+        if (data) setHasRated(true);
+      });
+  }, [ticketId, user?.id]);
 
   // Load messages + attachments
   useEffect(() => {
@@ -64,10 +84,13 @@ export function SupportChatView({ ticketId }: Props) {
     const loadTicket = async () => {
       const { data } = await supabase
         .from("support_tickets")
-        .select("status")
+        .select("status, assigned_to")
         .eq("id", ticketId)
         .single();
-      if (data) setTicketStatus(data.status);
+      if (data) {
+        setTicketStatus(data.status);
+        setTicketAssignedTo((data as any).assigned_to);
+      }
     };
 
     loadMessages();
@@ -93,7 +116,15 @@ export function SupportChatView({ ticketId }: Props) {
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "support_tickets", filter: `id=eq.${ticketId}` },
-        (payload) => setTicketStatus((payload.new as any).status)
+        (payload) => {
+          const updated = payload.new as any;
+          setTicketStatus(updated.status);
+          setTicketAssignedTo(updated.assigned_to);
+          // Show rating dialog when resolved (by any side)
+          if (updated.status === "resolved" && !hasRated) {
+            setRatingOpen(true);
+          }
+        }
       )
       .on(
         "postgres_changes",
@@ -106,7 +137,7 @@ export function SupportChatView({ ticketId }: Props) {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [ticketId]);
+  }, [ticketId, hasRated]);
 
   const loadAttachments = async (messageIds: string[]) => {
     if (messageIds.length === 0) return;
@@ -186,6 +217,33 @@ export function SupportChatView({ ticketId }: Props) {
     }
   };
 
+  const triggerSummarize = async () => {
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      if (!session) return;
+      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/support-summarize`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ ticketId }),
+      });
+    } catch (e) {
+      console.error("Summarize error:", e);
+    }
+  };
+
+  const handleResolve = async () => {
+    await supabase
+      .from("support_tickets")
+      .update({ status: "resolved", resolved_at: new Date().toISOString() } as any)
+      .eq("id", ticketId);
+    toast.success("Atendimento encerrado!");
+    triggerSummarize();
+    if (!hasRated) setRatingOpen(true);
+  };
+
   const handleSend = useCallback(async () => {
     const text = input.trim();
     if ((!text && pendingFiles.length === 0) || sending) return;
@@ -225,7 +283,6 @@ export function SupportChatView({ ticketId }: Props) {
           }
         }
       } else {
-        // Direct message (escalated/assigned or has attachments)
         const { data: msgData } = await supabase.from("support_messages").insert({
           ticket_id: ticketId,
           sender_type: "user",
@@ -286,6 +343,8 @@ export function SupportChatView({ ticketId }: Props) {
             ? "Resolvido"
             : "";
 
+  const canResolve = ticketStatus === "assigned" || ticketStatus === "escalated";
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -297,6 +356,11 @@ export function SupportChatView({ ticketId }: Props) {
           <h2 className="text-sm font-semibold truncate">Suporte Invictus</h2>
           <p className="text-[10px] text-muted-foreground">{statusLabel}</p>
         </div>
+        {canResolve && (
+          <Button variant="outline" size="sm" className="text-xs gap-1" onClick={handleResolve}>
+            <CheckCircle className="h-3.5 w-3.5" /> Encerrar
+          </Button>
+        )}
         {ticketStatus === "ai_handling" && (
           <Button variant="outline" size="sm" className="text-xs" onClick={handleEscalate}>
             Falar com atendente
@@ -321,8 +385,8 @@ export function SupportChatView({ ticketId }: Props) {
               createdAt={msg.created_at}
               perspective="user"
               readAt={msg.read_at}
-              senderName={agentProfile?.name}
-              senderAvatar={agentProfile?.avatar || undefined}
+              senderName={msg.sender_type === "user" ? (myProfile?.display_name || "Você") : agentProfile?.name}
+              senderAvatar={msg.sender_type === "user" ? (myProfile?.avatar_url || undefined) : (agentProfile?.avatar || undefined)}
               attachments={attachments[msg.id]}
             />
           );
@@ -388,6 +452,20 @@ export function SupportChatView({ ticketId }: Props) {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Rating dialog */}
+      {user && (
+        <SupportRatingDialog
+          open={ratingOpen}
+          onOpenChange={(open) => {
+            setRatingOpen(open);
+            if (!open) setHasRated(true);
+          }}
+          ticketId={ticketId}
+          userId={user.id}
+          agentId={ticketAssignedTo}
+        />
       )}
     </div>
   );

@@ -54,6 +54,7 @@ const SuporteAuth = React.lazy(() => import("@/pages/suporte-backoffice/SuporteA
 const SuporteDashboard = React.lazy(() => import("@/pages/suporte-backoffice/SuporteDashboard"));
 const SuporteAtendimento = React.lazy(() => import("@/pages/suporte-backoffice/SuporteAtendimento"));
 const SuporteEquipe = React.lazy(() => import("@/pages/suporte-backoffice/SuporteEquipe"));
+const SuporteAvaliacoes = React.lazy(() => import("@/pages/suporte-backoffice/SuporteAvaliacoes"));
 const SuporteLayoutLazy = React.lazy(() => import("@/components/suporte-backoffice/SuporteLayout").then(m => ({ default: m.SuporteLayout })));
 
 export function HostRouter() {
@@ -154,6 +155,7 @@ export function HostRouter() {
         <Route path="/suporte-backoffice/dashboard" element={<RequireSuporteAuth><RequireSuporte><SuporteLayoutLazy><SuporteDashboard /></SuporteLayoutLazy></RequireSuporte></RequireSuporteAuth>} />
         <Route path="/suporte-backoffice/atendimento/:ticketId" element={<RequireSuporteAuth><RequireSuporte><SuporteLayoutLazy><SuporteAtendimento /></SuporteLayoutLazy></RequireSuporte></RequireSuporteAuth>} />
         <Route path="/suporte-backoffice/equipe" element={<RequireSuporteAuth><RequireSuporte><SuporteLayoutLazy><SuporteEquipe /></SuporteLayoutLazy></RequireSuporte></RequireSuporteAuth>} />
+        <Route path="/suporte-backoffice/avaliacoes" element={<RequireSuporteAuth><RequireSuporte><SuporteLayoutLazy><SuporteAvaliacoes /></SuporteLayoutLazy></RequireSuporte></RequireSuporteAuth>} />
 
         <Route
           path="/aguardando-aprovacao"
@@ -486,6 +488,7 @@ export function HostRouter() {
         <Route path="/dashboard" element={<RequireSuporteAuth><RequireSuporte><SuporteLayoutLazy><SuporteDashboard /></SuporteLayoutLazy></RequireSuporte></RequireSuporteAuth>} />
         <Route path="/atendimento/:ticketId" element={<RequireSuporteAuth><RequireSuporte><SuporteLayoutLazy><SuporteAtendimento /></SuporteLayoutLazy></RequireSuporte></RequireSuporteAuth>} />
         <Route path="/equipe" element={<RequireSuporteAuth><RequireSuporte><SuporteLayoutLazy><SuporteEquipe /></SuporteLayoutLazy></RequireSuporte></RequireSuporteAuth>} />
+        <Route path="/avaliacoes" element={<RequireSuporteAuth><RequireSuporte><SuporteLayoutLazy><SuporteAvaliacoes /></SuporteLayoutLazy></RequireSuporte></RequireSuporteAuth>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     );

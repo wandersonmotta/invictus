@@ -228,6 +228,23 @@ export default function SuporteAtendimento() {
       .update({ status: "resolved", resolved_at: new Date().toISOString() } as any)
       .eq("id", ticketId);
     toast.success("Ticket resolvido!");
+
+    // Trigger AI summary
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      if (session) {
+        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/support-summarize`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ ticketId }),
+        }).catch(console.error);
+      }
+    } catch (e) {
+      console.error("Summarize error:", e);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

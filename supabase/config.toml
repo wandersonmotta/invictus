@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.manage-support-agents]
 verify_jwt = false
+
+[functions.support-summarize]
+verify_jwt = false

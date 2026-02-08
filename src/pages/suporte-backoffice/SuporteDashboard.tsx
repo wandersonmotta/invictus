@@ -184,8 +184,8 @@ export default function SuporteDashboard() {
       ) : (
         <Tabs defaultValue="pending" onValueChange={() => setPriorityFilter("all")}>
           <TabsList className="w-full grid grid-cols-2">
-            <TabsTrigger value="pending">Pendentes ({pendingTickets.length})</TabsTrigger>
-            <TabsTrigger value="resolved">Resolvidos ({resolvedTickets.length})</TabsTrigger>
+            <TabsTrigger value="pending">Pendentes</TabsTrigger>
+            <TabsTrigger value="resolved">Resolvidos</TabsTrigger>
           </TabsList>
 
           <TabsContent value="pending" className="space-y-4">

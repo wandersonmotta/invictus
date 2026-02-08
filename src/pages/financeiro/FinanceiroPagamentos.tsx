@@ -156,10 +156,10 @@ export default function FinanceiroPagamentos() {
   ];
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 pb-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
-        <h1 className="text-xl sm:text-2xl font-bold">Pagamentos</h1>
+        <h1 className="text-lg sm:text-2xl font-bold">Pagamentos</h1>
         <Button variant="outline" size="sm" onClick={fetchData} disabled={loading} className="shrink-0">
           <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           <span className="hidden sm:inline">Atualizar</span>
@@ -168,23 +168,23 @@ export default function FinanceiroPagamentos() {
 
       {/* KPIs */}
       {loading ? (
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-2 sm:gap-3 grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-24 sm:h-28 w-full" />
+            <Skeleton key={i} className="h-20 sm:h-28 w-full" />
           ))}
         </div>
       ) : (
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-2 sm:gap-3 grid-cols-2 lg:grid-cols-4">
           {kpiCards.map((kpi) => (
             <Card key={kpi.title}>
-              <CardContent className="flex items-center gap-3 p-3 sm:p-4">
-                <div className={`flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-muted ${kpi.color}`}>
-                  <kpi.icon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <CardContent className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-4">
+                <div className={`flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-muted ${kpi.color}`}>
+                  <kpi.icon className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">{kpi.title}</p>
-                  <p className="text-sm sm:text-lg font-bold truncate">{kpi.value}</p>
-                  <p className="text-[10px] text-muted-foreground">{kpi.sub}</p>
+                  <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">{kpi.title}</p>
+                  <p className="text-xs sm:text-lg font-bold truncate">{kpi.value}</p>
+                  <p className="text-[9px] sm:text-[10px] text-muted-foreground leading-tight">{kpi.sub}</p>
                 </div>
               </CardContent>
             </Card>
@@ -192,33 +192,33 @@ export default function FinanceiroPagamentos() {
         </div>
       )}
 
-      {/* Filter Tabs */}
+      {/* Filter Tabs - full width on mobile */}
       <Tabs value={tab} onValueChange={(v) => setTab(v as FilterTab)}>
-        <TabsList>
-          <TabsTrigger value="todos">Todos</TabsTrigger>
-          <TabsTrigger value="pending">Pendentes</TabsTrigger>
-          <TabsTrigger value="approved">Aprovados</TabsTrigger>
-          <TabsTrigger value="expired">Expirados</TabsTrigger>
+        <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex">
+          <TabsTrigger value="todos" className="text-xs sm:text-sm">Todos</TabsTrigger>
+          <TabsTrigger value="pending" className="text-xs sm:text-sm">Pendentes</TabsTrigger>
+          <TabsTrigger value="approved" className="text-xs sm:text-sm">Aprovados</TabsTrigger>
+          <TabsTrigger value="expired" className="text-xs sm:text-sm">Expirados</TabsTrigger>
         </TabsList>
       </Tabs>
 
       {/* Data */}
       <Card>
-        <CardHeader className="px-3 sm:px-6">
-          <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+        <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+          <CardTitle className="text-xs sm:text-sm font-medium uppercase tracking-wider text-muted-foreground">
             {tab === "todos" ? "Todos os Pagamentos" : tab === "pending" ? "Pagamentos Pendentes" : tab === "approved" ? "Pagamentos Aprovados" : "Pagamentos Expirados"}
             {" "}({filtered.length})
           </CardTitle>
         </CardHeader>
-        <CardContent className="px-3 sm:px-6">
+        <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
           {loading ? (
             <Skeleton className="h-48 w-full" />
           ) : filtered.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground">Nenhum pagamento encontrado</p>
+            <p className="py-8 text-center text-sm text-muted-foreground">Nenhum pagamento encontrado</p>
           ) : (
             <>
               {/* Desktop table */}
-              <div className="hidden sm:block overflow-x-auto">
+              <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border text-left">
@@ -257,27 +257,27 @@ export default function FinanceiroPagamentos() {
                 </table>
               </div>
 
-              {/* Mobile card list */}
-              <div className="sm:hidden space-y-2">
+              {/* Mobile/Tablet card list */}
+              <div className="lg:hidden space-y-2">
                 {filtered.map((p) => (
-                  <div key={p.payment_id} className="rounded-lg border border-border p-3 space-y-1.5">
+                  <div key={p.payment_id} className="rounded-lg border border-border p-2.5 sm:p-3 space-y-1.5">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <Avatar className="h-7 w-7 shrink-0">
+                        <Avatar className="h-6 w-6 sm:h-7 sm:w-7 shrink-0">
                           <AvatarImage src={p.avatar_url || undefined} />
-                          <AvatarFallback className="text-[10px]">
+                          <AvatarFallback className="text-[9px] sm:text-[10px]">
                             {(p.display_name || "M").charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="font-medium text-sm truncate">{memberName(p)}</span>
+                        <span className="font-medium text-xs sm:text-sm truncate">{memberName(p)}</span>
                       </div>
                       {statusBadge(p.status)}
                     </div>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <div className="flex items-center justify-between text-[11px] sm:text-xs text-muted-foreground">
                       <span>{serviceLabel(p.service_type)} · {p.item_count} item(ns)</span>
-                      <span className="font-semibold text-sm text-foreground">{formatCurrency(p.amount_cents)}</span>
+                      <span className="font-semibold text-xs sm:text-sm text-foreground">{formatCurrency(p.amount_cents)}</span>
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-[11px] sm:text-xs text-muted-foreground">
                       {format(new Date(p.paid_at || p.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
                     </div>
                   </div>

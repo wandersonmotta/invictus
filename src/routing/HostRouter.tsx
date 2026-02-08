@@ -48,7 +48,7 @@ const FinanceiroHistorico = React.lazy(() => import("@/pages/financeiro/Financei
 const FinanceiroRelatorios = React.lazy(() => import("@/pages/financeiro/FinanceiroRelatorios"));
 const FinanceiroCarteira = React.lazy(() => import("@/pages/financeiro/FinanceiroCarteira"));
 const FinanceiroPagamentos = React.lazy(() => import("@/pages/financeiro/FinanceiroPagamentos"));
-
+const FinanceiroEquipe = React.lazy(() => import("@/pages/financeiro/FinanceiroEquipe"));
 // Suporte backoffice pages
 const SuporteAuth = React.lazy(() => import("@/pages/suporte-backoffice/SuporteAuth"));
 const SuporteDashboard = React.lazy(() => import("@/pages/suporte-backoffice/SuporteDashboard"));
@@ -148,6 +148,18 @@ export function HostRouter() {
              </RequireFinanceiro>
            </RequireFinanceiroAuth>
          }
+        />
+        <Route
+          path="/financeiro/equipe"
+          element={
+            <RequireFinanceiroAuth>
+              <RequireFinanceiro>
+                <FinanceiroLayout>
+                  <FinanceiroEquipe />
+                </FinanceiroLayout>
+              </RequireFinanceiro>
+            </RequireFinanceiroAuth>
+          }
         />
 
         {/* Suporte backoffice routes for preview */}
@@ -471,6 +483,18 @@ export function HostRouter() {
              <RequireFinanceiro>
                <FinanceiroLayout>
                  <FinanceiroPagamentos />
+               </FinanceiroLayout>
+             </RequireFinanceiro>
+           </RequireFinanceiroAuth>
+         }
+       />
+       <Route
+         path="/equipe"
+         element={
+           <RequireFinanceiroAuth>
+             <RequireFinanceiro>
+               <FinanceiroLayout>
+                 <FinanceiroEquipe />
                </FinanceiroLayout>
              </RequireFinanceiro>
            </RequireFinanceiroAuth>

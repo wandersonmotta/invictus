@@ -1,0 +1,187 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseService = createClient(
+      supabaseUrl,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Check caller has admin role
+    const { data: callerRoles } = await supabaseService
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id);
+
+    const roles = (callerRoles || []).map((r: any) => r.role);
+    if (!roles.includes("admin")) {
+      return new Response(JSON.stringify({ error: "Forbidden – admin only" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { action, email, password, fullName, targetUserId } = await req.json();
+
+    if (action === "create") {
+      if (!email || !password || !fullName) {
+        return new Response(JSON.stringify({ error: "email, password and fullName are required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: newUser, error: createErr } = await supabaseService.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+      });
+
+      if (createErr) {
+        return new Response(JSON.stringify({ error: createErr.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const newUserId = newUser.user.id;
+
+      await supabaseService.from("profiles").insert({
+        user_id: newUserId,
+        display_name: fullName,
+        first_name: fullName.split(" ")[0],
+        last_name: fullName.split(" ").slice(1).join(" ") || null,
+        access_status: "approved",
+        approved_at: new Date().toISOString(),
+        approved_by: user.id,
+      });
+
+      await supabaseService.from("user_roles").insert({
+        user_id: newUserId,
+        role: "financeiro",
+      });
+
+      return new Response(JSON.stringify({ success: true, userId: newUserId }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "remove") {
+      if (!targetUserId) {
+        return new Response(JSON.stringify({ error: "targetUserId is required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      await supabaseService
+        .from("user_roles")
+        .delete()
+        .eq("user_id", targetUserId)
+        .eq("role", "financeiro");
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "list") {
+      const { data: financeiroRoles } = await supabaseService
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "financeiro");
+
+      const userIds = (financeiroRoles || []).map((r: any) => r.user_id);
+
+      if (userIds.length === 0) {
+        return new Response(JSON.stringify({ agents: [] }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Exclude users who also have admin role
+      const { data: adminRoles } = await supabaseService
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin")
+        .in("user_id", userIds);
+
+      const adminIds = new Set((adminRoles || []).map((r: any) => r.user_id));
+      const filteredIds = userIds.filter((uid: string) => !adminIds.has(uid));
+
+      if (filteredIds.length === 0) {
+        return new Response(JSON.stringify({ agents: [] }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: profiles } = await supabaseService
+        .from("profiles")
+        .select("user_id, display_name, avatar_url, first_name, last_name")
+        .in("user_id", filteredIds);
+
+      const agents = await Promise.all(
+        filteredIds.map(async (uid: string) => {
+          const profile = (profiles || []).find((p: any) => p.user_id === uid);
+          const { data: { user: authUser } } = await supabaseService.auth.admin.getUserById(uid);
+          return {
+            user_id: uid,
+            email: authUser?.email || "",
+            display_name: profile?.display_name || "",
+            avatar_url: profile?.avatar_url || null,
+            first_name: profile?.first_name || "",
+            last_name: profile?.last_name || "",
+          };
+        })
+      );
+
+      return new Response(JSON.stringify({ agents }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: "Invalid action" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    console.error("manage-financeiro-agents error:", e);
+    return new Response(
+      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});

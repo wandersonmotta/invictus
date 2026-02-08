@@ -1,26 +1,29 @@
- import { useNavigate, useLocation } from "react-router-dom";
- import { useTheme } from "next-themes";
- import {
+import { useNavigate, useLocation } from "react-router-dom";
+import { useTheme } from "next-themes";
+import {
   ListChecks,
   FileText,
   BarChart3,
   CreditCard,
   Wallet,
-   ChevronRight,
-   LogOut,
-   Monitor,
-   Sun,
-   Moon,
- } from "lucide-react";
- 
- import { Sheet, SheetContent } from "@/components/ui/sheet";
- import { ScrollArea } from "@/components/ui/scroll-area";
- import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
- import { Separator } from "@/components/ui/separator";
- import { Button } from "@/components/ui/button";
- import { supabase } from "@/integrations/supabase/client";
- import { isLovableHost } from "@/lib/appOrigin";
- import invictusLogo from "@/assets/INVICTUS-GOLD_1.png";
+  Users,
+  ChevronRight,
+  LogOut,
+  Monitor,
+  Sun,
+  Moon,
+} from "lucide-react";
+
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { isLovableHost } from "@/lib/appOrigin";
+import invictusLogo from "@/assets/INVICTUS-GOLD_1.png";
+import { useAuth } from "@/auth/AuthProvider";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
  
  interface FinanceiroMenuSheetProps {
    open: boolean;
@@ -33,10 +36,12 @@
    icon: typeof ListChecks;
  }
  
- export function FinanceiroMenuSheet({ open, onOpenChange }: FinanceiroMenuSheetProps) {
+export function FinanceiroMenuSheet({ open, onOpenChange }: FinanceiroMenuSheetProps) {
    const navigate = useNavigate();
    const location = useLocation();
    const { theme, setTheme } = useTheme();
+   const { user } = useAuth();
+   const { data: isAdmin } = useIsAdmin(user?.id);
  
    const basePath = isLovableHost(window.location.hostname) ? "/financeiro" : "";
  
@@ -47,6 +52,10 @@
        { title: "Pagamentos", url: `${basePath}/pagamentos`, icon: CreditCard },
        { title: "Carteira", url: `${basePath}/carteira`, icon: Wallet },
     ];
+
+   const adminItems: MenuItem[] = isAdmin
+     ? [{ title: "Equipe", url: `${basePath}/equipe`, icon: Users }]
+     : [];
  
    const handleNavigate = (item: MenuItem) => {
      navigate(item.url);
@@ -113,7 +122,39 @@
                  </button>
                );
              })}
-           </nav>
+            </nav>
+
+            {adminItems.length > 0 && (
+              <>
+                <Separator className="mx-4" />
+                <nav className="flex flex-col px-4 py-4">
+                  <p className="invictus-mobile-menu-sectionLabel text-xs font-semibold uppercase tracking-wider px-1 py-2">
+                    Administração
+                  </p>
+                  {adminItems.map((item) => {
+                    const active = isActive(item.url);
+                    return (
+                      <button
+                        key={item.url}
+                        onClick={() => handleNavigate(item)}
+                        className={`
+                          invictus-mobile-menu-item
+                          flex items-center justify-between py-3 px-1 w-full
+                          transition-colors hover:bg-muted/30
+                          ${active ? "invictus-mobile-menu-item--active" : ""}
+                        `}
+                      >
+                        <div className="flex items-center gap-3">
+                          <item.icon className={`h-5 w-5 ${active ? "text-primary" : "text-muted-foreground"}`} />
+                          <span className={`text-base ${active ? "text-foreground font-medium" : "text-foreground/80"}`}>{item.title}</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    );
+                  })}
+                </nav>
+              </>
+            )}
  
            <Separator className="mx-4" />
  

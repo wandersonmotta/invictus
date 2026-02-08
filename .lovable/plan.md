@@ -1,35 +1,24 @@
 
-# Animacao "Sweeping Gold Shine" na Frase Final
+# Ajuste do Timing da Animacao Gold Sweep
+
+## Problema atual
+
+A animacao existe e funciona, mas o brilho varre muito rapido (apenas 40% dos 4s = 1.6s de movimento real) e depois fica parado por muito tempo (60% = 2.4s de pausa). Isso pode dar a impressao de que nao esta funcionando.
 
 ## O que muda
 
-A frase **"Isso e INVICTUS. Isso e Fraternidade. Isso e decisao."** vai deixar de usar o `GoldHoverText` (efeito que segue o mouse) e vai ganhar uma **animacao automatica de brilho dourado varrendo o texto** -- como um reflexo de luz passando por uma superficie metalica premium. O efeito roda em loop infinito, sem precisar de interacao do usuario.
+**Arquivo**: `src/components/landing/GoldSweepText.tsx`
 
-## Referencia visual
-
-Pense em logotipos gravados em metal dourado onde um reflexo de luz percorre a superficie de ponta a ponta, como se houvesse um spot de luz passando. O texto base fica com um gradiente dourado estatico, e um "flash" branco-dourado mais intenso desliza da esquerda para a direita a cada ~4 segundos.
+1. **Duracao total**: de `4s` para `3s` (ciclo mais curto, como solicitado)
+2. **Distribuicao do keyframe**: o brilho vai varrer por 60% do ciclo (1.8s de movimento) e pausar por 40% (1.2s), ao inves do contrario atual. Isso deixa o sweep mais visivel e a pausa mais curta.
+3. **Faixa de brilho mais larga**: aumentar a area do highlight no gradiente (de 30% de largura para 40%) para que o reflexo fique mais perceptivel enquanto passa.
 
 ## Detalhes tecnicos
 
-### Novo componente: `src/components/landing/GoldSweepText.tsx`
-
-Um componente dedicado que aplica:
-- Texto base com gradiente dourado fixo (`--gold-hot` / `--gold-soft`) via `background-clip: text`
-- Uma camada de brilho animada usando `background-position` com `@keyframes` que desliza um highlight branco-dourado da esquerda para a direita
-- Animacao em loop com pausa natural (aceleracao no meio, pausa de ~2s entre ciclos usando porcentagens do keyframe)
-- Sutil `text-shadow` dourado para dar profundidade
-
-### Arquivo modificado: `src/components/landing/ManifestoSections.tsx`
-
-- Substituir `<GoldHoverText>` por `<GoldSweepText>` na frase final
-- Importar o novo componente
-
-### Keyframe da animacao
-
-```text
-0%    -> brilho posicionado fora da esquerda
-40%   -> brilho percorre ate a direita
-100%  -> pausa (brilho fora da tela, espera antes do proximo ciclo)
-```
-
-Duracao total: ~4s, criando um ritmo elegante sem ser excessivo.
+Alteracoes no `GoldSweepText.tsx`:
+- Linha 41: `animation: "gold-sweep 3s ease-in-out infinite"`
+- Linhas 46-50: keyframes ajustados:
+  - `0%` -> brilho em `200% center` (comeca fora da direita... na verdade fora da esquerda, posicao alta)
+  - `60%` -> brilho em `-100% center` (termina fora da direita)
+  - `100%` -> pausa (mantem `-100% center`)
+- Gradiente do brilho: alargar a faixa luminosa (transparent em 30%/70% ao inves de 35%/65%)

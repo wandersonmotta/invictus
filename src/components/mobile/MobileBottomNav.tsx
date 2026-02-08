@@ -18,7 +18,7 @@ const navItems: NavItem[] = [
   { id: "inicio", label: "Início", icon: Home, action: "navigate", url: "/app" },
    { id: "carteira", label: "Carteira", icon: Wallet, action: "navigate", url: "/carteira" },
   { id: "pontos", label: "Pontos", icon: Gift, action: "navigate", url: "/pontos" },
-  { id: "suporte", label: "Suporte", icon: HelpCircle, action: "placeholder" },
+  { id: "suporte", label: "Suporte", icon: HelpCircle, action: "navigate", url: "/suporte" },
   { id: "menu", label: "Menu", icon: Menu, action: "menu" },
 ];
 

@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.hubdev-document-lookup]
 verify_jwt = false
+
+[functions.support-chat]
+verify_jwt = false

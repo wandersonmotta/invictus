@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { GoldHoverText } from "@/components/GoldHoverText";
 import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { SupportChatBubble } from "@/components/suporte/SupportChatBubble";
 import { UserMenu } from "@/components/UserMenu";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useIsMobileOrTablet } from "@/hooks/use-mobile";
@@ -70,6 +71,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Mobile bottom navigation */}
         <MobileBottomNav />
+
+        {/* Floating support chat bubble */}
+        <SupportChatBubble />
       </div>
     </SidebarProvider>
   );

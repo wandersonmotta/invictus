@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
-import { isAppHost as isAppHostFn, isLovableHost, isFinanceiroHost as isFinanceiroHostFn } from "@/lib/appOrigin";
+import { isAppHost as isAppHostFn, isLovableHost, isFinanceiroHost as isFinanceiroHostFn, isSuporteHost as isSuporteHostFn } from "@/lib/appOrigin";
 
 import { RedirectToApp } from "@/routing/RedirectToApp";
 
@@ -12,7 +12,9 @@ import { AppLayout } from "@/components/AppLayout";
 import { RequireAuth } from "@/auth/RequireAuth";
 import { RequireAdmin } from "@/auth/RequireAdmin";
 import { RequireFinanceiro } from "@/auth/RequireFinanceiro";
- import { RequireFinanceiroAuth } from "@/auth/RequireFinanceiroAuth";
+import { RequireFinanceiroAuth } from "@/auth/RequireFinanceiroAuth";
+import { RequireSuporte } from "@/auth/RequireSuporte";
+import { RequireSuporteAuth } from "@/auth/RequireSuporteAuth";
 import { FinanceiroLayout } from "@/components/financeiro/FinanceiroLayout";
 
 const Home = React.lazy(() => import("@/pages/Home"));
@@ -36,20 +38,28 @@ const Servicos = React.lazy(() => import("@/pages/Servicos"));
 const PagamentoSucesso = React.lazy(() => import("@/pages/PagamentoSucesso"));
 const Pagamentos = React.lazy(() => import("@/pages/Pagamentos"));
 const Faturas = React.lazy(() => import("@/pages/Faturas"));
+const Suporte = React.lazy(() => import("@/pages/Suporte"));
 
 // Financeiro pages
 const FinanceiroAuth = React.lazy(() => import("@/pages/financeiro/FinanceiroAuth"));
 const FinanceiroDashboard = React.lazy(() => import("@/pages/financeiro/FinanceiroDashboard"));
 const AuditoriaDetalhe = React.lazy(() => import("@/pages/financeiro/AuditoriaDetalhe"));
- const FinanceiroHistorico = React.lazy(() => import("@/pages/financeiro/FinanceiroHistorico"));
- const FinanceiroRelatorios = React.lazy(() => import("@/pages/financeiro/FinanceiroRelatorios"));
- const FinanceiroCarteira = React.lazy(() => import("@/pages/financeiro/FinanceiroCarteira"));
- const FinanceiroPagamentos = React.lazy(() => import("@/pages/financeiro/FinanceiroPagamentos"));
+const FinanceiroHistorico = React.lazy(() => import("@/pages/financeiro/FinanceiroHistorico"));
+const FinanceiroRelatorios = React.lazy(() => import("@/pages/financeiro/FinanceiroRelatorios"));
+const FinanceiroCarteira = React.lazy(() => import("@/pages/financeiro/FinanceiroCarteira"));
+const FinanceiroPagamentos = React.lazy(() => import("@/pages/financeiro/FinanceiroPagamentos"));
+
+// Suporte backoffice pages
+const SuporteAuth = React.lazy(() => import("@/pages/suporte-backoffice/SuporteAuth"));
+const SuporteDashboard = React.lazy(() => import("@/pages/suporte-backoffice/SuporteDashboard"));
+const SuporteAtendimento = React.lazy(() => import("@/pages/suporte-backoffice/SuporteAtendimento"));
+const SuporteLayoutLazy = React.lazy(() => import("@/components/suporte-backoffice/SuporteLayout").then(m => ({ default: m.SuporteLayout })));
 
 export function HostRouter() {
   const hostname = window.location.hostname;
   const isAppHost = isAppHostFn(hostname);
   const isFinanceiroHost = isFinanceiroHostFn(hostname);
+  const isSuporteHost = isSuporteHostFn(hostname);
   const lovable = isLovableHost(hostname);
 
   // In *.lovable.app (preview/staging/published default domains) we DO NOT split by subdomain,
@@ -135,7 +145,13 @@ export function HostRouter() {
              </RequireFinanceiro>
            </RequireFinanceiroAuth>
          }
-       />
+        />
+
+        {/* Suporte backoffice routes for preview */}
+        <Route path="/suporte-backoffice" element={<Navigate to="/suporte-backoffice/dashboard" replace />} />
+        <Route path="/suporte-backoffice/auth" element={<SuporteAuth />} />
+        <Route path="/suporte-backoffice/dashboard" element={<RequireSuporteAuth><RequireSuporte><SuporteLayoutLazy><SuporteDashboard /></SuporteLayoutLazy></RequireSuporte></RequireSuporteAuth>} />
+        <Route path="/suporte-backoffice/atendimento/:ticketId" element={<RequireSuporteAuth><RequireSuporte><SuporteLayoutLazy><SuporteAtendimento /></SuporteLayoutLazy></RequireSuporte></RequireSuporteAuth>} />
 
         <Route
           path="/aguardando-aprovacao"
@@ -357,13 +373,17 @@ export function HostRouter() {
           }
         />
 
+        {/* Suporte user routes */}
+        <Route path="/suporte" element={<RequireAuth><AppLayout><Suporte /></AppLayout></RequireAuth>} />
+        <Route path="/suporte/:ticketId" element={<RequireAuth><AppLayout><Suporte /></AppLayout></RequireAuth>} />
+
         <Route path="*" element={<NotFound />} />
       </Routes>
     );
   }
 
   // Root domain: only Landing. Anything else -> app subdomain (preserving path).
-  if (!isAppHost && !isFinanceiroHost) {
+  if (!isAppHost && !isFinanceiroHost && !isSuporteHost) {
     return (
       <Routes>
         <Route path="/" element={<Landing />} />
@@ -450,6 +470,19 @@ export function HostRouter() {
            </RequireFinanceiroAuth>
          }
        />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    );
+  }
+
+  // Suporte subdomain: isolated back office for support team
+  if (isSuporteHost) {
+    return (
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/auth" element={<SuporteAuth />} />
+        <Route path="/dashboard" element={<RequireSuporteAuth><RequireSuporte><SuporteLayoutLazy><SuporteDashboard /></SuporteLayoutLazy></RequireSuporte></RequireSuporteAuth>} />
+        <Route path="/atendimento/:ticketId" element={<RequireSuporteAuth><RequireSuporte><SuporteLayoutLazy><SuporteAtendimento /></SuporteLayoutLazy></RequireSuporte></RequireSuporteAuth>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     );
@@ -682,6 +715,10 @@ export function HostRouter() {
           </RequireAuth>
         }
       />
+
+      {/* Suporte user routes */}
+      <Route path="/suporte" element={<RequireAuth><AppLayout><Suporte /></AppLayout></RequireAuth>} />
+      <Route path="/suporte/:ticketId" element={<RequireAuth><AppLayout><Suporte /></AppLayout></RequireAuth>} />
 
       <Route path="*" element={<NotFound />} />
     </Routes>

@@ -1,125 +1,106 @@
 
+# Plano: Chat IA Flutuante sem Ticket + Treinamento de IA no Back-office
 
-# Plano Unificado: Perfil Atendente + Encerramento Bidirecional + Avaliacao + Resumo IA
+## Resumo das Mudancas
 
-Este plano consolida as duas solicitacoes anteriores em uma implementacao unica.
+O fluxo de suporte muda fundamentalmente:
 
----
-
-## Bloco 1 -- Perfil Obrigatorio do Atendente
-
-Quando um novo atendente faz login no back-office pela primeira vez, ele ainda nao tem `first_name`, `last_name` e `avatar_url`. O sistema detecta isso e exibe uma tela de setup obrigatoria.
-
-**O que acontece:**
-- O `SuporteLayout` carrega o perfil do atendente logado
-- Se faltar nome, sobrenome ou foto, renderiza a tela de setup em vez do conteudo normal
-- A tela tem campos de nome, sobrenome e upload de foto com crop circular (reutilizando `AvatarCropDialog`)
-- Apos salvar, a tela some permanentemente -- nao ha opcao de editar depois
-
-**Arquivos:**
-- Criar `src/components/suporte-backoffice/SuporteProfileSetup.tsx`
-- Modificar `src/components/suporte-backoffice/SuporteLayout.tsx`
+1. **Botao flutuante abre um popup/drawer de chat com a IA** -- nao navega para /suporte e nao cria ticket
+2. **Conversa com IA e efemera** -- sem historico, sem ticket, sem persistencia
+3. **Ticket so e criado quando a IA escala para atendente** -- a IA decide quando oferecer atendente humano
+4. **Remover botao "Falar com atendente"** do header do chat do usuario
+5. **Pagina /suporte mostra apenas tickets reais** (escalados) -- sem botao "Iniciar chat"
+6. **Nova secao "IA" no back-office (admin only)** para inserir treinamentos/knowledge base
 
 ---
 
-## Bloco 2 -- Foto do Usuario no Proprio Chat
+## Bloco 1 -- Chat Flutuante com IA (Popup/Drawer)
 
-Atualmente o `SupportChatView` nao exibe o avatar do usuario nas mensagens dele.
+### O que muda no `SupportChatBubble`
+Atualmente o botao flutuante navega para `/suporte`. Agora ele vai abrir um popup (desktop) ou drawer (mobile) com um mini-chat inline.
 
-**Alteracao:**
-- Buscar o perfil do usuario logado (`avatar_url`, `display_name`) no `SupportChatView`
-- Passar `senderAvatar` e `senderName` nas mensagens com `sender_type === "user"`
+### Novo componente: `SupportAIChatPopup`
+- **Desktop**: Popover/dialog fixo no canto inferior direito (~400x500px), estilo WhatsApp Web
+- **Mobile**: Drawer (vaul) subindo da parte de baixo, ~90vh de altura
+- Chat completamente efemero: mensagens ficam apenas no state React (useState)
+- Sem criar ticket, sem persistir no banco
+- Input + mensagens + indicador "IA digitando..."
+- Ao fechar, o historico some
 
-**Arquivo:** `src/components/suporte/SupportChatView.tsx`
+### Comunicacao com a IA
+- Cria uma nova edge function `support-chat-ephemeral` que:
+  - NAO cria ticket
+  - NAO salva mensagens no banco
+  - Recebe o array de mensagens no body (historico vem do client state)
+  - Tambem recebe treinamentos do banco (busca `ai_training_entries` ativas e injeta no system prompt)
+  - Faz streaming SSE da resposta igual ao `support-chat` atual
+  - Se a resposta contem `[ESCALATE]`, retorna um header especial ou campo no SSE indicando escalacao
+- Quando IA escala:
+  - O frontend cria o ticket automaticamente (`support_tickets` com status `escalated`)
+  - Salva todas as mensagens efemeras no banco como historico do ticket
+  - Navega para `/suporte/{ticketId}`
+  - O atendente no back-office ve todo o contexto da conversa com a IA
+
+### System prompt atualizado
+- Remover a regra de "se o membro pedir para falar com atendente"
+- A IA tenta resolver sozinha
+- Apos 3-4 tentativas sem sucesso, a IA pergunta se o membro gostaria de falar com um especialista
+- Se o membro confirmar, a IA retorna `[ESCALATE]`
+- A IA nunca sugere atendente humano logo de cara
 
 ---
 
-## Bloco 3 -- Encerramento Bidirecional
+## Bloco 2 -- Pagina /suporte (Apenas Tickets Reais)
 
-Tanto o atendente quanto o usuario podem encerrar o ticket. Ambos os lados sincronizam via realtime.
-
-**Lado do usuario (SupportChatView):**
-- Botao "Encerrar atendimento" no header, visivel quando status e `assigned` ou `escalated`
-- Ao clicar, atualiza o ticket para `status = 'resolved'` e `resolved_at = now()`
-- Apos resolver, dispara a geracao do resumo IA e exibe o dialog de avaliacao
-
-**Lado do atendente (SuporteAtendimento):**
-- Ja tem o botao "Resolver" -- ao clicar, tambem dispara o resumo IA
-- O usuario ve a mudanca via realtime e recebe o dialog de avaliacao
-
-**Arquivos:** `SupportChatView.tsx`, `SuporteAtendimento.tsx`
+### Mudancas em `Suporte.tsx`
+- Remover botao "Iniciar chat" (nao cria mais ticket manualmente)
+- Lista apenas tickets com status `escalated`, `assigned` ou `resolved`
+- Filtrar tickets `ai_handling` da lista (se algum existir por legado)
+- Mensagem vazia: "Nenhum atendimento registrado" (em vez de "clique em iniciar chat")
 
 ---
 
-## Bloco 4 -- Sistema de Avaliacao com Estrelas
+## Bloco 3 -- Remover Escalacao Manual do SupportChatView
+
+### Mudancas em `SupportChatView.tsx`
+- Remover o botao "Falar com atendente" do header (o que tinha `handleEscalate`)
+- Manter botao "Encerrar" para tickets `assigned`/`escalated`
+- O chat view agora so e acessado quando ja existe um ticket real
+
+---
+
+## Bloco 4 -- Treinamento da IA (Admin Only no Back-office)
 
 ### Banco de dados (migration)
 
-Nova tabela `support_ratings`:
+Nova tabela `ai_training_entries`:
 
 ```text
-id          uuid PK
-ticket_id   uuid NOT NULL UNIQUE
-user_id     uuid NOT NULL
-agent_id    uuid (nullable)
-rating_resolved  smallint NOT NULL (1-5) -- "O problema foi solucionado?"
-rating_agent     smallint NOT NULL (1-5) -- "O atendente foi cordial/ajudou?"
-created_at  timestamptz DEFAULT now()
+id            uuid PK
+title         text NOT NULL (titulo do treinamento)
+content       text NOT NULL (conteudo/instrucoes para a IA)
+category      text (ex: "plataforma", "servicos", "planos")
+active        boolean DEFAULT true
+created_at    timestamptz
+updated_at    timestamptz
+created_by    uuid (admin que criou)
 ```
 
 RLS:
-- Usuario pode inserir propria avaliacao (user_id = auth.uid())
-- Usuario pode ver propria avaliacao
-- Admin pode ver todas
-- Ninguem atualiza ou deleta
+- Admin pode CRUD completo
+- Ninguem mais acessa (a edge function usa service role)
 
-### Dialog de avaliacao (usuario)
-- Exibido automaticamente quando o ticket muda para `resolved` (por qualquer lado)
-- Duas perguntas com estrelas clicaveis (1-5):
-  - "O seu problema foi solucionado?"
-  - "O atendente foi cordial e ajudou a resolver?"
-- Se ja avaliou, nao exibe novamente
+### Nova pagina: `SuporteIATreinamento.tsx`
+- Acessivel apenas por admin
+- Lista de treinamentos com titulo, categoria, status (ativo/inativo)
+- Botao para adicionar novo treinamento (dialog com titulo, categoria, conteudo textarea grande)
+- Opcao de editar e ativar/desativar cada entrada
+- Oculta para usuarios com role `suporte` (apenas admin ve)
 
-**Arquivos:**
-- Criar `src/components/suporte/SupportRatingDialog.tsx`
-- Modificar `SupportChatView.tsx`
-
----
-
-## Bloco 5 -- Resumo por IA
-
-### Coluna nova
-Adicionar `ai_summary text` na tabela `support_tickets`.
-
-### Edge function: `support-summarize`
-- Recebe `{ ticketId }` no body
-- Valida autenticacao (dono do ticket, suporte ou admin)
-- Busca todas as mensagens do ticket com service role
-- Chama Lovable AI (gemini-3-flash-preview) com prompt pedindo:
-  - O que o usuario relatou/perguntou
-  - O que o atendente/IA respondeu
-  - Qual foi a resolucao final
-- Salva o resumo no campo `ai_summary` do ticket
-- Chamada disparada automaticamente quando o ticket e resolvido (por qualquer lado)
-
-**Arquivos:**
-- Criar `supabase/functions/support-summarize/index.ts`
-- Adicionar em `supabase/config.toml`
-
----
-
-## Bloco 6 -- Painel de Avaliacoes no Back-office (Admin)
-
-Nova aba "Avaliacoes" no sidebar, visivel apenas para admin.
-
-**Funcionalidades:**
-- Lista de avaliacoes com: nome do usuario, nome do atendente, nota "solucionado", nota "cordialidade", resumo IA, data
-- Busca em dois estagios (avaliacoes + perfis separados, conforme padrao do projeto)
-
-**Arquivos:**
-- Criar `src/pages/suporte-backoffice/SuporteAvaliacoes.tsx`
-- Modificar `SuporteLayout.tsx` e `SuporteBottomNav.tsx` (link admin only)
-- Adicionar rota em `HostRouter.tsx`
+### Integracao com a IA
+- A edge function `support-chat-ephemeral` busca todos os `ai_training_entries` ativos
+- Concatena o conteudo no system prompt como secao "Base de Conhecimento"
+- A IA usa essas informacoes para responder com mais precisao
 
 ---
 
@@ -128,65 +109,61 @@ Nova aba "Avaliacoes" no sidebar, visivel apenas para admin.
 ### Migration SQL
 
 ```text
--- Coluna para resumo IA
-ALTER TABLE public.support_tickets
-  ADD COLUMN IF NOT EXISTS ai_summary text;
-
--- Tabela de avaliacoes
-CREATE TABLE public.support_ratings (
+CREATE TABLE public.ai_training_entries (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  ticket_id uuid NOT NULL UNIQUE,
-  user_id uuid NOT NULL,
-  agent_id uuid,
-  rating_resolved smallint NOT NULL,
-  rating_agent smallint NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
+  title text NOT NULL,
+  content text NOT NULL,
+  category text DEFAULT 'geral',
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  created_by uuid
 );
 
-ALTER TABLE public.support_ratings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_training_entries ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can insert own rating"
-  ON public.support_ratings FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can view own rating"
-  ON public.support_ratings FOR SELECT
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Admins can view all ratings"
-  ON public.support_ratings FOR SELECT
-  USING (has_role(auth.uid(), 'admin'::app_role));
-
-CREATE POLICY "No update ratings"
-  ON public.support_ratings FOR UPDATE USING (false);
-
-CREATE POLICY "No delete ratings"
-  ON public.support_ratings FOR DELETE USING (false);
+CREATE POLICY "Admins can manage training entries"
+  ON public.ai_training_entries FOR ALL
+  USING (has_role(auth.uid(), 'admin'::app_role))
+  WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
 ```
 
-### Todos os arquivos a criar/modificar
+### Edge function: `support-chat-ephemeral`
+
+```text
+supabase/functions/support-chat-ephemeral/index.ts
+- Recebe { messages: [{role, content}] } no body
+- Autentica o usuario via JWT
+- Busca ai_training_entries ativas com service role
+- Monta system prompt = SYSTEM_PROMPT base + "\n\n## Base de Conhecimento\n" + conteudos
+- Chama Lovable AI com streaming
+- Retorna SSE stream para o client
+- Apos stream completo, verifica se contem [ESCALATE] e retorna trailer/final event
+```
+
+### Arquivos a criar/modificar
 
 | Arquivo | Acao |
 |---------|------|
-| Migration SQL | Tabela `support_ratings` + coluna `ai_summary` |
-| `src/components/suporte-backoffice/SuporteProfileSetup.tsx` | **Novo** -- tela de setup obrigatoria do atendente |
-| `src/components/suporte-backoffice/SuporteLayout.tsx` | Verificar perfil incompleto + link Avaliacoes (admin) |
-| `src/components/suporte-backoffice/SuporteBottomNav.tsx` | Item Avaliacoes (admin) |
-| `src/components/suporte/SupportChatView.tsx` | Avatar do usuario, botao encerrar, trigger avaliacao, chamar summarize |
-| `src/components/suporte/SupportRatingDialog.tsx` | **Novo** -- dialog de avaliacao com estrelas |
-| `src/pages/suporte-backoffice/SuporteAtendimento.tsx` | Chamar summarize ao resolver |
-| `src/pages/suporte-backoffice/SuporteAvaliacoes.tsx` | **Novo** -- painel de avaliacoes (admin) |
-| `supabase/functions/support-summarize/index.ts` | **Novo** -- gera resumo IA do atendimento |
-| `supabase/config.toml` | Adicionar config para `support-summarize` |
-| `src/routing/HostRouter.tsx` | Rota para SuporteAvaliacoes |
+| Migration SQL | Tabela `ai_training_entries` |
+| `supabase/functions/support-chat-ephemeral/index.ts` | **Novo** -- chat IA efemero sem ticket |
+| `supabase/config.toml` | Adicionar config para `support-chat-ephemeral` |
+| `src/components/suporte/SupportAIChatPopup.tsx` | **Novo** -- popup/drawer de chat flutuante |
+| `src/components/suporte/SupportChatBubble.tsx` | Abrir popup em vez de navegar |
+| `src/pages/Suporte.tsx` | Remover botao "Iniciar chat", filtrar tickets ai_handling |
+| `src/components/suporte/SupportChatView.tsx` | Remover botao "Falar com atendente" |
+| `src/pages/suporte-backoffice/SuporteIATreinamento.tsx` | **Novo** -- painel de treinamento IA (admin) |
+| `src/components/suporte-backoffice/SuporteLayout.tsx` | Adicionar link "IA" (admin only) |
+| `src/components/suporte-backoffice/SuporteBottomNav.tsx` | Adicionar item "IA" (admin only) |
+| `src/routing/HostRouter.tsx` | Adicionar rota SuporteIATreinamento |
 
 ### Ordem de execucao
 
-1. Migration (tabela `support_ratings` + coluna `ai_summary`)
-2. Edge function `support-summarize` + config.toml + deploy
-3. Perfil obrigatorio do atendente (`SuporteProfileSetup` + `SuporteLayout`)
-4. Avatar do usuario no chat (`SupportChatView`)
-5. Encerramento bidirecional (`SupportChatView` + `SuporteAtendimento` chamando summarize)
-6. Dialog de avaliacao (`SupportRatingDialog` + integracao no `SupportChatView`)
-7. Painel de avaliacoes no back-office (`SuporteAvaliacoes` + navegacao + rota)
-
+1. Migration (tabela `ai_training_entries`)
+2. Edge function `support-chat-ephemeral` + config.toml + deploy
+3. `SupportAIChatPopup` (componente de chat flutuante efemero)
+4. `SupportChatBubble` (abrir popup em vez de navegar)
+5. `Suporte.tsx` (remover botao iniciar, filtrar lista)
+6. `SupportChatView.tsx` (remover botao "Falar com atendente")
+7. `SuporteIATreinamento.tsx` (painel admin)
+8. Navegacao + rotas (SuporteLayout, SuporteBottomNav, HostRouter)

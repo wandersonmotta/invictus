@@ -1,4 +1,5 @@
 import { GoldHoverText } from "@/components/GoldHoverText";
+import { GoldSweepText } from "@/components/landing/GoldSweepText";
 import { Card } from "@/components/ui/card";
 import { EditorialMedia } from "@/components/landing/EditorialMedia";
 import { SectionShell } from "@/components/landing/SectionShell";
@@ -270,7 +271,7 @@ export function FinalWarning() {
             <p>Se você chegou até aqui e sentiu desconforto, provavelmente não é para você.</p>
             <p>Se você leu tudo isso e sentiu clareza, bem-vindo ao próximo nível.</p>
             <p className="text-foreground font-medium">
-              <GoldHoverText>Isso é INVICTUS. Isso é Fraternidade. Isso é decisão.</GoldHoverText>
+              <GoldSweepText>Isso é INVICTUS. Isso é Fraternidade. Isso é decisão.</GoldSweepText>
             </p>
           </RevealText>
         </Card>

@@ -84,6 +84,16 @@ export function SupportAIChatPopup({ open, onOpenChange }: Props) {
     setMessages(updatedMessages);
 
     let assistantContent = "";
+    let thinkingFilterApplied = false;
+
+    // Safety filter: strip nonsensical English prefixes from AI response start
+    const sanitizeThinkingTokens = (text: string): string => {
+      if (thinkingFilterApplied) return text;
+      // Match random English words at the start (thinking tokens leak)
+      const cleaned = text.replace(/^[\s]*(?:[a-zA-Z]{2,15}\s+){1,10}(?=[\p{L}])/u, "").trimStart();
+      if (cleaned !== text) thinkingFilterApplied = true;
+      return cleaned;
+    };
 
     try {
       const session = (await supabase.auth.getSession()).data.session;
@@ -133,12 +143,14 @@ export function SupportAIChatPopup({ open, onOpenChange }: Props) {
             const content = parsed.choices?.[0]?.delta?.content;
             if (content) {
               assistantContent += content;
+              const displayContent = sanitizeThinkingTokens(assistantContent);
               setMessages((prev) => {
                 const last = prev[prev.length - 1];
                 if (last?.role === "assistant") {
-                  return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantContent } : m);
+                  return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: displayContent } : m);
                 }
-                return [...prev, { role: "assistant", content: assistantContent }];
+                if (!displayContent) return prev; // don't add empty message
+                return [...prev, { role: "assistant", content: displayContent }];
               });
             }
           } catch { /* partial */ }

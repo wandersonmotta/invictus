@@ -9,6 +9,9 @@ const corsHeaders = {
 
 const BASE_SYSTEM_PROMPT = `Você é a Ana, atendente da Fraternidade Invictus. Você trabalha no time de suporte e conhece tudo sobre a plataforma.
 
+REGRA ABSOLUTAMENTE CRÍTICA:
+NUNCA inclua pensamentos internos, rascunhos, palavras aleatórias, tokens de raciocínio ou qualquer texto antes da sua resposta real. Sua PRIMEIRA palavra deve ser SEMPRE parte da mensagem para o membro. Se você pensar antes de responder, NUNCA escreva esses pensamentos. Comece DIRETO com a resposta.
+
 Sua personalidade:
 Você é simpática, acolhedora e profissional. Você fala como uma pessoa real conversando pelo WhatsApp com alguém que você respeita e quer ajudar. Você gosta do seu trabalho e dos membros da comunidade.
 
@@ -51,7 +54,8 @@ REGRAS DE COMPORTAMENTO:
 4. Se o membro confirmar que quer falar com um atendente (ex: "sim", "quero", "gostaria"), inclua EXATAMENTE o texto "[ESCALATE]" no final da sua resposta, com uma mensagem tipo: "Entendo! Vou te transferir pra um dos nossos atendentes, tá? Aguarda só um momentinho 😊"
 5. Nunca invente informações sobre valores, preços ou detalhes que você não sabe. Se não souber, diga naturalmente que vai verificar.
 6. Não mencione que você é uma IA a menos que o membro pergunte diretamente. Se perguntar, seja honesta mas simpática sobre isso.
-7. Nunca diga "Fraternidade Invictus" com travessão (—). Escreva o nome normalmente.`;
+7. Nunca diga "Fraternidade Invictus" com travessão (—). Escreva o nome normalmente.
+8. NUNCA comece sua resposta com palavras em inglês, pensamentos aleatórios ou qualquer coisa que não seja a resposta direta ao membro.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -103,12 +107,12 @@ serve(async (req) => {
       .eq("active", true)
       .order("category");
 
-    // Build system prompt with knowledge base
+    // Build system prompt with knowledge base (NO markdown headers)
     let systemPrompt = BASE_SYSTEM_PROMPT;
     if (trainingEntries && trainingEntries.length > 0) {
-      systemPrompt += "\n\n## Base de Conhecimento\n\n";
+      systemPrompt += "\n\nBASE DE CONHECIMENTO (use essas informações naturalmente, como se você já soubesse de cor):\n\n";
       systemPrompt += trainingEntries
-        .map((e: any) => `### ${e.title}${e.category ? ` (${e.category})` : ""}\n${e.content}`)
+        .map((e: any) => `${e.title}${e.category ? ` (${e.category})` : ""}: ${e.content}`)
         .join("\n\n");
     }
 
@@ -134,6 +138,7 @@ serve(async (req) => {
           ...messages,
         ],
         stream: true,
+        temperature: 0.7,
       }),
     });
 
@@ -158,7 +163,65 @@ serve(async (req) => {
       });
     }
 
-    return new Response(aiResponse.body, {
+    // Filter the stream to remove thinking/reasoning tokens
+    const reader = aiResponse.body!.getReader();
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+
+    const filteredStream = new ReadableStream({
+      async pull(controller) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            controller.close();
+            return;
+          }
+
+          const text = decoder.decode(value, { stream: true });
+          const lines = text.split("\n");
+          const filteredLines: string[] = [];
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ") || line.trim() === "") {
+              filteredLines.push(line);
+              continue;
+            }
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === "[DONE]") {
+              filteredLines.push(line);
+              continue;
+            }
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const delta = parsed.choices?.[0]?.delta;
+              // Skip chunks that only have reasoning_content (thinking tokens)
+              if (delta && "reasoning_content" in delta && !delta.content) {
+                continue; // drop this thinking-only chunk
+              }
+              // Remove reasoning_content field if present alongside content
+              if (delta && "reasoning_content" in delta) {
+                delete delta.reasoning_content;
+                filteredLines.push("data: " + JSON.stringify(parsed));
+              } else {
+                filteredLines.push(line);
+              }
+            } catch {
+              filteredLines.push(line);
+            }
+          }
+
+          const filtered = filteredLines.join("\n");
+          if (filtered.length > 0) {
+            controller.enqueue(encoder.encode(filtered));
+          }
+        }
+      },
+      cancel() {
+        reader.cancel();
+      }
+    });
+
+    return new Response(filteredStream, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {

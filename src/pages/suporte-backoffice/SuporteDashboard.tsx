@@ -15,12 +15,12 @@ export default function SuporteDashboard() {
   const navigate = useNavigate();
   const basePath = isLovableHost(window.location.hostname) ? "/suporte-backoffice" : "";
 
-  const { data: tickets, isLoading } = useQuery({
+  const { data: rawTickets, isLoading } = useQuery({
     queryKey: ["suporte-tickets-queue"],
     queryFn: async () => {
       const { data } = await supabase
         .from("support_tickets")
-        .select("*, profiles!support_tickets_user_id_fkey(display_name, avatar_url)")
+        .select("*")
         .in("status", ["escalated", "assigned", "resolved"] as any)
         .order("updated_at", { ascending: false });
       return (data || []) as any[];
@@ -28,12 +28,12 @@ export default function SuporteDashboard() {
     refetchInterval: 5000,
   });
 
-  // Fallback: fetch profile separately if join fails
-  const { data: ticketsWithProfiles } = useQuery({
-    queryKey: ["suporte-tickets-profiles", tickets],
-    enabled: !!tickets && tickets.length > 0,
+  // Fetch profiles separately (no FK between support_tickets and profiles)
+  const { data: displayTickets } = useQuery({
+    queryKey: ["suporte-tickets-profiles", rawTickets?.map((t: any) => t.id)],
+    enabled: !!rawTickets && rawTickets.length > 0,
     queryFn: async () => {
-      const userIds = [...new Set(tickets!.map((t: any) => t.user_id))];
+      const userIds = [...new Set(rawTickets!.map((t: any) => t.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, display_name, avatar_url")
@@ -42,14 +42,14 @@ export default function SuporteDashboard() {
       const profileMap: Record<string, any> = {};
       (profiles || []).forEach((p: any) => { profileMap[p.user_id] = p; });
 
-      return tickets!.map((t: any) => ({
+      return rawTickets!.map((t: any) => ({
         ...t,
-        profile: t.profiles || profileMap[t.user_id] || null,
+        profile: profileMap[t.user_id] || null,
       }));
     },
   });
 
-  const displayTickets = ticketsWithProfiles || tickets || [];
+  const finalTickets = displayTickets || rawTickets || [];
 
   return (
     <div className="space-y-6">
@@ -64,14 +64,14 @@ export default function SuporteDashboard() {
         </div>
       )}
 
-      {!isLoading && displayTickets.length === 0 && (
+      {!isLoading && finalTickets.length === 0 && (
         <div className="text-center py-16 text-muted-foreground text-sm">
           Nenhum ticket pendente no momento.
         </div>
       )}
 
       <div className="space-y-2">
-        {displayTickets.map((ticket: any) => {
+        {finalTickets.map((ticket: any) => {
           const status = STATUS_MAP[ticket.status] || { label: ticket.status, color: "text-muted-foreground" };
           const profile = ticket.profile;
           return (

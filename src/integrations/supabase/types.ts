@@ -1454,6 +1454,7 @@ export type Database = {
           body: string | null
           created_at: string
           id: string
+          read_at: string | null
           sender_id: string | null
           sender_type: Database["public"]["Enums"]["support_sender_type"]
           ticket_id: string
@@ -1462,6 +1463,7 @@ export type Database = {
           body?: string | null
           created_at?: string
           id?: string
+          read_at?: string | null
           sender_id?: string | null
           sender_type: Database["public"]["Enums"]["support_sender_type"]
           ticket_id: string
@@ -1470,6 +1472,7 @@ export type Database = {
           body?: string | null
           created_at?: string
           id?: string
+          read_at?: string | null
           sender_id?: string | null
           sender_type?: Database["public"]["Enums"]["support_sender_type"]
           ticket_id?: string

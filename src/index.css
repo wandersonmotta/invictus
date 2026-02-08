@@ -595,8 +595,33 @@ All colors MUST be HSL.
 }
 
 /* Gold sweep animation for premium text shine effect */
+.gold-sweep-text {
+  display: inline;
+  color: hsl(var(--gold-hot));
+  background: linear-gradient(
+    90deg,
+    hsl(var(--gold-hot)) 0%,
+    hsl(var(--gold-soft)) 15%,
+    hsl(var(--gold-hot)) 30%,
+    hsl(var(--gold-soft)) 40%,
+    hsl(50 100% 92%) 45%,
+    hsl(45 100% 95%) 50%,
+    hsl(50 100% 92%) 55%,
+    hsl(var(--gold-soft)) 60%,
+    hsl(var(--gold-hot)) 70%,
+    hsl(var(--gold-soft)) 85%,
+    hsl(var(--gold-hot)) 100%
+  );
+  background-size: 300% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gold-sweep 3s ease-in-out infinite;
+}
+
 @keyframes gold-sweep {
-  0%   { background-position: 0% center, 200% center; }
-  60%  { background-position: 0% center, -100% center; }
-  100% { background-position: 0% center, -100% center; }
+  0%   { background-position: 100% 0; }
+  60%  { background-position: 0% 0; }
+  100% { background-position: 0% 0; }
 }

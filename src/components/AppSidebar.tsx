@@ -82,7 +82,7 @@ const navSections: NavSection[] = [
     items: [
       { title: "Minhas Faturas", url: "/faturas", icon: Receipt },
       { title: "Perfil", url: "/perfil", icon: User },
-      { title: "Suporte", url: "/suporte", icon: HelpCircle, placeholder: true },
+      { title: "Suporte", url: "/suporte", icon: HelpCircle },
     ],
   },
 ];

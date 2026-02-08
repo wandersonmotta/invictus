@@ -39,17 +39,26 @@ export function getAppOrigin(hostname = window.location.hostname, protocol = win
 }
 
 export function getFinanceiroOrigin(hostname = window.location.hostname, protocol = window.location.protocol) {
-  // Preview/staging: keep same origin.
   if (!isCustomDomain(hostname)) return window.location.origin;
-
-  // Already on financeiro.
   if (hostname.startsWith("financeiro.")) return `${protocol}//${hostname}`;
-
-  // Root may be www. or app.; normalize to financeiro.
   let base = hostname;
   if (base.startsWith("www.")) base = base.slice(4);
   if (base.startsWith("app.")) base = base.slice(4);
   return `${protocol}//financeiro.${base}`;
+}
+
+export function isSuporteHost(hostname: string) {
+  return isCustomDomain(hostname) && hostname.startsWith("suporte.");
+}
+
+export function getSuporteOrigin(hostname = window.location.hostname, protocol = window.location.protocol) {
+  if (!isCustomDomain(hostname)) return window.location.origin;
+  if (hostname.startsWith("suporte.")) return `${protocol}//${hostname}`;
+  let base = hostname;
+  if (base.startsWith("www.")) base = base.slice(4);
+  if (base.startsWith("app.")) base = base.slice(4);
+  if (base.startsWith("financeiro.")) base = base.slice(11);
+  return `${protocol}//suporte.${base}`;
 }
 
 export function buildAppUrlFromCurrentLocation(pathname: string) {

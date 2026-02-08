@@ -1408,6 +1408,118 @@ export type Database = {
         }
         Relationships: []
       }
+      support_message_attachments: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          file_name: string | null
+          id: string
+          message_id: string
+          size_bytes: number | null
+          storage_bucket: string
+          storage_path: string
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          message_id: string
+          size_bytes?: number | null
+          storage_bucket?: string
+          storage_path: string
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          message_id?: string
+          size_bytes?: number | null
+          storage_bucket?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_message_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "support_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_messages: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          sender_id: string | null
+          sender_type: Database["public"]["Enums"]["support_sender_type"]
+          ticket_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          sender_id?: string | null
+          sender_type: Database["public"]["Enums"]["support_sender_type"]
+          ticket_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          sender_id?: string | null
+          sender_type?: Database["public"]["Enums"]["support_sender_type"]
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          escalated_at: string | null
+          id: string
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["support_ticket_status"]
+          subject: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          escalated_at?: string | null
+          id?: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["support_ticket_status"]
+          subject?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          escalated_at?: string | null
+          id?: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["support_ticket_status"]
+          subject?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       training_categories: {
         Row: {
           created_at: string
@@ -1992,6 +2104,7 @@ export type Database = {
       is_approved: { Args: never; Returns: boolean }
       is_financeiro: { Args: never; Returns: boolean }
       is_mutual_follow: { Args: { a: string; b: string }; Returns: boolean }
+      is_suporte: { Args: never; Returns: boolean }
       list_all_member_balances: {
         Args: never
         Returns: {
@@ -2256,6 +2369,13 @@ export type Database = {
       profile_visibility: "members" | "mutuals" | "private"
       redemption_status: "pending" | "approved" | "rejected" | "delivered"
       subscription_status: "active" | "cancelled" | "past_due"
+      support_sender_type: "user" | "ai" | "agent"
+      support_ticket_status:
+        | "open"
+        | "ai_handling"
+        | "escalated"
+        | "assigned"
+        | "resolved"
       wallet_transaction_type: "credit" | "debit"
       withdrawal_status: "pending" | "approved" | "rejected"
     }
@@ -2394,6 +2514,14 @@ export const Constants = {
       profile_visibility: ["members", "mutuals", "private"],
       redemption_status: ["pending", "approved", "rejected", "delivered"],
       subscription_status: ["active", "cancelled", "past_due"],
+      support_sender_type: ["user", "ai", "agent"],
+      support_ticket_status: [
+        "open",
+        "ai_handling",
+        "escalated",
+        "assigned",
+        "resolved",
+      ],
       wallet_transaction_type: ["credit", "debit"],
       withdrawal_status: ["pending", "approved", "rejected"],
     },

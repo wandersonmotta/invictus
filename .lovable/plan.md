@@ -1,73 +1,64 @@
 
-# Plano: Equipe Financeira (mesmo padrao do Suporte)
+# Plano: Bloquear acesso de Financeiro/Suporte ao App de membros
 
-## Resumo
+## Problema atual
 
-Criar a secao "Equipe" no painel financeiro, seguindo exatamente o mesmo padrao ja implementado no back-office de suporte. Apenas o admin pode visualizar e gerenciar membros da equipe financeira. Novos membros precisam completar um setup de perfil obrigatorio (nome, sobrenome, foto) no primeiro acesso.
+Os usuarios criados nas equipes "Financeiro" e "Suporte" conseguem acessar `app.invictusfraternidade.com.br` porque o guard `RequireAuth` verifica apenas se existe uma sessao ativa e um perfil -- nao verifica se o usuario tem uma role restrita (`financeiro` ou `suporte`).
 
----
+## Solucao
+
+Adicionar uma verificacao de role dentro do `RequireAuth`. Se o usuario logado possuir APENAS a role `financeiro` ou `suporte` (sem ser admin ou membro regular), ele sera redirecionado para a pagina inicial do seu respectivo painel.
 
 ## O que sera feito
 
-### 1. Edge Function: `manage-financeiro-agents`
+### 1. Criar hook `useUserRoles`
 
-Copia do `manage-support-agents`, mas operando com a role `financeiro` em vez de `suporte`:
+Um novo hook que retorna todas as roles do usuario logado, consultando a tabela `user_roles`:
 
-- **create**: Cria usuario via admin API, cria perfil com `access_status = 'approved'`, atribui role `financeiro`
-- **remove**: Remove role `financeiro` do usuario
-- **list**: Lista usuarios com role `financeiro`, excluindo admins, retornando perfil + email
+- Retorna array de roles (ex: `['financeiro']`, `['suporte']`, `['admin']`, ou `[]` para membros normais)
+- Usa RPC `has_role` para checar `financeiro` e `suporte`
 
-### 2. Pagina: `FinanceiroEquipe.tsx`
+### 2. Modificar `RequireAuth`
 
-Copia do `SuporteEquipe.tsx` adaptada para o contexto financeiro:
+Apos confirmar que existe sessao, verificar se o usuario tem role `financeiro` ou `suporte`:
 
-- Titulo: "Equipe Financeira"
-- Usa `useIsAdmin` para restringir acesso
-- Chama `manage-financeiro-agents` em vez de `manage-support-agents`
-- Formulario para cadastrar novo membro (nome, email, senha)
-- Lista de membros com avatar, nome, email e botao de remover
-- Redireciona nao-admins para `/financeiro/dashboard` (ou `/dashboard` em producao)
+- Se tem role `financeiro` (e nao e admin): redirecionar para `/financeiro/dashboard` (preview) ou o dominio `financeiro.` (producao)
+- Se tem role `suporte` (e nao e admin): redirecionar para `/suporte-backoffice/dashboard` (preview) ou o dominio `suporte.` (producao)
+- Se nao tem nenhuma dessas roles (membro normal ou admin): continua o fluxo atual normalmente
 
-### 3. Setup de Perfil Obrigatorio
+### 3. Modificar `RequireFinanceiro` e `RequireSuporte`
 
-Reutilizar o `SuporteProfileSetup` existente (ou criar `FinanceiroProfileSetup` identico) no `FinanceiroLayout`:
+Garantir que esses guards tambem bloqueiem acesso cruzado:
 
-- Ao carregar o layout, verificar se o usuario logado tem `first_name`, `last_name` e `avatar_url`
-- Se faltar algum, exibir tela de setup obrigatoria antes de mostrar o conteudo
-- Apos salvar, a tela some permanentemente
-
-### 4. Navegacao
-
-Adicionar link "Equipe" na sidebar e bottom nav, visivel apenas para admin:
-
-- **Sidebar** (`FinanceiroLayout.tsx`): Novo `NavItem` com icone `Users` apos "Carteira", condicional ao admin
-- **Bottom Nav** (`FinanceiroBottomNav.tsx`): Nao adicionar item direto (ja tem Menu); incluir no `FinanceiroMenuSheet` como item admin-only
-- **Rota** (`HostRouter.tsx`): Adicionar rota `/equipe` no bloco financeiro (preview e producao)
-
----
+- `RequireFinanceiro`: se o usuario tem role `suporte` mas nao `financeiro`, redirecionar para area de suporte
+- `RequireSuporte`: se o usuario tem role `financeiro` mas nao `suporte`, redirecionar para area financeira
 
 ## Detalhes Tecnicos
-
-### Arquivos a criar
-
-| Arquivo | Descricao |
-|---------|-----------|
-| `supabase/functions/manage-financeiro-agents/index.ts` | Edge function para CRUD de membros financeiros |
-| `src/pages/financeiro/FinanceiroEquipe.tsx` | Pagina de gestao da equipe |
 
 ### Arquivos a modificar
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `supabase/config.toml` | Adicionar config `manage-financeiro-agents` |
-| `src/components/financeiro/FinanceiroLayout.tsx` | Verificar perfil incompleto (setup obrigatorio) + link "Equipe" admin-only na sidebar |
-| `src/components/financeiro/FinanceiroMenuSheet.tsx` | Adicionar item "Equipe" admin-only no menu mobile |
-| `src/routing/HostRouter.tsx` | Adicionar rota `/equipe` nos blocos financeiro (preview + producao) |
+| `src/auth/RequireAuth.tsx` | Adicionar verificacao de roles `financeiro`/`suporte` e redirecionar para area correta |
+| `src/hooks/useIsFinanceiro.ts` | Reutilizado (ja existe) |
+| `src/hooks/useIsSuporte.ts` | Reutilizado (ja existe) |
+
+### Logica no RequireAuth
+
+```text
+1. Sessao existe? Nao -> /auth
+2. Usuario tem role 'financeiro' (e nao admin)?
+   -> Redirecionar para /financeiro/dashboard (preview) ou financeiro.dominio (producao)
+3. Usuario tem role 'suporte' (e nao admin)?
+   -> Redirecionar para /suporte-backoffice/dashboard (preview) ou suporte.dominio (producao)
+4. Continuar fluxo normal (perfil, aprovacao, etc.)
+```
+
+### Tratamento por ambiente
+
+- **Preview (lovable.app)**: Redireciona internamente para `/financeiro/dashboard` ou `/suporte-backoffice/dashboard`
+- **Producao (dominio custom)**: Redireciona para `financeiro.invictusfraternidade.com.br` ou `suporte.invictusfraternidade.com.br`
 
 ### Ordem de execucao
 
-1. Criar edge function `manage-financeiro-agents` + config.toml + deploy
-2. Criar `FinanceiroEquipe.tsx`
-3. Modificar `FinanceiroLayout.tsx` (setup obrigatorio + link Equipe)
-4. Modificar `FinanceiroMenuSheet.tsx` (item Equipe admin)
-5. Adicionar rota em `HostRouter.tsx`
+1. Modificar `RequireAuth.tsx` para incluir verificacao de roles e redirecionamento

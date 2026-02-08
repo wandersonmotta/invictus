@@ -10,11 +10,12 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
   const location = useLocation();
 
+  // Hook must be called unconditionally (Rules of Hooks)
+  const roleQuery = useRestrictedRole(session?.user.id);
+
   const profileQuery = useQuery({
     queryKey: ["profile_access", session?.user.id],
     enabled: !!session?.user.id,
-    // While the user is pending, we want the approval to "unlock" automatically.
-    // Keep polling only on the waiting screen to avoid unnecessary traffic elsewhere.
     refetchInterval: location.pathname === "/aguardando-aprovacao" ? 8_000 : false,
     queryFn: async () => {
       if (!session?.user.id)
@@ -67,8 +68,6 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   }
 
   // --- Block restricted-role users from the member app ---
-  const roleQuery = useRestrictedRole(session?.user.id);
-
   if (roleQuery.isLoading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
@@ -80,7 +79,6 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   if (roleQuery.data) {
     const { isFinanceiro, isSuporte, isAdmin } = roleQuery.data;
 
-    // Financeiro-only user → redirect to financeiro area
     if (isFinanceiro && !isAdmin) {
       if (isLovableHost(window.location.hostname)) {
         return <Navigate to="/financeiro/dashboard" replace />;
@@ -89,7 +87,6 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
       return null;
     }
 
-    // Suporte-only user → redirect to suporte area
     if (isSuporte && !isAdmin) {
       if (isLovableHost(window.location.hostname)) {
         return <Navigate to="/suporte-backoffice/dashboard" replace />;

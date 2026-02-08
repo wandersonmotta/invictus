@@ -46,7 +46,7 @@ export function HeroIntro({ onComplete }: { onComplete?: () => void }) {
       <img
         src={logo}
         alt=""
-        className="w-32 select-none sm:w-36 md:w-40"
+        className="w-44 select-none sm:w-52 md:w-60"
         draggable={false}
         style={{
           filter: "drop-shadow(0 0 20px hsl(var(--primary) / 0.4))",

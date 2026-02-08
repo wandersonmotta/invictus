@@ -36,9 +36,10 @@ export function ScrollProgress() {
     <div
       ref={barRef}
       aria-hidden
-      className="fixed left-0 top-0 z-50 h-[2px] w-full origin-left"
+      className="fixed left-0 top-0 z-[60] h-[3px] w-full origin-left"
       style={{
         background: "linear-gradient(90deg, hsl(var(--gold-hot) / 0.9), hsl(var(--gold-soft) / 0.7))",
+        boxShadow: "0 0 6px 1px hsl(var(--gold-hot) / 0.5)",
         transform: "scaleX(0)",
         willChange: "transform",
         pointerEvents: "none",

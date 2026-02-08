@@ -12,35 +12,7 @@ export function GoldSweepText({
   className?: string;
 }) {
   return (
-    <span
-      className={className}
-      style={{
-        display: "inline",
-        backgroundImage: `
-          linear-gradient(
-            135deg,
-            hsl(var(--gold-hot)) 0%,
-            hsl(var(--gold-soft)) 45%,
-            hsl(var(--gold-hot)) 100%
-          ),
-          linear-gradient(
-            105deg,
-            transparent 0%,
-            transparent 30%,
-            hsl(50 100% 95% / 0.7) 42%,
-            hsl(45 100% 85% / 0.9) 50%,
-            hsl(50 100% 95% / 0.7) 58%,
-            transparent 70%,
-            transparent 100%
-          )
-        `,
-        backgroundSize: "100% 100%, 250% 100%",
-        backgroundClip: "text",
-        WebkitBackgroundClip: "text",
-        WebkitTextFillColor: "transparent",
-        animation: "gold-sweep 3s ease-in-out infinite",
-      }}
-    >
+    <span className={`gold-sweep-text ${className ?? ""}`}>
       {children}
     </span>
   );

@@ -1,32 +1,41 @@
 
 
-# Ajustes: Logo Maior na Cortina + Barra Dourada no Mobile
+# Aviso Final -- Destaque Premium de Alto Impacto
 
-## 1. Logo maior na cortina de abertura
+## Conceito
 
-A logo atual usa `w-32` (128px) no mobile e `w-40` (160px) no desktop. Ainda esta pequena para o impacto cinematografico desejado. Vou aumentar significativamente:
+Inspirado em marcas de luxo como Rolls-Royce, Audemars Piguet e convites exclusivos de memberships premium (Soho House, Amex Centurion), o "Aviso Final" vai se tornar um **momento cinematografico** na pagina -- um bloco que "quebra" o ritmo visual e forca o visitante a parar e ler.
 
-- Mobile: `w-44` (176px)
-- Tablet: `w-52` (208px)  
-- Desktop: `w-60` (240px)
+Referencia: sites de relojoaria de luxo usam um "statement card" isolado com moldura dourada mais intensa, tipografia maior e um efeito de luz que diferencia aquele bloco de todo o resto da pagina. Vamos aplicar essa tecnica aqui.
 
-O drop-shadow dourado tambem sera intensificado para acompanhar o tamanho maior.
+## O que muda visualmente
 
-**Arquivo**: `src/components/landing/HeroIntro.tsx`
-- Linha 49: classe `w-32 sm:w-36 md:w-40` passa para `w-44 sm:w-52 md:w-60`
+1. **Moldura dourada reforçada** -- O card atual usa `invictus-auth-surface invictus-frame` (sutil). Vai passar a usar `invictus-auth-surface invictus-auth-frame`, que e a moldura dourada mais intensa do sistema (borda champagne com glow always-on), a mesma usada na tela de login.
 
-## 2. Barra dourada de scroll (ScrollProgress) no mobile
+2. **Linhas douradas decorativas** -- Duas linhas horizontais douradas (gradiente 90deg) acima e abaixo do card, animadas com reveal (scaleX de 0 a 1), criando um efeito de "moldura aberta" que emoldura o bloco no espaço.
 
-A barra dourada no topo da pagina que acompanha o scroll nao esta aparecendo no mobile. O problema e que com apenas `2px` de altura, ela fica praticamente invisivel em telas de alta densidade (retina). Alem disso, o `z-50` pode estar sendo coberto por outros elementos fixos.
+3. **Titulo com gradiente dourado** -- O "Aviso final" passa de `text-xl font-semibold` branco para um texto com gradiente dourado via `background-clip: text`, maior (`text-2xl sm:text-3xl`) e com tracking mais aberto para sensacao de exclusividade.
 
-**Correcoes** no `src/components/landing/ScrollProgress.tsx`:
-- Aumentar altura de `h-[2px]` para `h-[3px]` (mais visivel em telas retina)
-- Aumentar z-index para `z-[60]` para garantir que fique acima de tudo
-- Adicionar uma sombra dourada (`box-shadow`) para dar mais presenca visual
+4. **Frase final em destaque dourado** -- A ultima frase ("Isso e INVICTUS...") usa o componente `GoldHoverText` com o efeito dourado que segue o mouse, ja existente no projeto.
+
+5. **Animacao de reveal dedicada** -- O bloco inteiro usa `useRevealOnScroll` para aparecer com fade-in + translateY suave, dando peso ao momento.
+
+6. **Eyebrow label** -- Um badge "INVICTUS" discreto acima do titulo (como nas outras secoes), usando o token `--gold-hot` para manter consistencia.
 
 ## Detalhes tecnicos
 
-Apenas 2 arquivos modificados:
-- `src/components/landing/HeroIntro.tsx` -- Logo maior
-- `src/components/landing/ScrollProgress.tsx` -- Barra visivel no mobile
+### Arquivo modificado: `src/components/landing/ManifestoSections.tsx`
+
+Apenas a funcao `FinalWarning` sera reescrita:
+
+- Importar `useRevealOnScroll` e `GoldHoverText`
+- Adicionar linhas douradas decorativas (divs com gradiente animado)
+- Trocar classe do Card de `invictus-frame` para `invictus-auth-frame` (moldura mais intensa)
+- Titulo com gradiente dourado via estilo inline (`background-clip: text`)
+- Aumentar tipografia do titulo para `text-2xl sm:text-3xl`
+- Frase final com `GoldHoverText`
+- Padding mais generoso (`p-8 sm:p-10 lg:p-12`)
+- Wrap com `useRevealOnScroll` para animacao de entrada
+
+Nenhum arquivo CSS novo. Nenhuma dependencia nova. Apenas reutilizando os tokens e classes premium que ja existem no design system.
 

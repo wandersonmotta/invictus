@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Send, CheckCircle, User, Loader2, Paperclip, X } from "lucide-react";
+import { ArrowLeft, Send, CheckCircle, User, Loader2, Paperclip, X, ArrowRightLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { SupportMessageBubble } from "@/components/suporte/SupportMessageBubble";
+import { TransferTicketDialog } from "@/components/suporte-backoffice/TransferTicketDialog";
 import { isLovableHost } from "@/lib/appOrigin";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useIsSuporteGerente } from "@/hooks/useIsSuporteGerente";
 import { toast } from "sonner";
 
 interface Attachment {
@@ -24,18 +27,23 @@ export default function SuporteAtendimento() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const basePath = isLovableHost(window.location.hostname) ? "/suporte-backoffice" : "";
+  const { data: isAdmin } = useIsAdmin(user?.id);
+  const { data: isGerente } = useIsSuporteGerente(user?.id);
+  const canTransfer = isAdmin || isGerente;
+
   const [messages, setMessages] = useState<any[]>([]);
   const [attachments, setAttachments] = useState<Record<string, Attachment[]>>({});
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [ticketStatus, setTicketStatus] = useState<string>("");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [transferOpen, setTransferOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load ticket info
-  const { data: ticket } = useQuery({
+  const { data: ticket, refetch: refetchTicket } = useQuery({
     queryKey: ["suporte-ticket", ticketId],
     enabled: !!ticketId,
     queryFn: async () => {
@@ -45,6 +53,29 @@ export default function SuporteAtendimento() {
         .eq("id", ticketId!)
         .single();
       return data as any;
+    },
+  });
+
+  // Load agents for transfer dialog
+  const { data: agentsList } = useQuery({
+    queryKey: ["support-agents-for-transfer"],
+    enabled: !!canTransfer,
+    queryFn: async () => {
+      const session = (await supabase.auth.getSession()).data.session;
+      if (!session) return [];
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-support-agents`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ action: "list" }),
+        }
+      );
+      const data = await resp.json();
+      return data.agents || [];
     },
   });
 
@@ -107,7 +138,6 @@ export default function SuporteAtendimento() {
     });
   };
 
-  // Mark user messages as read when opening ticket
   const markAsRead = useCallback(async () => {
     if (!ticketId) return;
     await supabase
@@ -118,7 +148,6 @@ export default function SuporteAtendimento() {
       .is("read_at", null);
   }, [ticketId]);
 
-  // Load messages
   useEffect(() => {
     if (!ticketId) return;
 
@@ -194,7 +223,6 @@ export default function SuporteAtendimento() {
     setSending(true);
 
     try {
-      // Auto-assign on first agent message
       if (ticketStatus === "escalated") {
         await supabase
           .from("support_tickets")
@@ -229,7 +257,6 @@ export default function SuporteAtendimento() {
       .eq("id", ticketId);
     toast.success("Ticket resolvido!");
 
-    // Trigger AI summary
     try {
       const session = (await supabase.auth.getSession()).data.session;
       if (session) {
@@ -282,11 +309,18 @@ export default function SuporteAtendimento() {
               </p>
             </div>
           </div>
-          {ticketStatus !== "resolved" && (
-            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={handleResolve}>
-              <CheckCircle className="h-3.5 w-3.5" /> Resolver
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {canTransfer && ticketStatus !== "resolved" && (
+              <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => setTransferOpen(true)}>
+                <ArrowRightLeft className="h-3.5 w-3.5" /> Transferir
+              </Button>
+            )}
+            {ticketStatus !== "resolved" && (
+              <Button variant="outline" size="sm" className="text-xs gap-1" onClick={handleResolve}>
+                <CheckCircle className="h-3.5 w-3.5" /> Resolver
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Messages */}
@@ -397,6 +431,18 @@ export default function SuporteAtendimento() {
           </div>
         )}
       </div>
+
+      {/* Transfer dialog */}
+      {canTransfer && ticketId && (
+        <TransferTicketDialog
+          open={transferOpen}
+          onOpenChange={setTransferOpen}
+          ticketId={ticketId}
+          currentAssignedTo={ticket?.assigned_to || null}
+          agents={agentsList || []}
+          onTransferred={() => refetchTicket()}
+        />
+      )}
     </div>
   );
 }

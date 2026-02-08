@@ -12,6 +12,7 @@ import { SuporteBottomNav } from "./SuporteBottomNav";
 import { SuporteProfileSetup } from "./SuporteProfileSetup";
 import { useAuth } from "@/auth/AuthProvider";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useIsSuporteGerente } from "@/hooks/useIsSuporteGerente";
 
 interface Props { children: ReactNode; }
 
@@ -21,12 +22,15 @@ export function SuporteLayout({ children }: Props) {
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
   const { data: isAdmin } = useIsAdmin(user?.id);
+  const { data: isGerente } = useIsSuporteGerente(user?.id);
+
+  const showManagerFeatures = isAdmin || isGerente;
+  const showIAFeatures = isAdmin;
 
   const [profileComplete, setProfileComplete] = useState<boolean | null>(null);
 
   const basePath = isLovableHost(window.location.hostname) ? "/suporte-backoffice" : "";
 
-  // Check if agent profile is complete
   useEffect(() => {
     if (!user?.id) return;
     supabase
@@ -48,19 +52,16 @@ export function SuporteLayout({ children }: Props) {
     navigate(`${basePath}/auth`);
   };
 
-  // Loading state
   if (profileComplete === null) {
     return <div className="flex min-h-screen items-center justify-center bg-background"><div className="text-muted-foreground text-sm">Carregando...</div></div>;
   }
 
-  // Profile setup required
   if (!profileComplete) {
     return <SuporteProfileSetup onComplete={() => setProfileComplete(true)} />;
   }
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Sidebar */}
       <aside className="hidden w-64 flex-col border-r border-border bg-card lg:flex">
         <div className="flex h-20 flex-col items-center justify-center gap-1.5 border-b border-border px-4">
           <img src={invictusLogo} alt="Invictus" className="h-6 w-auto shrink-0" />
@@ -80,7 +81,7 @@ export function SuporteLayout({ children }: Props) {
             <ListChecks className="h-4 w-4" />
             Fila de Tickets
           </Link>
-          {isAdmin && (
+          {showManagerFeatures && (
             <>
               <Link
                 to={`${basePath}/equipe`}
@@ -102,17 +103,19 @@ export function SuporteLayout({ children }: Props) {
                 <Star className="h-4 w-4" />
                 Avaliações
               </Link>
-              <Link
-                to={`${basePath}/ia`}
-                className={cn(
-                  "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
-                  location.pathname.includes("/ia") ? "bg-accent text-accent-foreground" : "text-muted-foreground"
-                )}
-              >
-                <Brain className="h-4 w-4" />
-                IA
-              </Link>
             </>
+          )}
+          {showIAFeatures && (
+            <Link
+              to={`${basePath}/ia`}
+              className={cn(
+                "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
+                location.pathname.includes("/ia") ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+              )}
+            >
+              <Brain className="h-4 w-4" />
+              IA
+            </Link>
           )}
         </nav>
 

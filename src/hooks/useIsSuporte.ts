@@ -16,13 +16,18 @@ export function useIsSuporte() {
         return;
       }
 
-      const { data, error } = await rpcUntyped<boolean>("has_role", {
-        _user_id: session.session.user.id,
-        _role: "suporte",
-      });
+      const userId = session.session.user.id;
+
+      // Accept both "suporte" and "suporte_gerente" roles
+      const [supRes, gerRes] = await Promise.all([
+        rpcUntyped<boolean>("has_role", { _user_id: userId, _role: "suporte" }),
+        rpcUntyped<boolean>("has_role", { _user_id: userId, _role: "suporte_gerente" }),
+      ]);
 
       if (mounted) {
-        setIsSuporte(!error && data === true);
+        const hasSuporte = !supRes.error && supRes.data === true;
+        const hasGerente = !gerRes.error && gerRes.data === true;
+        setIsSuporte(hasSuporte || hasGerente);
         setLoading(false);
       }
     }

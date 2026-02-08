@@ -15,8 +15,8 @@ export function RevealText({
   delayMs?: number;
 }) {
   const reveal = useRevealOnScroll<HTMLDivElement>({
-    rootMargin: "0px 0px -10% 0px",
-    threshold: 0.15,
+    rootMargin: "0px 0px -25% 0px",
+    threshold: 0.3,
     once: true,
     enterDelayMs: 40,
     disableClasses: true,

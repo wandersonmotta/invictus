@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import { useRevealOnScroll } from "@/hooks/useRevealOnScroll";
+import { useCursorGlow } from "@/hooks/useCursorGlow";
 
 type SectionShellProps = {
   id?: string;
@@ -10,12 +11,14 @@ type SectionShellProps = {
 
 export function SectionShell({ id, title, children }: SectionShellProps) {
   const reveal = useRevealOnScroll<HTMLElement>({
-    rootMargin: "0px 0px -18% 0px",
-    threshold: 0.22,
+    rootMargin: "0px 0px -28% 0px",
+    threshold: 0.3,
     once: true,
     enterDelayMs: 56,
     disableClasses: true,
   });
+
+  const glowRef = useCursorGlow<HTMLDivElement>();
 
   return (
     <section
@@ -30,14 +33,14 @@ export function SectionShell({ id, title, children }: SectionShellProps) {
         <header className="invictus-section-head mb-6 flex items-end justify-between gap-4">
           <div className="min-w-0">
             <p className="invictus-section-eyebrow">INVICTUS</p>
-            <h2 className="invictus-landing-title text-balance text-2xl font-semibold sm:text-3xl">{title}</h2>
+            <h2 className="invictus-landing-title invictus-gradient-wipe text-balance text-2xl font-semibold sm:text-3xl">{title}</h2>
           </div>
           <div
             className={`invictus-section-separator hidden sm:block ${reveal.visible ? "invictus-separator-animate" : ""}`}
             aria-hidden="true"
           />
         </header>
-        <div className="invictus-landing-panel">{children}</div>
+        <div ref={glowRef} className="invictus-landing-panel invictus-cursor-glow">{children}</div>
       </div>
     </section>
   );

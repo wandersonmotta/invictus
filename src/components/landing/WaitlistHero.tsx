@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { GoldHoverText } from "@/components/GoldHoverText";
+import { useMagneticHover } from "@/hooks/useMagneticHover";
 import { EditorialMedia } from "@/components/landing/EditorialMedia";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import waitlistMediaPrimary from "@/assets/invictus-landing-waitlist-media-color-v3d.jpg";
@@ -28,6 +29,7 @@ export function WaitlistHero() {
   const [loading, setLoading] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const [mediaSrc, setMediaSrc] = React.useState<string>(waitlistMediaPrimary);
+  const magneticRef = useMagneticHover<HTMLButtonElement>(0.25);
 
   const form = useForm<WaitlistValues>({
     resolver: zodResolver(waitlistSchema),
@@ -122,7 +124,7 @@ export function WaitlistHero() {
 
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                <Button className="invictus-cta h-11 w-full sm:w-auto" disabled={loading}>
+                <Button ref={magneticRef} className="invictus-cta h-11 w-full sm:w-auto" disabled={loading} style={{ transition: "transform 200ms ease-out" }}>
                   Quero fazer parte
                 </Button>
               </DialogTrigger>

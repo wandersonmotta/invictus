@@ -16,8 +16,8 @@ type UseRevealOnScrollOptions = {
  */
 export function useRevealOnScroll<T extends HTMLElement>(options: UseRevealOnScrollOptions = {}) {
   const {
-    rootMargin = "0px 0px -10% 0px",
-    threshold = 0.15,
+    rootMargin = "0px 0px -25% 0px",
+    threshold = 0.3,
     once = true,
     enterDelayMs = 48,
     disableClasses = false,

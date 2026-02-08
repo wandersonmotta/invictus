@@ -13,6 +13,7 @@ import { SuporteProfileSetup } from "./SuporteProfileSetup";
 import { useAuth } from "@/auth/AuthProvider";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useIsSuporteGerente } from "@/hooks/useIsSuporteGerente";
+import { useAgentPresence } from "@/hooks/useAgentPresence";
 
 interface Props { children: ReactNode; }
 
@@ -26,6 +27,9 @@ export function SuporteLayout({ children }: Props) {
 
   const showManagerFeatures = isAdmin || isGerente;
   const showIAFeatures = isAdmin;
+
+  // Agent presence heartbeat
+  useAgentPresence(user?.id);
 
   const [profileComplete, setProfileComplete] = useState<boolean | null>(null);
 

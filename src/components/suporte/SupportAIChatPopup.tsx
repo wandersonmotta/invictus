@@ -45,27 +45,31 @@ export function SupportAIChatPopup({ open, onOpenChange }: Props) {
   const handleEscalate = useCallback(async (chatHistory: Message[]) => {
     if (!user?.id) return;
     try {
-      // Create ticket
-      const { data: ticket, error: ticketErr } = await supabase
-        .from("support_tickets")
-        .insert({ user_id: user.id, status: "escalated", escalated_at: new Date().toISOString() } as any)
-        .select("id")
-        .single();
-      if (ticketErr || !ticket) throw ticketErr;
+      const session = (await supabase.auth.getSession()).data.session;
+      if (!session) throw new Error("No session");
 
-      // Save chat history as messages
-      const messagesToSave = chatHistory.map((msg) => ({
-        ticket_id: ticket.id,
-        sender_type: msg.role === "user" ? "user" : "ai",
-        sender_id: msg.role === "user" ? user.id : null,
-        body: msg.content,
-      }));
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/support-escalate`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ messages: chatHistory }),
+        }
+      );
 
-      await supabase.from("support_messages").insert(messagesToSave as any);
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || "Escalation failed");
+      }
+
+      const { ticketId } = await resp.json();
 
       onOpenChange(false);
       setMessages([]);
-      navigate(`/suporte/${ticket.id}`);
+      navigate(`/suporte/${ticketId}`);
       toast.success("Você foi transferido para um atendente humano.");
     } catch (e) {
       console.error("Escalation error:", e);

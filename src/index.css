@@ -593,3 +593,10 @@ All colors MUST be HSL.
   -webkit-user-drag: none;
   pointer-events: none;
 }
+
+/* Gold sweep animation for premium text shine effect */
+@keyframes gold-sweep {
+  0%   { background-position: 0% center, 200% center; }
+  60%  { background-position: 0% center, -100% center; }
+  100% { background-position: 0% center, -100% center; }
+}

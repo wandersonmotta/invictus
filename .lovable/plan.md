@@ -1,46 +1,71 @@
 
-# Plano: Excluir membros de equipe (Financeiro/Suporte) da listagem de Membros no Admin
+# Plano: Avatar feminino cinematografico para a IA do Suporte
 
-## Problema
+## Objetivo
 
-A funcao RPC `admin_search_members` retorna todos os perfis com `access_status = 'approved'`, sem verificar se o usuario possui uma role restrita (`financeiro` ou `suporte`). Isso faz com que atendentes e membros da equipe financeira aparecam na aba "Membros" do painel admin como se fossem membros regulares da fraternidade.
-
-## Solucao
-
-Atualizar a funcao `admin_search_members` no banco de dados para excluir usuarios que possuam as roles `financeiro` ou `suporte` (exceto se tambem forem admin). Dessa forma, apenas membros reais da fraternidade aparecerao na listagem.
+Gerar uma imagem realista estilo cinematografico de uma mulher com fone de ouvido para representar a assistente IA do Suporte Invictus. Essa imagem sera usada como avatar em todos os pontos onde a IA aparece no chat.
 
 ## O que sera feito
 
-### 1. Migration: Atualizar `admin_search_members`
+### 1. Gerar a imagem via Edge Function
 
-Adicionar um filtro na query que exclui usuarios presentes na tabela `user_roles` com role `financeiro` ou `suporte`:
+Criar uma Edge Function `generate-support-avatar` que usa o modelo de geracao de imagens (Gemini Flash Image) para criar a foto. O prompt sera algo como:
+
+> "Cinematic studio portrait of a professional Brazilian woman wearing a modern headset, warm lighting, shallow depth of field, friendly smile, dark background with subtle gold accents, high-end corporate look"
+
+A imagem gerada sera salva no bucket de storage (ex: `support-assets`) e a URL publica sera usada no codigo.
+
+### 2. Salvar a imagem no storage
+
+- Criar bucket `support-assets` (publico) via migration
+- A Edge Function faz upload do base64 para `support-assets/ai-avatar.jpg`
+- A URL publica fica disponivel para uso no frontend
+
+### 3. Atualizar o frontend
+
+Substituir o icone `Bot` pelo avatar da IA em 3 pontos:
+
+| Arquivo | Local | Mudanca |
+|---------|-------|---------|
+| `SupportAIChatPopup.tsx` | Header do chat (linha 175) | Trocar icone Bot por Avatar com imagem |
+| `SupportAIChatPopup.tsx` | Bolhas de mensagem da IA (linha 198) | Trocar icone Bot por Avatar com imagem |
+| `SupportMessageBubble.tsx` | Icone para `senderType === "ai"` (linha ~80) | Usar a imagem como avatar da IA |
+
+### 4. Constante centralizada
+
+Criar uma constante para a URL do avatar da IA em um arquivo de config para facilitar manutencao futura:
 
 ```text
-WHERE p.access_status = 'approved'
-  AND NOT EXISTS (
-    SELECT 1 FROM public.user_roles ur
-    WHERE ur.user_id = p.user_id
-      AND ur.role IN ('financeiro', 'suporte')
-  )
+src/config/supportAvatar.ts
+  -> export const AI_SUPPORT_AVATAR_URL = "https://[supabase-url]/storage/v1/object/public/support-assets/ai-avatar.jpg";
 ```
-
-Isso garante que:
-- Membros regulares continuam aparecendo normalmente
-- Admins que tambem sao financeiro/suporte continuam aparecendo (pois o filtro exclui quem tem APENAS essas roles)
-- Atendentes e equipe financeira nao aparecem na lista
-
-### 2. Verificar `admin_list_pending_profiles_logged`
-
-Confirmar se a funcao de fila de aprovacao tambem precisa do mesmo filtro (provavelmente nao, pois membros de equipe sao criados com `access_status = 'approved'` e nunca ficam pendentes, mas vale garantir).
 
 ## Detalhes Tecnicos
 
-### Arquivo a criar
+### Edge Function: `generate-support-avatar`
 
-| Arquivo | Descricao |
-|---------|-----------|
-| `supabase/migrations/[timestamp].sql` | Migration com `CREATE OR REPLACE FUNCTION admin_search_members` atualizada |
+- Usa `google/gemini-2.5-flash-image` via Lovable AI gateway
+- Prompt focado em: mulher brasileira, fone de ouvido, iluminacao cinematografica, fundo escuro com tons dourados
+- Faz upload do resultado para o bucket `support-assets`
+- Funcao executada uma unica vez (manualmente ou via curl)
 
-### Nenhum arquivo de codigo frontend precisa ser alterado
+### Migration SQL
 
-A mudanca e inteiramente no banco de dados. O frontend ja chama `admin_search_members` e vai automaticamente parar de exibir esses usuarios.
+```text
+INSERT INTO storage.buckets (id, name, public) VALUES ('support-assets', 'support-assets', true);
+
+CREATE POLICY "Public read support assets"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'support-assets');
+
+CREATE POLICY "Service role upload support assets"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'support-assets');
+```
+
+### Ordem de execucao
+
+1. Migration para criar bucket
+2. Criar e executar Edge Function para gerar a imagem
+3. Atualizar `SupportAIChatPopup.tsx` e `SupportMessageBubble.tsx` com o avatar
+4. Criar `src/config/supportAvatar.ts` com a URL centralizada

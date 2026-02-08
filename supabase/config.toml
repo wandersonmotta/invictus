@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.support-summarize]
 verify_jwt = false
+
+[functions.support-chat-ephemeral]
+verify_jwt = false

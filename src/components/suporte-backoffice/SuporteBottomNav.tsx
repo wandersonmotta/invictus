@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { ListChecks, LogOut, Users, Star } from "lucide-react";
+import { ListChecks, LogOut, Users, Star, Brain } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobileOrTablet } from "@/hooks/use-mobile";
 import { isLovableHost } from "@/lib/appOrigin";
@@ -22,6 +22,7 @@ export function SuporteBottomNav() {
     ...(isAdmin ? [
       { id: "equipe", label: "Equipe", icon: Users, url: `${basePath}/equipe` },
       { id: "avaliacoes", label: "Avaliações", icon: Star, url: `${basePath}/avaliacoes` },
+      { id: "ia", label: "IA", icon: Brain, url: `${basePath}/ia` },
     ] : []),
   ];
 

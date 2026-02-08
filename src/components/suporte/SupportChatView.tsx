@@ -316,21 +316,7 @@ export function SupportChatView({ ticketId }: Props) {
     e.target.value = "";
   };
 
-  const handleEscalate = async () => {
-    await supabase
-      .from("support_tickets")
-      .update({ status: "escalated", escalated_at: new Date().toISOString() } as any)
-      .eq("id", ticketId);
-
-    await supabase.from("support_messages").insert({
-      ticket_id: ticketId,
-      sender_type: "ai",
-      sender_id: null,
-      body: "Você foi transferido para um atendente humano. Aguarde um momento, em breve alguém irá te atender! 🙌",
-    } as any);
-
-    toast.success("Atendente humano solicitado!");
-  };
+  // handleEscalate removed — escalation is now handled by the ephemeral AI chat
 
   const statusLabel =
     ticketStatus === "ai_handling"
@@ -359,11 +345,6 @@ export function SupportChatView({ ticketId }: Props) {
         {canResolve && (
           <Button variant="outline" size="sm" className="text-xs gap-1" onClick={handleResolve}>
             <CheckCircle className="h-3.5 w-3.5" /> Encerrar
-          </Button>
-        )}
-        {ticketStatus === "ai_handling" && (
-          <Button variant="outline" size="sm" className="text-xs" onClick={handleEscalate}>
-            Falar com atendente
           </Button>
         )}
       </div>

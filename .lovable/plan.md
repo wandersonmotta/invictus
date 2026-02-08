@@ -1,121 +1,192 @@
 
 
-# Plano: Correções e Melhorias no Sistema de Suporte
+# Plano Unificado: Perfil Atendente + Encerramento Bidirecional + Avaliacao + Resumo IA
 
-## Problemas Identificados
-
-1. **Edge Function `support-chat` quebrada** -- usa `supabase.auth.getClaims()` que nao existe. Por isso o chat com IA nao funciona e nenhum ticket escala corretamente.
-2. **Falta anexo de arquivos** no chat do usuario (UI nao tem botao de anexar).
-3. **Falta indicadores de status de mensagem** (enviado / visualizado).
-4. **Falta foto do perfil do atendente** nas mensagens do back-office.
-5. **Falta aba de gestao de equipe** no back-office (cadastrar novos atendentes).
+Este plano consolida as duas solicitacoes anteriores em uma implementacao unica.
 
 ---
 
-## 1. Corrigir Edge Function `support-chat`
+## Bloco 1 -- Perfil Obrigatorio do Atendente
 
-Substituir `supabase.auth.getClaims(token)` por `supabase.auth.getUser()` (padrao usado em todas as outras edge functions do projeto). Isso vai destravar o chat com IA e permitir que tickets sejam escalados automaticamente quando a IA responde com `[ESCALATE]`.
+Quando um novo atendente faz login no back-office pela primeira vez, ele ainda nao tem `first_name`, `last_name` e `avatar_url`. O sistema detecta isso e exibe uma tela de setup obrigatoria.
 
----
+**O que acontece:**
+- O `SuporteLayout` carrega o perfil do atendente logado
+- Se faltar nome, sobrenome ou foto, renderiza a tela de setup em vez do conteudo normal
+- A tela tem campos de nome, sobrenome e upload de foto com crop circular (reutilizando `AvatarCropDialog`)
+- Apos salvar, a tela some permanentemente -- nao ha opcao de editar depois
 
-## 2. Anexo de Arquivos no Chat do Usuario
-
-A tabela `support_message_attachments` e o bucket `support-attachments` ja existem no banco. Falta apenas a UI.
-
-**Alteracoes:**
-- Adicionar botao de anexo (clip) no `SupportChatView.tsx` (lado do usuario)
-- Upload do arquivo para o bucket `support-attachments` via Storage API
-- Criar o registro na tabela `support_message_attachments` vinculado a mensagem
-- Exibir anexos no `SupportMessageBubble.tsx` (imagens inline, outros arquivos como link)
-- Adicionar a mesma funcionalidade no `SuporteAtendimento.tsx` (lado do atendente)
+**Arquivos:**
+- Criar `src/components/suporte-backoffice/SuporteProfileSetup.tsx`
+- Modificar `src/components/suporte-backoffice/SuporteLayout.tsx`
 
 ---
 
-## 3. Indicadores de Status de Mensagem
+## Bloco 2 -- Foto do Usuario no Proprio Chat
 
-Adicionar coluna `read_at` na tabela `support_messages` para rastrear visualizacao.
+Atualmente o `SupportChatView` nao exibe o avatar do usuario nas mensagens dele.
 
-**Logica:**
-- **Um check** = mensagem enviada (aparece imediatamente ao enviar)
-- **Dois checks** (visualizado) = aparece apenas quando o atendente responde (ou seja, quando chega uma mensagem com `sender_type = 'agent'`, todas as mensagens anteriores do usuario sao marcadas como lidas)
+**Alteracao:**
+- Buscar o perfil do usuario logado (`avatar_url`, `display_name`) no `SupportChatView`
+- Passar `senderAvatar` e `senderName` nas mensagens com `sender_type === "user"`
 
-**Alteracoes:**
-- Migration: adicionar coluna `read_at timestamptz` em `support_messages` + policy de UPDATE para suporte poder atualizar
-- No `SuporteAtendimento.tsx`: ao abrir um ticket, marcar mensagens do usuario como lidas (atualizar `read_at`)
-- No `SupportMessageBubble.tsx`: exibir icone de check/double-check para mensagens do usuario
+**Arquivo:** `src/components/suporte/SupportChatView.tsx`
 
 ---
 
-## 4. Foto do Perfil do Atendente no Back-office
+## Bloco 3 -- Encerramento Bidirecional
 
-Quando o atendente envia uma mensagem, o `SupportMessageBubble` no lado do usuario mostra um icone generico. Precisamos carregar o perfil do atendente (avatar + nome) para exibir corretamente.
+Tanto o atendente quanto o usuario podem encerrar o ticket. Ambos os lados sincronizam via realtime.
 
-**Alteracoes:**
-- No `SupportChatView.tsx`: buscar perfis dos atendentes que enviaram mensagens (via `sender_id` onde `sender_type = 'agent'`)
-- Passar `senderAvatar` e `senderName` para o `SupportMessageBubble` nas mensagens de agentes
-- Mesma logica no `SuporteAtendimento.tsx` para mostrar o avatar do proprio atendente
+**Lado do usuario (SupportChatView):**
+- Botao "Encerrar atendimento" no header, visivel quando status e `assigned` ou `escalated`
+- Ao clicar, atualiza o ticket para `status = 'resolved'` e `resolved_at = now()`
+- Apos resolver, dispara a geracao do resumo IA e exibe o dialog de avaliacao
+
+**Lado do atendente (SuporteAtendimento):**
+- Ja tem o botao "Resolver" -- ao clicar, tambem dispara o resumo IA
+- O usuario ve a mudanca via realtime e recebe o dialog de avaliacao
+
+**Arquivos:** `SupportChatView.tsx`, `SuporteAtendimento.tsx`
 
 ---
 
-## 5. Gestao de Equipe de Suporte (Back-office)
+## Bloco 4 -- Sistema de Avaliacao com Estrelas
 
-Nova aba no sidebar do back-office para o admin de suporte gerenciar a equipe.
+### Banco de dados (migration)
+
+Nova tabela `support_ratings`:
+
+```text
+id          uuid PK
+ticket_id   uuid NOT NULL UNIQUE
+user_id     uuid NOT NULL
+agent_id    uuid (nullable)
+rating_resolved  smallint NOT NULL (1-5) -- "O problema foi solucionado?"
+rating_agent     smallint NOT NULL (1-5) -- "O atendente foi cordial/ajudou?"
+created_at  timestamptz DEFAULT now()
+```
+
+RLS:
+- Usuario pode inserir propria avaliacao (user_id = auth.uid())
+- Usuario pode ver propria avaliacao
+- Admin pode ver todas
+- Ninguem atualiza ou deleta
+
+### Dialog de avaliacao (usuario)
+- Exibido automaticamente quando o ticket muda para `resolved` (por qualquer lado)
+- Duas perguntas com estrelas clicaveis (1-5):
+  - "O seu problema foi solucionado?"
+  - "O atendente foi cordial e ajudou a resolver?"
+- Se ja avaliou, nao exibe novamente
+
+**Arquivos:**
+- Criar `src/components/suporte/SupportRatingDialog.tsx`
+- Modificar `SupportChatView.tsx`
+
+---
+
+## Bloco 5 -- Resumo por IA
+
+### Coluna nova
+Adicionar `ai_summary text` na tabela `support_tickets`.
+
+### Edge function: `support-summarize`
+- Recebe `{ ticketId }` no body
+- Valida autenticacao (dono do ticket, suporte ou admin)
+- Busca todas as mensagens do ticket com service role
+- Chama Lovable AI (gemini-3-flash-preview) com prompt pedindo:
+  - O que o usuario relatou/perguntou
+  - O que o atendente/IA respondeu
+  - Qual foi a resolucao final
+- Salva o resumo no campo `ai_summary` do ticket
+- Chamada disparada automaticamente quando o ticket e resolvido (por qualquer lado)
+
+**Arquivos:**
+- Criar `supabase/functions/support-summarize/index.ts`
+- Adicionar em `supabase/config.toml`
+
+---
+
+## Bloco 6 -- Painel de Avaliacoes no Back-office (Admin)
+
+Nova aba "Avaliacoes" no sidebar, visivel apenas para admin.
 
 **Funcionalidades:**
-- Listar atendentes atuais (usuarios com role `suporte`)
-- Formulario para cadastrar novo atendente: e-mail, senha, nome completo
-- Ao cadastrar, o sistema cria o usuario via edge function (signup), insere a role `suporte`, e exige que o atendente complete seu perfil (nome + foto) no primeiro acesso
-- Remover atendente (remover role `suporte`)
+- Lista de avaliacoes com: nome do usuario, nome do atendente, nota "solucionado", nota "cordialidade", resumo IA, data
+- Busca em dois estagios (avaliacoes + perfis separados, conforme padrao do projeto)
 
-**Alteracoes:**
-- Nova edge function `manage-support-agents` para criar usuario + atribuir role (precisa service_role)
-- Nova pagina `SuporteEquipe.tsx` no back-office
-- Adicionar rota e link na sidebar/bottom nav
-- RLS: apenas usuarios com role `suporte` + alguma flag de "admin de suporte" ou role `admin` podem gerenciar
+**Arquivos:**
+- Criar `src/pages/suporte-backoffice/SuporteAvaliacoes.tsx`
+- Modificar `SuporteLayout.tsx` e `SuporteBottomNav.tsx` (link admin only)
+- Adicionar rota em `HostRouter.tsx`
 
 ---
 
 ## Detalhes Tecnicos
 
-### Migration SQL necessaria
+### Migration SQL
 
 ```text
--- Adicionar read_at para rastreamento de visualizacao
-ALTER TABLE public.support_messages ADD COLUMN read_at timestamptz;
+-- Coluna para resumo IA
+ALTER TABLE public.support_tickets
+  ADD COLUMN IF NOT EXISTS ai_summary text;
 
--- Permitir suporte atualizar read_at
-CREATE POLICY "Suporte can mark messages read"
-  ON public.support_messages FOR UPDATE
-  USING (
-    has_role(auth.uid(), 'suporte'::app_role) AND
-    sender_type = 'user'
-  );
+-- Tabela de avaliacoes
+CREATE TABLE public.support_ratings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  ticket_id uuid NOT NULL UNIQUE,
+  user_id uuid NOT NULL,
+  agent_id uuid,
+  rating_resolved smallint NOT NULL,
+  rating_agent smallint NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 
--- Remover policy antiga que bloqueia updates
-DROP POLICY IF EXISTS "No update messages" ON public.support_messages;
+ALTER TABLE public.support_ratings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can insert own rating"
+  ON public.support_ratings FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own rating"
+  ON public.support_ratings FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Admins can view all ratings"
+  ON public.support_ratings FOR SELECT
+  USING (has_role(auth.uid(), 'admin'::app_role));
+
+CREATE POLICY "No update ratings"
+  ON public.support_ratings FOR UPDATE USING (false);
+
+CREATE POLICY "No delete ratings"
+  ON public.support_ratings FOR DELETE USING (false);
 ```
 
-### Arquivos a criar/modificar
+### Todos os arquivos a criar/modificar
 
 | Arquivo | Acao |
 |---------|------|
-| `supabase/functions/support-chat/index.ts` | Corrigir auth (getClaims -> getUser) |
-| `src/components/suporte/SupportChatView.tsx` | Adicionar anexos, indicadores de status, carregar perfil do agente |
-| `src/components/suporte/SupportMessageBubble.tsx` | Exibir anexos e indicadores de status |
-| `src/pages/suporte-backoffice/SuporteAtendimento.tsx` | Adicionar anexos, marcar como lido |
-| `src/pages/suporte-backoffice/SuporteEquipe.tsx` | **Novo** - gestao de equipe |
-| `supabase/functions/manage-support-agents/index.ts` | **Novo** - criar/remover atendentes |
-| `src/components/suporte-backoffice/SuporteLayout.tsx` | Adicionar link "Equipe" no sidebar |
-| `src/components/suporte-backoffice/SuporteBottomNav.tsx` | Adicionar item "Equipe" |
-| `src/routing/HostRouter.tsx` | Adicionar rota para SuporteEquipe |
+| Migration SQL | Tabela `support_ratings` + coluna `ai_summary` |
+| `src/components/suporte-backoffice/SuporteProfileSetup.tsx` | **Novo** -- tela de setup obrigatoria do atendente |
+| `src/components/suporte-backoffice/SuporteLayout.tsx` | Verificar perfil incompleto + link Avaliacoes (admin) |
+| `src/components/suporte-backoffice/SuporteBottomNav.tsx` | Item Avaliacoes (admin) |
+| `src/components/suporte/SupportChatView.tsx` | Avatar do usuario, botao encerrar, trigger avaliacao, chamar summarize |
+| `src/components/suporte/SupportRatingDialog.tsx` | **Novo** -- dialog de avaliacao com estrelas |
+| `src/pages/suporte-backoffice/SuporteAtendimento.tsx` | Chamar summarize ao resolver |
+| `src/pages/suporte-backoffice/SuporteAvaliacoes.tsx` | **Novo** -- painel de avaliacoes (admin) |
+| `supabase/functions/support-summarize/index.ts` | **Novo** -- gera resumo IA do atendimento |
+| `supabase/config.toml` | Adicionar config para `support-summarize` |
+| `src/routing/HostRouter.tsx` | Rota para SuporteAvaliacoes |
 
 ### Ordem de execucao
 
-1. Migration (read_at + policy update)
-2. Corrigir edge function support-chat
-3. Criar edge function manage-support-agents
-4. Implementar UI de anexos no chat (usuario + back-office)
-5. Implementar indicadores de status
-6. Carregar e exibir perfis dos atendentes
-7. Criar pagina de gestao de equipe
+1. Migration (tabela `support_ratings` + coluna `ai_summary`)
+2. Edge function `support-summarize` + config.toml + deploy
+3. Perfil obrigatorio do atendente (`SuporteProfileSetup` + `SuporteLayout`)
+4. Avatar do usuario no chat (`SupportChatView`)
+5. Encerramento bidirecional (`SupportChatView` + `SuporteAtendimento` chamando summarize)
+6. Dialog de avaliacao (`SupportRatingDialog` + integracao no `SupportChatView`)
+7. Painel de avaliacoes no back-office (`SuporteAvaliacoes` + navegacao + rota)
 

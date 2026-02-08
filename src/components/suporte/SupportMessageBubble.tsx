@@ -1,5 +1,13 @@
-import { Bot, User, Headset } from "lucide-react";
+import { Bot, User, Headset, Check, CheckCheck, FileText, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+interface Attachment {
+  id: string;
+  file_name: string | null;
+  content_type: string | null;
+  storage_path: string;
+  publicUrl?: string;
+}
 
 interface Props {
   senderType: "user" | "ai" | "agent";
@@ -7,8 +15,9 @@ interface Props {
   createdAt: string;
   senderName?: string;
   senderAvatar?: string;
-  /** When rendered from the back-office perspective, "user" is left and "agent" is right */
   perspective?: "user" | "agent";
+  readAt?: string | null;
+  attachments?: Attachment[];
 }
 
 export function SupportMessageBubble({
@@ -18,6 +27,8 @@ export function SupportMessageBubble({
   senderName,
   senderAvatar,
   perspective = "user",
+  readAt,
+  attachments,
 }: Props) {
   const isOwnMessage =
     perspective === "user" ? senderType === "user" : senderType === "agent";
@@ -42,6 +53,8 @@ export function SupportMessageBubble({
       : senderType === "agent"
         ? senderName || "Atendente"
         : senderName || "Você";
+
+  const showStatus = perspective === "user" && senderType === "user";
 
   return (
     <div
@@ -82,7 +95,50 @@ export function SupportMessageBubble({
           )}
         >
           {body || ""}
+
+          {/* Attachments */}
+          {attachments && attachments.length > 0 && (
+            <div className="mt-2 space-y-1.5">
+              {attachments.map((att) => {
+                const isImage = att.content_type?.startsWith("image/");
+                if (isImage && att.publicUrl) {
+                  return (
+                    <a key={att.id} href={att.publicUrl} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={att.publicUrl}
+                        alt={att.file_name || "Anexo"}
+                        className="max-w-[240px] max-h-[200px] rounded-lg object-cover border border-border mt-1"
+                      />
+                    </a>
+                  );
+                }
+                return (
+                  <a
+                    key={att.id}
+                    href={att.publicUrl || "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-xs text-primary hover:underline"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    {att.file_name || "Arquivo"}
+                  </a>
+                );
+              })}
+            </div>
+          )}
         </div>
+
+        {/* Status indicators for user messages */}
+        {showStatus && (
+          <div className="flex justify-end mt-0.5">
+            {readAt ? (
+              <CheckCheck className="h-3.5 w-3.5 text-primary" />
+            ) : (
+              <Check className="h-3.5 w-3.5 text-muted-foreground/60" />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

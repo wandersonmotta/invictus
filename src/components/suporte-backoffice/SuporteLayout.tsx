@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, ListChecks, Monitor, Sun, Moon } from "lucide-react";
+import { LogOut, ListChecks, Monitor, Sun, Moon, Users } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import invictusLogo from "@/assets/INVICTUS-GOLD_1.png";
 import { cn } from "@/lib/utils";
@@ -45,6 +45,16 @@ export function SuporteLayout({ children }: Props) {
           >
             <ListChecks className="h-4 w-4" />
             Fila de Tickets
+          </Link>
+          <Link
+            to={`${basePath}/equipe`}
+            className={cn(
+              "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
+              location.pathname.includes("equipe") ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+            )}
+          >
+            <Users className="h-4 w-4" />
+            Equipe
           </Link>
         </nav>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Send, CheckCircle, User, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, CheckCircle, User, Loader2, Paperclip, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
@@ -10,17 +10,29 @@ import { SupportMessageBubble } from "@/components/suporte/SupportMessageBubble"
 import { isLovableHost } from "@/lib/appOrigin";
 import { toast } from "sonner";
 
+interface Attachment {
+  id: string;
+  message_id: string;
+  file_name: string | null;
+  content_type: string | null;
+  storage_path: string;
+  publicUrl?: string;
+}
+
 export default function SuporteAtendimento() {
   const { ticketId } = useParams<{ ticketId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const basePath = isLovableHost(window.location.hostname) ? "/suporte-backoffice" : "";
   const [messages, setMessages] = useState<any[]>([]);
+  const [attachments, setAttachments] = useState<Record<string, Attachment[]>>({});
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [ticketStatus, setTicketStatus] = useState<string>("");
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load ticket info
   const { data: ticket } = useQuery({
@@ -50,9 +62,61 @@ export default function SuporteAtendimento() {
     },
   });
 
+  // Load own profile for agent avatar
+  const { data: ownProfile } = useQuery({
+    queryKey: ["suporte-own-profile", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("display_name, avatar_url")
+        .eq("user_id", user!.id)
+        .single();
+      return data as any;
+    },
+  });
+
   useEffect(() => {
     if (ticket) setTicketStatus(ticket.status);
   }, [ticket]);
+
+  const loadAttachments = async (messageIds: string[]) => {
+    if (messageIds.length === 0) return;
+    const { data } = await supabase
+      .from("support_message_attachments")
+      .select("*")
+      .in("message_id", messageIds);
+    if (!data || data.length === 0) return;
+
+    const withUrls = (data as any[]).map((att) => {
+      const { data: urlData } = supabase.storage
+        .from(att.storage_bucket || "support-attachments")
+        .getPublicUrl(att.storage_path);
+      return { ...att, publicUrl: urlData?.publicUrl };
+    });
+
+    setAttachments((prev) => {
+      const next = { ...prev };
+      withUrls.forEach((att) => {
+        if (!next[att.message_id]) next[att.message_id] = [];
+        if (!next[att.message_id].some((a: any) => a.id === att.id)) {
+          next[att.message_id] = [...next[att.message_id], att];
+        }
+      });
+      return next;
+    });
+  };
+
+  // Mark user messages as read when opening ticket
+  const markAsRead = useCallback(async () => {
+    if (!ticketId) return;
+    await supabase
+      .from("support_messages")
+      .update({ read_at: new Date().toISOString() } as any)
+      .eq("ticket_id", ticketId)
+      .eq("sender_type", "user")
+      .is("read_at", null);
+  }, [ticketId]);
 
   // Load messages
   useEffect(() => {
@@ -64,7 +128,11 @@ export default function SuporteAtendimento() {
         .select("*")
         .eq("ticket_id", ticketId)
         .order("created_at", { ascending: true });
-      if (data) setMessages(data as any);
+      if (data) {
+        setMessages(data as any);
+        loadAttachments((data as any).map((m: any) => m.id));
+        markAsRead();
+      }
     };
     load();
 
@@ -74,32 +142,55 @@ export default function SuporteAtendimento() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "support_messages", filter: `ticket_id=eq.${ticketId}` },
         (payload) => {
+          const newMsg = payload.new as any;
           setMessages((prev) => {
-            if (prev.some((m) => m.id === (payload.new as any).id)) return prev;
-            return [...prev, payload.new as any];
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
           });
+          loadAttachments([newMsg.id]);
+          if (newMsg.sender_type === "user") markAsRead();
         }
       )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "support_tickets", filter: `id=eq.${ticketId}` },
-        (payload) => {
-          setTicketStatus((payload.new as any).status);
-        }
+        (payload) => setTicketStatus((payload.new as any).status)
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [ticketId]);
+  }, [ticketId, markAsRead]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
+  const uploadFiles = async (messageId: string, files: File[]) => {
+    for (const file of files) {
+      const path = `${ticketId}/${messageId}/${Date.now()}_${file.name}`;
+      const { error: uploadErr } = await supabase.storage
+        .from("support-attachments")
+        .upload(path, file);
+      if (uploadErr) {
+        console.error("Upload error:", uploadErr);
+        continue;
+      }
+      await supabase.from("support_message_attachments").insert({
+        message_id: messageId,
+        storage_path: path,
+        file_name: file.name,
+        content_type: file.type,
+        size_bytes: file.size,
+      } as any);
+    }
+  };
+
   const handleSend = useCallback(async () => {
     const text = input.trim();
-    if (!text || sending || !ticketId) return;
+    if ((!text && pendingFiles.length === 0) || sending || !ticketId) return;
     setInput("");
+    const filesToSend = [...pendingFiles];
+    setPendingFiles([]);
     setSending(true);
 
     try {
@@ -111,12 +202,16 @@ export default function SuporteAtendimento() {
           .eq("id", ticketId);
       }
 
-      await supabase.from("support_messages").insert({
+      const { data: msgData } = await supabase.from("support_messages").insert({
         ticket_id: ticketId,
         sender_type: "agent",
         sender_id: user?.id,
-        body: text,
-      } as any);
+        body: text || null,
+      } as any).select("id").single();
+
+      if (msgData && filesToSend.length > 0) {
+        await uploadFiles((msgData as any).id, filesToSend);
+      }
     } catch (e) {
       console.error(e);
       toast.error("Erro ao enviar mensagem");
@@ -124,7 +219,7 @@ export default function SuporteAtendimento() {
       setSending(false);
       textareaRef.current?.focus();
     }
-  }, [input, sending, ticketId, ticketStatus, user]);
+  }, [input, sending, ticketId, ticketStatus, user, pendingFiles]);
 
   const handleResolve = async () => {
     if (!ticketId) return;
@@ -140,6 +235,12 @@ export default function SuporteAtendimento() {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setPendingFiles((prev) => [...prev, ...files]);
+    e.target.value = "";
   };
 
   return (
@@ -171,7 +272,7 @@ export default function SuporteAtendimento() {
           )}
         </div>
 
-        {/* Messages - FULL HISTORY including AI */}
+        {/* Messages */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
           {messages.map((msg) => (
             <SupportMessageBubble
@@ -184,18 +285,55 @@ export default function SuporteAtendimento() {
                   ? memberProfile?.display_name
                   : msg.sender_type === "ai"
                     ? "Assistente IA"
+                    : ownProfile?.display_name || undefined
+              }
+              senderAvatar={
+                msg.sender_type === "user"
+                  ? memberProfile?.avatar_url
+                  : msg.sender_type === "agent"
+                    ? ownProfile?.avatar_url || undefined
                     : undefined
               }
-              senderAvatar={msg.sender_type === "user" ? memberProfile?.avatar_url : undefined}
               perspective="agent"
+              attachments={attachments[msg.id]}
             />
           ))}
         </div>
+
+        {/* Pending files */}
+        {pendingFiles.length > 0 && (
+          <div className="border-t border-border px-3 py-2 flex gap-2 flex-wrap bg-card/50">
+            {pendingFiles.map((f, i) => (
+              <div key={i} className="flex items-center gap-1 bg-muted/50 rounded-lg px-2 py-1 text-xs">
+                <span className="truncate max-w-[120px]">{f.name}</span>
+                <button onClick={() => setPendingFiles((prev) => prev.filter((_, j) => j !== i))}>
+                  <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Input */}
         {ticketStatus !== "resolved" && (
           <div className="border-t border-border p-3 bg-card/50 shrink-0">
             <div className="flex items-end gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,.pdf,.doc,.docx,.txt"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 shrink-0"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
               <Textarea
                 ref={textareaRef}
                 value={input}
@@ -205,7 +343,7 @@ export default function SuporteAtendimento() {
                 className="min-h-[40px] max-h-[120px] resize-none bg-muted/30 border-border text-sm"
                 rows={1}
               />
-              <Button size="icon" className="h-10 w-10 shrink-0" disabled={!input.trim() || sending} onClick={handleSend}>
+              <Button size="icon" className="h-10 w-10 shrink-0" disabled={(!input.trim() && pendingFiles.length === 0) || sending} onClick={handleSend}>
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
             </div>

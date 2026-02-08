@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.support-chat]
 verify_jwt = false
+
+[functions.manage-support-agents]
+verify_jwt = false

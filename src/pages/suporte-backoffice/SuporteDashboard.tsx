@@ -39,7 +39,7 @@ function PriorityChips({ tickets, filter, onFilter }: { tickets: any[]; filter: 
   ];
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex gap-2 overflow-x-auto no-scrollbar">
       {chips.map(({ key, label, className }) => (
         <button
           key={key}

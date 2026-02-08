@@ -5,6 +5,7 @@ import { SectionShell } from "@/components/landing/SectionShell";
 import { BulletList } from "@/components/landing/BulletList";
 import { RevealText } from "@/components/landing/RevealText";
 import { useTilt3D } from "@/hooks/useTilt3D";
+import { useRevealOnScroll } from "@/hooks/useRevealOnScroll";
 import { Eye, Shield, Target, Zap, Layers, Cpu, Briefcase } from "lucide-react";
 
 import manifestoMedia from "@/assets/invictus-landing-manifesto-media-color.jpg";
@@ -216,17 +217,66 @@ export function LeadershipAndRule() {
 }
 
 export function FinalWarning() {
+  const reveal = useRevealOnScroll<HTMLElement>({
+    rootMargin: "0px 0px -15% 0px",
+    threshold: 0.2,
+    once: true,
+    enterDelayMs: 60,
+    disableClasses: true,
+  });
+
+  const goldLineStyle: React.CSSProperties = {
+    height: 1,
+    background: "linear-gradient(90deg, transparent 0%, hsl(var(--gold-hot) / 0.6) 30%, hsl(var(--gold-hot) / 0.9) 50%, hsl(var(--gold-hot) / 0.6) 70%, transparent 100%)",
+    transform: reveal.visible ? "scaleX(1)" : "scaleX(0)",
+    transition: "transform 900ms cubic-bezier(0.2,0.8,0.2,1)",
+  };
+
+  const titleGradient: React.CSSProperties = {
+    backgroundImage: "linear-gradient(135deg, hsl(var(--gold-hot)) 0%, hsl(var(--gold-soft)) 50%, hsl(var(--gold-hot)) 100%)",
+    backgroundClip: "text",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+  };
+
   return (
-    <section className="px-4 pb-12 sm:px-6 sm:pb-16">
-      <div className="mx-auto w-full max-w-6xl">
-        <Card className="invictus-auth-surface invictus-frame border-0 p-6 sm:p-8">
-          <h2 className="text-xl font-semibold">Aviso final</h2>
-          <RevealText className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
+    <section ref={reveal.ref} className="px-4 pb-12 sm:px-6 sm:pb-16">
+      <div
+        className="mx-auto w-full max-w-6xl space-y-4"
+        style={{
+          opacity: reveal.visible ? 1 : 0,
+          transform: reveal.visible ? "none" : "translateY(16px)",
+          transition: "opacity 700ms cubic-bezier(0.2,0.8,0.2,1), transform 700ms cubic-bezier(0.2,0.8,0.2,1)",
+        }}
+      >
+        {/* Linha dourada superior */}
+        <div style={goldLineStyle} aria-hidden="true" />
+
+        <Card className="invictus-auth-surface invictus-auth-frame border-0 p-8 sm:p-10 lg:p-12">
+          {/* Eyebrow */}
+          <span
+            className="mb-4 inline-block text-[10px] font-semibold uppercase tracking-[0.25em]"
+            style={{ color: "hsl(var(--gold-hot))" }}
+          >
+            INVICTUS
+          </span>
+
+          {/* Título dourado */}
+          <h2 className="text-2xl font-semibold tracking-wide sm:text-3xl" style={titleGradient}>
+            Aviso final
+          </h2>
+
+          <RevealText className="mt-6 space-y-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
             <p>Se você chegou até aqui e sentiu desconforto, provavelmente não é para você.</p>
             <p>Se você leu tudo isso e sentiu clareza, bem-vindo ao próximo nível.</p>
-            <p className="text-foreground">Isso é INVICTUS. Isso é Fraternidade. Isso é decisão.</p>
+            <p className="text-foreground font-medium">
+              <GoldHoverText>Isso é INVICTUS. Isso é Fraternidade. Isso é decisão.</GoldHoverText>
+            </p>
           </RevealText>
         </Card>
+
+        {/* Linha dourada inferior */}
+        <div style={{ ...goldLineStyle, transitionDelay: "200ms" }} aria-hidden="true" />
       </div>
     </section>
   );

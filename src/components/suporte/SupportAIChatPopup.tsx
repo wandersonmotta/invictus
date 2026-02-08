@@ -193,7 +193,7 @@ export function SupportAIChatPopup({ open, onOpenChange }: Props) {
           <img src={AI_SUPPORT_AVATAR_URL} alt="Suporte IA" className="h-full w-full object-cover" />
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-semibold">Suporte Invictus</h2>
+          <h2 className="text-sm font-semibold">Ana - Suporte Invictus</h2>
           <p className="text-[10px] text-muted-foreground">Assistente IA</p>
         </div>
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onOpenChange(false)}>

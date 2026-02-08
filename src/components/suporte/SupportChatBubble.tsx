@@ -34,8 +34,10 @@ export function SupportChatBubble() {
   }, [user?.id]);
 
   const handleClick = () => {
-    setUnread(0);
-    setChatOpen(true);
+    setChatOpen((prev) => {
+      if (!prev) setUnread(0);
+      return !prev;
+    });
   };
 
   // Don't show on support pages
@@ -52,7 +54,7 @@ export function SupportChatBubble() {
           "bg-primary text-primary-foreground hover:bg-primary/90",
           "h-12 w-12",
           isMobile ? "bottom-20 right-4" : "bottom-6 right-6",
-          chatOpen && !isMobile && "hidden"
+          isMobile ? "bottom-20 right-4" : "bottom-6 right-6"
         )}
         aria-label="Suporte"
       >

@@ -1,32 +1,41 @@
 
-# Ajustes na Landing Page -- Logo, Cor Dourada e Counter
+# Protecao Anti-Copia do Site
 
-## 1. Logo maior na cortina de abertura
+## O que e possivel fazer
 
-A logo atualmente usa `w-20` (80px) no mobile e `w-24` (96px) no desktop. Vou aumentar para `w-32` (128px) no mobile e `w-40` (160px) no desktop, mantendo responsividade com breakpoints intermediarios.
+E importante ser transparente: **nenhuma protecao no front-end e 100% inviolavel** -- um desenvolvedor experiente sempre consegue contornar. Porem, podemos criar **barreiras significativas** que impedem a copia casual (usuarios comuns, concorrentes sem conhecimento tecnico). Isso cobre 95% dos casos.
 
-**Arquivo**: `src/components/landing/HeroIntro.tsx`
-- Classe da img: `w-20 sm:w-24` passa para `w-32 sm:w-36 md:w-40`
-- O texto "FRATERNIDADE" mantem o mesmo tamanho (`text-xs tracking-[0.35em]`)
+## Camadas de protecao que vamos implementar
 
-## 2. Texto "FRATERNIDADE" com cor dourada
+### 1. Bloquear clique direito (context menu)
+Impedir o menu "Inspecionar Elemento" / "Salvar imagem como" / "Ver codigo fonte" pelo clique direito.
 
-Trocar a cor de `text-foreground/80` para o gradiente dourado da identidade visual, usando `background-clip: text` com o gradiente primary da marca.
+### 2. Bloquear selecao de texto
+Impedir que o usuario selecione e copie textos da landing page com CSS `user-select: none`.
 
-**Arquivo**: `src/components/landing/HeroIntro.tsx`
-- Remover `text-foreground/80`
-- Aplicar estilo inline com gradiente dourado (`linear-gradient` usando as cores primary do tema) e `background-clip: text` / `color: transparent`
+### 3. Bloquear atalhos de teclado
+Interceptar `Ctrl+U` (ver fonte), `Ctrl+S` (salvar pagina), `Ctrl+Shift+I` (DevTools), `Ctrl+Shift+J` (console), `F12`, `Ctrl+C` (copiar), `Ctrl+A` (selecionar tudo).
 
-## 3. Corrigir AnimatedNumber nos depoimentos
+### 4. Bloquear arrastar imagens
+CSS `pointer-events` e atributo `draggable=false` nas imagens para impedir download por drag-and-drop.
 
-O counter nao esta disparando porque o `useRevealOnScroll` com `disableClasses: true` funciona corretamente para `visible`, mas o `rootMargin: "0px 0px -10% 0px"` combinado com a posicao da secao no final da pagina pode nao intersectar adequadamente. Vou ajustar para usar `rootMargin: "0px"` e `threshold: 0.1` para garantir que o counter dispare quando a secao de depoimentos entrar na viewport.
+### 5. Aviso de propriedade intelectual
+Exibir um aviso discreto no console do navegador (como o Facebook faz) alertando que o conteudo e protegido.
 
-**Arquivo**: `src/components/landing/TestimonialsSection.tsx`
-- Ajustar `rootMargin` para `"0px 0px 0px 0px"` e `threshold` para `0.1`
-- Remover `enterDelayMs` que pode estar atrasando o trigger
+### 6. Ofuscacao de imagens via CSS
+Servir imagens de fundo via `background-image` ao inves de `<img>` onde possivel, dificultando o "Salvar imagem como".
 
 ## Detalhes tecnicos
 
-Apenas 2 arquivos serao modificados:
-- `src/components/landing/HeroIntro.tsx` -- Logo maior + texto dourado
-- `src/components/landing/TestimonialsSection.tsx` -- Fix do counter
+### Arquivos que serao CRIADOS
+- `src/hooks/useCopyProtection.ts` -- Hook que aplica todas as protecoes JS (bloquear context menu, atalhos, arrastar, aviso no console). Sera chamado apenas na landing page.
+
+### Arquivos que serao MODIFICADOS
+- `src/pages/Landing.tsx` -- Importar e ativar o hook `useCopyProtection`
+- `src/index.css` -- Adicionar regra `.invictus-landing-body` com `user-select: none` e `-webkit-user-drag: none` para bloquear selecao e arraste na landing
+
+### Escopo limitado a landing page
+As protecoes serao aplicadas **apenas na landing page publica**, sem afetar o app autenticado (onde o usuario precisa selecionar texto, copiar dados, etc).
+
+### Nenhuma dependencia externa
+Tudo com CSS nativo + event listeners em um unico hook React.

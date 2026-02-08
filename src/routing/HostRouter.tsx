@@ -12,6 +12,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { RequireAuth } from "@/auth/RequireAuth";
 import { RequireAdmin } from "@/auth/RequireAdmin";
 import { RequireFinanceiro } from "@/auth/RequireFinanceiro";
+import { RequireFinanceiroManager } from "@/auth/RequireFinanceiroManager";
 import { RequireFinanceiroAuth } from "@/auth/RequireFinanceiroAuth";
 import { RequireSuporte } from "@/auth/RequireSuporte";
 import { RequireSuporteAuth } from "@/auth/RequireSuporteAuth";
@@ -106,9 +107,11 @@ export function HostRouter() {
          element={
            <RequireFinanceiroAuth>
              <RequireFinanceiro>
-               <FinanceiroLayout>
-                 <FinanceiroHistorico />
-               </FinanceiroLayout>
+               <RequireFinanceiroManager>
+                 <FinanceiroLayout>
+                   <FinanceiroHistorico />
+                 </FinanceiroLayout>
+               </RequireFinanceiroManager>
              </RequireFinanceiro>
            </RequireFinanceiroAuth>
          }
@@ -118,9 +121,11 @@ export function HostRouter() {
          element={
            <RequireFinanceiroAuth>
              <RequireFinanceiro>
-               <FinanceiroLayout>
-                 <FinanceiroRelatorios />
-               </FinanceiroLayout>
+               <RequireFinanceiroManager>
+                 <FinanceiroLayout>
+                   <FinanceiroRelatorios />
+                 </FinanceiroLayout>
+               </RequireFinanceiroManager>
              </RequireFinanceiro>
            </RequireFinanceiroAuth>
          }
@@ -130,9 +135,11 @@ export function HostRouter() {
          element={
            <RequireFinanceiroAuth>
              <RequireFinanceiro>
-               <FinanceiroLayout>
-                 <FinanceiroCarteira />
-               </FinanceiroLayout>
+               <RequireFinanceiroManager>
+                 <FinanceiroLayout>
+                   <FinanceiroCarteira />
+                 </FinanceiroLayout>
+               </RequireFinanceiroManager>
              </RequireFinanceiro>
            </RequireFinanceiroAuth>
          }
@@ -142,9 +149,11 @@ export function HostRouter() {
          element={
            <RequireFinanceiroAuth>
              <RequireFinanceiro>
-               <FinanceiroLayout>
-                 <FinanceiroPagamentos />
-               </FinanceiroLayout>
+               <RequireFinanceiroManager>
+                 <FinanceiroLayout>
+                   <FinanceiroPagamentos />
+                 </FinanceiroLayout>
+               </RequireFinanceiroManager>
              </RequireFinanceiro>
            </RequireFinanceiroAuth>
          }
@@ -154,9 +163,11 @@ export function HostRouter() {
           element={
             <RequireFinanceiroAuth>
               <RequireFinanceiro>
-                <FinanceiroLayout>
-                  <FinanceiroEquipe />
-                </FinanceiroLayout>
+                <RequireFinanceiroManager>
+                  <FinanceiroLayout>
+                    <FinanceiroEquipe />
+                  </FinanceiroLayout>
+                </RequireFinanceiroManager>
               </RequireFinanceiro>
             </RequireFinanceiroAuth>
           }
@@ -445,9 +456,11 @@ export function HostRouter() {
          element={
            <RequireFinanceiroAuth>
              <RequireFinanceiro>
-               <FinanceiroLayout>
-                 <FinanceiroHistorico />
-               </FinanceiroLayout>
+               <RequireFinanceiroManager>
+                 <FinanceiroLayout>
+                   <FinanceiroHistorico />
+                 </FinanceiroLayout>
+               </RequireFinanceiroManager>
              </RequireFinanceiro>
            </RequireFinanceiroAuth>
          }
@@ -457,9 +470,11 @@ export function HostRouter() {
          element={
            <RequireFinanceiroAuth>
              <RequireFinanceiro>
-               <FinanceiroLayout>
-                 <FinanceiroRelatorios />
-               </FinanceiroLayout>
+               <RequireFinanceiroManager>
+                 <FinanceiroLayout>
+                   <FinanceiroRelatorios />
+                 </FinanceiroLayout>
+               </RequireFinanceiroManager>
              </RequireFinanceiro>
            </RequireFinanceiroAuth>
          }
@@ -469,9 +484,11 @@ export function HostRouter() {
          element={
            <RequireFinanceiroAuth>
              <RequireFinanceiro>
-               <FinanceiroLayout>
-                 <FinanceiroCarteira />
-               </FinanceiroLayout>
+               <RequireFinanceiroManager>
+                 <FinanceiroLayout>
+                   <FinanceiroCarteira />
+                 </FinanceiroLayout>
+               </RequireFinanceiroManager>
              </RequireFinanceiro>
            </RequireFinanceiroAuth>
          }
@@ -481,9 +498,11 @@ export function HostRouter() {
          element={
            <RequireFinanceiroAuth>
              <RequireFinanceiro>
-               <FinanceiroLayout>
-                 <FinanceiroPagamentos />
-               </FinanceiroLayout>
+               <RequireFinanceiroManager>
+                 <FinanceiroLayout>
+                   <FinanceiroPagamentos />
+                 </FinanceiroLayout>
+               </RequireFinanceiroManager>
              </RequireFinanceiro>
            </RequireFinanceiroAuth>
          }
@@ -493,9 +512,11 @@ export function HostRouter() {
          element={
            <RequireFinanceiroAuth>
              <RequireFinanceiro>
-               <FinanceiroLayout>
-                 <FinanceiroEquipe />
-               </FinanceiroLayout>
+               <RequireFinanceiroManager>
+                 <FinanceiroLayout>
+                   <FinanceiroEquipe />
+                 </FinanceiroLayout>
+               </RequireFinanceiroManager>
              </RequireFinanceiro>
            </RequireFinanceiroAuth>
          }

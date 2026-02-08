@@ -69,7 +69,12 @@ export default function Faturas() {
 
   const isLoading = plansLoading || subLoading || invoicesLoading;
 
-  const currentPlanId = subscription?.plan_id ?? null;
+  // While no payment platform is configured, default everyone to the first plan as active
+  const defaultPlan = plans?.[0] ?? null;
+  const currentPlanId = subscription?.plan_id ?? defaultPlan?.id ?? null;
+  const activePlanName = subscription
+    ? (subscription as any).subscription_plans?.name ?? "Plano"
+    : defaultPlan?.name ?? null;
   const latestInvoice = invoices?.[0] ?? null;
 
   return (
@@ -97,12 +102,8 @@ export default function Faturas() {
           <>
             {/* Subscription Status */}
             <SubscriptionStatusCard
-              planName={
-                subscription
-                  ? (subscription as any).subscription_plans?.name ?? "Plano"
-                  : null
-              }
-              invoiceStatus={latestInvoice?.status as any ?? null}
+              planName={activePlanName}
+              invoiceStatus={latestInvoice?.status as any ?? (activePlanName ? "paid" : null)}
               dueDate={latestInvoice?.due_date ?? null}
             />
 

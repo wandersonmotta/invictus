@@ -1,71 +1,52 @@
 
-# Plano: Avatar feminino cinematografico para a IA do Suporte
+# Plano: Humanizar a IA do Suporte Invictus
 
-## Objetivo
+## Problema
 
-Gerar uma imagem realista estilo cinematografico de uma mulher com fone de ouvido para representar a assistente IA do Suporte Invictus. Essa imagem sera usada como avatar em todos os pontos onde a IA aparece no chat.
+A IA do suporte responde de forma robotica, usando formatacao markdown (negrito com `**`, listas com `-`, etc.) e linguagem formal demais, como se fosse uma FAQ automatizada. O objetivo e que ela converse como uma pessoa real — uma atendente simpática que conhece bem a plataforma.
 
 ## O que sera feito
 
-### 1. Gerar a imagem via Edge Function
+### 1. Reescrever o system prompt completo
 
-Criar uma Edge Function `generate-support-avatar` que usa o modelo de geracao de imagens (Gemini Flash Image) para criar a foto. O prompt sera algo como:
+O prompt atual instrui a IA a "usar markdown quando util" e ser "conciso mas completo", o que gera respostas mecanicas. O novo prompt vai:
 
-> "Cinematic studio portrait of a professional Brazilian woman wearing a modern headset, warm lighting, shallow depth of field, friendly smile, dark background with subtle gold accents, high-end corporate look"
+- **Proibir qualquer formatacao markdown** (sem negrito, italico, listas, titulos)
+- Instruir a IA a escrever como se fosse uma mensagem de WhatsApp/chat real
+- Usar linguagem natural, informal mas profissional (como uma atendente real falaria)
+- Usar emojis com moderacao (como uma pessoa real faria)
+- Responder de forma curta e direta, como numa conversa de chat
+- Nunca listar funcionalidades de forma mecanica — falar sobre elas naturalmente
+- Ter uma personalidade: simpática, acolhedora, que chama o membro pelo nome quando possivel
+- Incorporar a base de conhecimento de forma natural, sem parecer que esta lendo um manual
 
-A imagem gerada sera salva no bucket de storage (ex: `support-assets`) e a URL publica sera usada no codigo.
+### 2. Novo prompt proposto
 
-### 2. Salvar a imagem no storage
+O novo prompt vai incluir instrucoes como:
 
-- Criar bucket `support-assets` (publico) via migration
-- A Edge Function faz upload do base64 para `support-assets/ai-avatar.jpg`
-- A URL publica fica disponivel para uso no frontend
+- "Voce e a Ana, atendente da Fraternidade Invictus"
+- "Escreva como se estivesse conversando pelo WhatsApp com um amigo profissional"
+- "NUNCA use formatacao markdown: nada de **, ##, -, *, listas numeradas"
+- "Use frases curtas e naturais. Quebre em paragrafos curtos como numa conversa de chat"
+- "Use emojis com moderacao e naturalidade (ex: 😊, 👋, ✅) mas sem exagero"
+- "Quando mencionar funcionalidades, fale como se estivesse explicando para um amigo, nao lendo um manual"
+- "Adapte seu tom ao do membro: se ele for mais formal, seja um pouco mais formal; se for descontraido, seja descontraida tambem"
 
-### 3. Atualizar o frontend
+### 3. Arquivo a ser modificado
 
-Substituir o icone `Bot` pelo avatar da IA em 3 pontos:
+| Arquivo | Mudanca |
+|---------|---------|
+| `supabase/functions/support-chat-ephemeral/index.ts` | Reescrever `BASE_SYSTEM_PROMPT` com prompt humanizado, proibir markdown, dar personalidade |
 
-| Arquivo | Local | Mudanca |
-|---------|-------|---------|
-| `SupportAIChatPopup.tsx` | Header do chat (linha 175) | Trocar icone Bot por Avatar com imagem |
-| `SupportAIChatPopup.tsx` | Bolhas de mensagem da IA (linha 198) | Trocar icone Bot por Avatar com imagem |
-| `SupportMessageBubble.tsx` | Icone para `senderType === "ai"` (linha ~80) | Usar a imagem como avatar da IA |
+### 4. Nenhuma mudanca no frontend
 
-### 4. Constante centralizada
-
-Criar uma constante para a URL do avatar da IA em um arquivo de config para facilitar manutencao futura:
-
-```text
-src/config/supportAvatar.ts
-  -> export const AI_SUPPORT_AVATAR_URL = "https://[supabase-url]/storage/v1/object/public/support-assets/ai-avatar.jpg";
-```
+O frontend ja renderiza texto puro (whitespace-pre-wrap). Ao remover o markdown das respostas, o resultado visual ja sera limpo automaticamente.
 
 ## Detalhes Tecnicos
 
-### Edge Function: `generate-support-avatar`
+A mudanca e exclusivamente no system prompt da Edge Function `support-chat-ephemeral`. O novo prompt tera aproximadamente 3x mais instrucoes de estilo/tom para garantir que o modelo realmente se comporte como uma pessoa, incluindo:
 
-- Usa `google/gemini-2.5-flash-image` via Lovable AI gateway
-- Prompt focado em: mulher brasileira, fone de ouvido, iluminacao cinematografica, fundo escuro com tons dourados
-- Faz upload do resultado para o bucket `support-assets`
-- Funcao executada uma unica vez (manualmente ou via curl)
-
-### Migration SQL
-
-```text
-INSERT INTO storage.buckets (id, name, public) VALUES ('support-assets', 'support-assets', true);
-
-CREATE POLICY "Public read support assets"
-  ON storage.objects FOR SELECT
-  USING (bucket_id = 'support-assets');
-
-CREATE POLICY "Service role upload support assets"
-  ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'support-assets');
-```
-
-### Ordem de execucao
-
-1. Migration para criar bucket
-2. Criar e executar Edge Function para gerar a imagem
-3. Atualizar `SupportAIChatPopup.tsx` e `SupportMessageBubble.tsx` com o avatar
-4. Criar `src/config/supportAvatar.ts` com a URL centralizada
+- Exemplos concretos de como responder (few-shot)
+- Proibicao explicita de padroes roboticos
+- Instrucoes para adaptar tom ao contexto
+- Nome e personalidade definidos para a atendente

@@ -80,7 +80,7 @@ const navSections: NavSection[] = [
   {
     label: "Conta",
     items: [
-      { title: "Minhas Faturas", url: "/faturas", icon: Receipt, placeholder: true },
+      { title: "Minhas Faturas", url: "/faturas", icon: Receipt },
       { title: "Perfil", url: "/perfil", icon: User },
       { title: "Suporte", url: "/suporte", icon: HelpCircle, placeholder: true },
     ],

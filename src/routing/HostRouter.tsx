@@ -35,6 +35,7 @@ const Pontos = React.lazy(() => import("@/pages/Pontos"));
 const Servicos = React.lazy(() => import("@/pages/Servicos"));
 const PagamentoSucesso = React.lazy(() => import("@/pages/PagamentoSucesso"));
 const Pagamentos = React.lazy(() => import("@/pages/Pagamentos"));
+const Faturas = React.lazy(() => import("@/pages/Faturas"));
 
 // Financeiro pages
 const FinanceiroAuth = React.lazy(() => import("@/pages/financeiro/FinanceiroAuth"));
@@ -330,6 +331,16 @@ export function HostRouter() {
           element={
             <RequireAuth>
               <PagamentoSucesso />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/faturas"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Faturas />
+              </AppLayout>
             </RequireAuth>
           }
         />
@@ -646,6 +657,16 @@ export function HostRouter() {
           element={
             <RequireAuth>
               <PagamentoSucesso />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/faturas"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <Faturas />
+              </AppLayout>
             </RequireAuth>
           }
         />

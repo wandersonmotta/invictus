@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Send, Loader2, Bot, User } from "lucide-react";
+import { X, Send, Loader2, User } from "lucide-react";
+import { AI_SUPPORT_AVATAR_URL } from "@/config/supportAvatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { useMyProfile } from "@/hooks/useMyProfile";
@@ -172,8 +173,8 @@ export function SupportAIChatPopup({ open, onOpenChange }: Props) {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card/80 backdrop-blur-sm shrink-0">
-        <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10">
-          <Bot className="h-4 w-4 text-primary" />
+        <div className="flex items-center justify-center h-8 w-8 rounded-full overflow-hidden">
+          <img src={AI_SUPPORT_AVATAR_URL} alt="Suporte IA" className="h-full w-full object-cover" />
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-sm font-semibold">Suporte Invictus</h2>
@@ -195,8 +196,8 @@ export function SupportAIChatPopup({ open, onOpenChange }: Props) {
           <div key={i} className={cn("flex gap-2", msg.role === "user" ? "justify-end" : "justify-start")}>
             {msg.role === "assistant" && (
               <div className="flex items-end">
-                <div className="flex items-center justify-center h-7 w-7 rounded-full bg-primary/10 shrink-0">
-                  <Bot className="h-3.5 w-3.5 text-primary" />
+                <div className="h-7 w-7 rounded-full overflow-hidden shrink-0">
+                  <img src={AI_SUPPORT_AVATAR_URL} alt="Suporte IA" className="h-full w-full object-cover" />
                 </div>
               </div>
             )}

@@ -688,3 +688,53 @@ body.invictus-landing-body {
     background-attachment: scroll, scroll, scroll, scroll, fixed;
   }
 }
+
+/* ========================================================
+   HERO INTRO - Cortina de abertura cinematográfica
+   ======================================================== */
+@keyframes invictus-intro-logo {
+  0% {
+    opacity: 0;
+    transform: scale(0.88);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes invictus-intro-text {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========================================================
+   SEPARADOR DOURADO ANIMADO - "acende" ao scroll
+   ======================================================== */
+.invictus-section-separator {
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 800ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.invictus-separator-animate {
+  transform: scaleX(1);
+}
+
+/* ========================================================
+   ACESSIBILIDADE EXTRA - reduced motion para novos efeitos
+   ======================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .invictus-section-separator {
+    transform: scaleX(1) !important;
+    transition: none !important;
+  }
+}

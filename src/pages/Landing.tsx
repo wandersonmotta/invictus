@@ -13,32 +13,40 @@ import {
 } from "@/components/landing/ManifestoSections";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingBackground } from "@/components/landing/LandingBackground";
+import { HeroIntro } from "@/components/landing/HeroIntro";
 import { useForceDark } from "@/hooks/useForceDark";
 
 export default function Landing() {
-  // Força tema dark na landing page, independente da escolha do usuário
   useForceDark();
+  const [introComplete, setIntroComplete] = React.useState(false);
 
   React.useEffect(() => {
-    // Fallback robusto: garante o background premium mesmo se algum device
-    // não aplicar corretamente o background no container principal.
     document.body.classList.add("invictus-landing-body");
     return () => document.body.classList.remove("invictus-landing-body");
   }, []);
 
   return (
-    <main className="invictus-landing-page min-h-svh">
-      <LandingBackground />
-      <LandingTopbar />
-      <Manifesto />
-      <Pillars />
-      <WhatYouFindHere />
-      <WhoIsFor />
-      <LeadershipAndRule />
-      <FinalWarning />
-      <WaitlistHero />
-      <TestimonialsSection />
-      <LandingFooter />
-    </main>
+    <>
+      <HeroIntro onComplete={() => setIntroComplete(true)} />
+      <main
+        className="invictus-landing-page min-h-svh"
+        style={{
+          opacity: introComplete ? 1 : 0,
+          transition: "opacity 600ms cubic-bezier(0.2,0.8,0.2,1)",
+        }}
+      >
+        <LandingBackground />
+        <LandingTopbar />
+        <Manifesto />
+        <Pillars />
+        <WhatYouFindHere />
+        <WhoIsFor />
+        <LeadershipAndRule />
+        <FinalWarning />
+        <WaitlistHero />
+        <TestimonialsSection />
+        <LandingFooter />
+      </main>
+    </>
   );
 }

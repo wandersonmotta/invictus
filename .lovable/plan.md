@@ -1,24 +1,67 @@
 
-# Ajuste do Timing da Animacao Gold Sweep
 
-## Problema atual
+# Upload de Lista e Baixar Modelo -- Limpa Nome
 
-A animacao existe e funciona, mas o brilho varre muito rapido (apenas 40% dos 4s = 1.6s de movimento real) e depois fica parado por muito tempo (60% = 2.4s de pausa). Isso pode dar a impressao de que nao esta funcionando.
+## Resumo
 
-## O que muda
+Adicionar dois botoes no topo da tela de cadastro (AddNomeView): **"Baixar modelo"** e **"Upload lista"**. O modelo e um arquivo Excel (.xlsx) com tres colunas (Nome, CPF/CNPJ, WhatsApp). O upload le o arquivo e popula automaticamente a lista de nomes.
 
-**Arquivo**: `src/components/landing/GoldSweepText.tsx`
+---
 
-1. **Duracao total**: de `4s` para `3s` (ciclo mais curto, como solicitado)
-2. **Distribuicao do keyframe**: o brilho vai varrer por 60% do ciclo (1.8s de movimento) e pausar por 40% (1.2s), ao inves do contrario atual. Isso deixa o sweep mais visivel e a pausa mais curta.
-3. **Faixa de brilho mais larga**: aumentar a area do highlight no gradiente (de 30% de largura para 40%) para que o reflexo fique mais perceptivel enquanto passa.
+## O que muda na interface
+
+Na area entre o titulo "Cadastre no campo abaixo" e o formulario, dois botoes serao adicionados lado a lado (conforme a imagem de referencia):
+
+- **Upload lista** (icone de upload, fundo roxo) -- abre seletor de arquivo .xlsx/.xls
+- **Baixar modelo** (icone de download, borda) -- faz download de um arquivo Excel modelo
+
+---
 
 ## Detalhes tecnicos
 
-Alteracoes no `GoldSweepText.tsx`:
-- Linha 41: `animation: "gold-sweep 3s ease-in-out infinite"`
-- Linhas 46-50: keyframes ajustados:
-  - `0%` -> brilho em `200% center` (comeca fora da direita... na verdade fora da esquerda, posicao alta)
-  - `60%` -> brilho em `-100% center` (termina fora da direita)
-  - `100%` -> pausa (mantem `-100% center`)
-- Gradiente do brilho: alargar a faixa luminosa (transparent em 30%/70% ao inves de 35%/65%)
+### 1. Dependencia: SheetJS (xlsx)
+
+Instalar o pacote `xlsx` para ler e gerar arquivos Excel no navegador. Nenhuma dependencia backend necessaria.
+
+### 2. Funcao "Baixar modelo"
+
+Criar um arquivo Excel em memoria usando `xlsx` com:
+- Sheet chamada "Limpa Nome"
+- Cabecalhos: `Nome | Nome Fantasia`, `CPF | CNPJ`, `WhatsApp`
+- Uma linha de exemplo preenchida para guiar o usuario
+- Dispara download automatico do arquivo `modelo-limpa-nome.xlsx`
+
+### 3. Funcao "Upload lista"
+
+- Input file oculto aceita `.xlsx, .xls`
+- Ao selecionar arquivo, le com `xlsx` e extrai as linhas
+- Para cada linha valida (com pelo menos nome preenchido), cria um item `LocalNomeItem` e adiciona ao estado `addedNames`
+- Formata CPF/CNPJ e WhatsApp automaticamente
+- Exibe toast de sucesso com quantidade de nomes importados
+- Linhas vazias ou sem nome sao ignoradas silenciosamente
+
+### 4. Alteracoes no componente AddNomeView
+
+- Adicionar os dois botoes no header, ao lado do titulo "Cadastre no campo abaixo" (alinhados a direita)
+- Adicionar input file oculto para Excel
+- Adicionar funcoes `handleDownloadTemplate` e `handleUploadList`
+- Os nomes importados via planilha entram na mesma lista (`addedNames`) que os cadastrados manualmente, mantendo todo o fluxo de pagamento identico
+
+### 5. Validacao na importacao
+
+- Linhas sem nome serao ignoradas
+- CPF/CNPJ sera formatado automaticamente mas **nao** validado via API (para nao travar com listas grandes) -- validacao local apenas (algoritmo)
+- WhatsApp tera o prefixo +55 adicionado automaticamente
+- Documentos (ficha/identidade) ficam como `null` nos itens importados via planilha -- o usuario pode adicionar depois manualmente se desejar
+
+---
+
+## Arquivos modificados
+
+| Arquivo | Acao |
+|---|---|
+| `package.json` | Adicionar dependencia `xlsx` |
+| `src/components/servicos/AddNomeView.tsx` | Adicionar botoes, input file, logica de download/upload |
+
+Nenhuma alteracao no banco de dados ou edge functions e necessaria -- o fluxo de pagamento permanece identico.
+

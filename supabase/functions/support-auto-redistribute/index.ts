@@ -9,6 +9,19 @@ const corsHeaders = {
 
 const TIMEOUT_MINUTES = 15;
 
+interface UserRole {
+  role: string;
+}
+
+interface AgentPresence {
+  user_id: string;
+}
+
+interface Ticket {
+  assigned_to: string | null;
+}
+
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -49,7 +62,8 @@ serve(async (req) => {
       .from("user_roles")
       .select("role")
       .eq("user_id", callerId);
-    const roleNames = (callerRoles || []).map((r: any) => r.role);
+    const roleNames = (callerRoles as UserRole[] || []).map((r) => r.role);
+
     if (!roleNames.includes("admin") && !roleNames.includes("suporte") && !roleNames.includes("suporte_gerente")) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
@@ -77,7 +91,8 @@ serve(async (req) => {
       .from("support_agent_presence")
       .select("user_id")
       .gte("last_heartbeat", presenceCutoff);
-    const onlineIds = (onlineAgents || []).map((a: any) => a.user_id);
+    const onlineIds = (onlineAgents as AgentPresence[] || []).map((a) => a.user_id);
+
 
     let redistributedCount = 0;
 
@@ -125,9 +140,10 @@ serve(async (req) => {
 
       const countMap: Record<string, number> = {};
       candidates.forEach((id: string) => (countMap[id] = 0));
-      (ticketCounts || []).forEach((t: any) => {
+      (ticketCounts as Ticket[] || []).forEach((t) => {
         if (t.assigned_to) countMap[t.assigned_to] = (countMap[t.assigned_to] || 0) + 1;
       });
+
 
       let bestAgent = candidates[0];
       let minCount = Infinity;

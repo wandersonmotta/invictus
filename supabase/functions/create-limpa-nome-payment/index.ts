@@ -8,6 +8,13 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+interface NameRecord {
+  person_name: string;
+  document: string;
+  whatsapp: string;
+}
+
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -48,11 +55,12 @@ serve(async (req) => {
       : (await stripe.customers.create({ email: user.email })).id;
 
     // Build metadata (same chunking logic)
-    const namesForMeta = names.map((n: any) => ({
+    const namesForMeta = (names as NameRecord[]).map((n) => ({
       n: n.person_name,
       d: n.document,
       w: n.whatsapp,
     }));
+
     const namesJson = JSON.stringify(namesForMeta);
     const metadataObj: Record<string, string> = {
       user_id: user.id,
@@ -79,7 +87,8 @@ serve(async (req) => {
     });
 
     // Extract Pix QR code data from next_action
-    const pixAction = (paymentIntent as any).next_action?.pix_display_qr_code;
+    const pixAction = paymentIntent.next_action?.pix_display_qr_code;
+
     if (!pixAction) {
       return new Response(JSON.stringify({ error: "Pix não disponível. Verifique se o Pix está ativado na sua conta Stripe." }), {
         status: 500,

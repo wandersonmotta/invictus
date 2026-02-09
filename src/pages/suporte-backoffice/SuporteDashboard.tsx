@@ -9,6 +9,15 @@ import { useAuth } from "@/auth/AuthProvider";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useIsSuporteGerente } from "@/hooks/useIsSuporteGerente";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Database } from "@/integrations/supabase/types";
+
+type Ticket = Database["public"]["Tables"]["support_tickets"]["Row"];
+type Profile = Pick<Database["public"]["Tables"]["profiles"]["Row"], "user_id" | "display_name" | "avatar_url">;
+
+interface TicketWithProfile extends Ticket {
+  profile: Profile | null;
+}
+
 
 const PRIORITY_MAP: Record<string, { label: string; color: string; chipBg: string; order: number }> = {
   urgente: { label: "Urgente", color: "bg-red-500/20 text-red-400", chipBg: "bg-red-500/20 text-red-400 border-red-500/30", order: 0 },
@@ -24,12 +33,16 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 
 type PriorityFilter = "all" | "urgente" | "moderado" | "baixo";
 
-function PriorityChips({ tickets, filter, onFilter }: { tickets: any[]; filter: PriorityFilter; onFilter: (f: PriorityFilter) => void }) {
+function PriorityChips({ tickets, filter, onFilter }: { tickets: TicketWithProfile[] | Ticket[]; filter: PriorityFilter; onFilter: (f: PriorityFilter) => void }) {
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: tickets.length, urgente: 0, moderado: 0, baixo: 0 };
-    tickets.forEach((t: any) => { if (c[t.priority] !== undefined) c[t.priority]++; });
+    tickets.forEach((t) => {
+      const p = t.priority || "baixo";
+      if (c[p] !== undefined) c[p]++;
+    });
     return c;
   }, [tickets]);
+
 
   const chips: { key: PriorityFilter; label: string; className: string }[] = [
     { key: "all", label: "Todos", className: "bg-muted text-muted-foreground border-border" },
@@ -54,17 +67,19 @@ function PriorityChips({ tickets, filter, onFilter }: { tickets: any[]; filter: 
   );
 }
 
-function TicketList({ tickets, basePath }: { tickets: any[]; basePath: string }) {
+function TicketList({ tickets, basePath }: { tickets: TicketWithProfile[]; basePath: string }) {
   const navigate = useNavigate();
+
   if (tickets.length === 0) {
     return <div className="text-center py-16 text-muted-foreground text-sm">Nenhum ticket encontrado.</div>;
   }
   return (
     <div className="space-y-2">
-      {tickets.map((ticket: any) => {
+      {tickets.map((ticket) => {
         const status = STATUS_MAP[ticket.status] || { label: ticket.status, color: "text-muted-foreground" };
-        const priority = PRIORITY_MAP[ticket.priority] || PRIORITY_MAP.baixo;
+        const priority = PRIORITY_MAP[ticket.priority || "baixo"] || PRIORITY_MAP.baixo;
         const profile = ticket.profile;
+
         return (
           <button
             key={ticket.id}
@@ -112,27 +127,29 @@ export default function SuporteDashboard() {
       const { data } = await supabase
         .from("support_tickets")
         .select("*")
-        .in("status", ["escalated", "assigned", "resolved"] as any)
+        .in("status", ["escalated", "assigned", "resolved"])
         .order("updated_at", { ascending: false });
-      return (data || []) as any[];
+      return (data || []) as Ticket[];
     },
+
     refetchInterval: 5000,
   });
 
   const { data: displayTickets } = useQuery({
-    queryKey: ["suporte-tickets-profiles", rawTickets?.map((t: any) => t.id)],
+    queryKey: ["suporte-tickets-profiles", rawTickets?.map((t) => t.id)],
     enabled: !!rawTickets && rawTickets.length > 0,
     queryFn: async () => {
-      const userIds = [...new Set(rawTickets!.map((t: any) => t.user_id))];
+      const userIds = [...new Set(rawTickets!.map((t) => t.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, display_name, avatar_url")
         .in("user_id", userIds);
-      const profileMap: Record<string, any> = {};
-      (profiles || []).forEach((p: any) => { profileMap[p.user_id] = p; });
-      return rawTickets!.map((t: any) => ({ ...t, profile: profileMap[t.user_id] || null }));
+      const profileMap: Record<string, Profile> = {};
+      (profiles || []).forEach((p) => { profileMap[p.user_id] = p; });
+      return rawTickets!.map((t) => ({ ...t, profile: profileMap[t.user_id] || null })) as TicketWithProfile[];
     },
   });
+
 
   useEffect(() => {
     if (!isManager) return;
@@ -154,23 +171,26 @@ export default function SuporteDashboard() {
   const allTickets = displayTickets || rawTickets || [];
 
   const { pendingTickets, resolvedTickets } = useMemo(() => {
-    const pending: any[] = [];
-    const resolved: any[] = [];
-    allTickets.forEach((t: any) => {
-      if (t.status === "resolved") resolved.push(t);
-      else pending.push(t);
+    const pending: TicketWithProfile[] = [];
+    const resolved: TicketWithProfile[] = [];
+    allTickets.forEach((t) => {
+      const ticketWithProfile = t as TicketWithProfile;
+      if (t.status === "resolved") resolved.push(ticketWithProfile);
+      else pending.push(ticketWithProfile);
     });
-    const sort = (arr: any[]) => arr.sort((a: any, b: any) => {
-      const pa = PRIORITY_MAP[a.priority]?.order ?? 3;
-      const pb = PRIORITY_MAP[b.priority]?.order ?? 3;
+    const sort = (arr: TicketWithProfile[]) => [...arr].sort((a, b) => {
+      const pa = PRIORITY_MAP[a.priority || "baixo"]?.order ?? 3;
+      const pb = PRIORITY_MAP[b.priority || "baixo"]?.order ?? 3;
       if (pa !== pb) return pa - pb;
       return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
     });
     return { pendingTickets: sort(pending), resolvedTickets: sort(resolved) };
   }, [allTickets]);
 
-  const applyFilter = (tickets: any[]) =>
-    priorityFilter === "all" ? tickets : tickets.filter((t: any) => t.priority === priorityFilter);
+
+  const applyFilter = (tickets: TicketWithProfile[]) =>
+    priorityFilter === "all" ? tickets : tickets.filter((t) => t.priority === priorityFilter);
+
 
   return (
     <div className="space-y-4 pb-24">

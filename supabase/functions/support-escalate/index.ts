@@ -7,6 +7,20 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+interface Message {
+  role: "user" | "assistant" | "system" | "ai";
+  content: string;
+}
+
+interface AgentPresence {
+  user_id: string;
+}
+
+interface Ticket {
+  assigned_to: string | null;
+}
+
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -55,9 +69,10 @@ serve(async (req) => {
     try {
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       if (LOVABLE_API_KEY) {
-        const conversationText = messages
-          .map((m: any) => `${m.role === "user" ? "Membro" : "IA"}: ${m.content}`)
+        const conversationText = (messages as Message[])
+          .map((m) => `${m.role === "user" ? "Membro" : "IA"}: ${m.content}`)
           .join("\n");
+
 
         const classifyResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -113,7 +128,8 @@ Responda APENAS com uma das três palavras: urgente, moderado ou baixo`,
 
       if (onlineAgents && onlineAgents.length > 0) {
         // Count actual assigned tickets per agent
-        const agentIds = onlineAgents.map((a: any) => a.user_id);
+        const agentIds = (onlineAgents as AgentPresence[]).map((a) => a.user_id);
+
         const { data: ticketCounts } = await admin
           .from("support_tickets")
           .select("assigned_to")
@@ -122,9 +138,10 @@ Responda APENAS com uma das três palavras: urgente, moderado ou baixo`,
 
         const countMap: Record<string, number> = {};
         agentIds.forEach((id: string) => (countMap[id] = 0));
-        (ticketCounts || []).forEach((t: any) => {
+        (ticketCounts as Ticket[] || []).forEach((t) => {
           if (t.assigned_to) countMap[t.assigned_to] = (countMap[t.assigned_to] || 0) + 1;
         });
+
 
         // Pick agent with fewest tickets
         let minCount = Infinity;
@@ -163,12 +180,13 @@ Responda APENAS com uma das três palavras: urgente, moderado ou baixo`,
     }
 
     // 4. Save all messages (user + AI) via service role - bypasses RLS
-    const messagesToSave = messages.map((msg: any) => ({
+    const messagesToSave = (messages as Message[]).map((msg) => ({
       ticket_id: ticket.id,
       sender_type: msg.role === "user" ? "user" : "ai",
       sender_id: msg.role === "user" ? userId : null,
       body: msg.content,
     }));
+
 
     const { error: msgErr } = await admin.from("support_messages").insert(messagesToSave);
     if (msgErr) {

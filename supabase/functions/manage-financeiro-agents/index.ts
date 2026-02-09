@@ -7,6 +7,20 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+interface UserRole {
+  role: string;
+  user_id?: string;
+}
+
+interface Profile {
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  first_name: string | null;
+  last_name: string | null;
+}
+
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -46,7 +60,8 @@ serve(async (req) => {
       .select("role")
       .eq("user_id", user.id);
 
-    const roles = (callerRoles || []).map((r: any) => r.role);
+    const roles = (callerRoles as UserRole[] || []).map((r) => r.role);
+
     const canManage = roles.includes("admin") || roles.includes("financeiro_gerente");
     if (!canManage) {
       return new Response(JSON.stringify({ error: "Forbidden – admin or gerente only" }), {
@@ -135,7 +150,8 @@ serve(async (req) => {
         .select("user_id")
         .eq("role", "financeiro");
 
-      const userIds = (financeiroRoles || []).map((r: any) => r.user_id);
+      const userIds = (financeiroRoles as UserRole[] || []).map((r) => r.user_id as string);
+
 
       if (userIds.length === 0) {
         return new Response(JSON.stringify({ agents: [] }), {
@@ -150,7 +166,8 @@ serve(async (req) => {
         .eq("role", "admin")
         .in("user_id", userIds);
 
-      const adminIds = new Set((adminRoles || []).map((r: any) => r.user_id));
+      const adminIds = new Set((adminRoles as UserRole[] || []).map((r) => r.user_id as string));
+
       const filteredIds = userIds.filter((uid: string) => !adminIds.has(uid));
 
       if (filteredIds.length === 0) {
@@ -166,7 +183,8 @@ serve(async (req) => {
         .eq("role", "financeiro_gerente")
         .in("user_id", filteredIds);
 
-      const gerenteIds = new Set((gerenteRoles || []).map((r: any) => r.user_id));
+      const gerenteIds = new Set((gerenteRoles as UserRole[] || []).map((r) => r.user_id as string));
+
 
       const { data: profiles } = await supabaseService
         .from("profiles")
@@ -175,7 +193,8 @@ serve(async (req) => {
 
       const agents = await Promise.all(
         filteredIds.map(async (uid: string) => {
-          const profile = (profiles || []).find((p: any) => p.user_id === uid);
+          const profile = (profiles as Profile[] || []).find((p) => p.user_id === uid);
+
           const { data: { user: authUser } } = await supabaseService.auth.admin.getUserById(uid);
           return {
             user_id: uid,

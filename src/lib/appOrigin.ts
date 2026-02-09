@@ -7,9 +7,13 @@
  */
 
 export function isLovableHost(hostname: string) {
-  // Lovable environments can use different base domains (preview/staging/published).
+  // Lovable environments and Vercel preview domains
   // In those environments we MUST NOT split by subdomain.
-  return hostname.endsWith(".lovable.app") || hostname.endsWith(".lovableproject.com");
+  return (
+    hostname.endsWith(".lovable.app") || 
+    hostname.endsWith(".lovableproject.com") ||
+    hostname.endsWith(".vercel.app")
+  );
 }
 
 export function isCustomDomain(hostname: string) {

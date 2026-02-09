@@ -1,0 +1,94 @@
+import * as XLSX from "xlsx";
+import { formatCPF, isValidCPF } from "@/lib/cpf";
+import { formatCNPJ, isValidCNPJ } from "@/lib/cnpj";
+
+interface ImportedNomeItem {
+  tempId: string;
+  person_name: string;
+  document: string;
+  whatsapp: string;
+  fichaFile: null;
+  identidadeFile: null;
+}
+
+function formatPhone(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+function formatDocument(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length <= 11) return formatCPF(value);
+  return formatCNPJ(value);
+}
+
+export function downloadTemplate() {
+  const header = ["Nome | Nome Fantasia", "CPF | CNPJ", "WhatsApp"];
+  const example = ["João da Silva", "123.456.789-00", "(11) 99999-9999"];
+
+  const ws = XLSX.utils.aoa_to_sheet([header, example]);
+
+  // Column widths
+  ws["!cols"] = [{ wch: 30 }, { wch: 20 }, { wch: 18 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Limpa Nome");
+  XLSX.writeFile(wb, "modelo-limpa-nome.xlsx");
+}
+
+export function parseExcelFile(file: File): Promise<ImportedNomeItem[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        if (!ws) { resolve([]); return; }
+
+        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+        // Skip header row
+        const items: ImportedNomeItem[] = [];
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || !row[0]) continue;
+
+          const name = String(row[0]).trim();
+          if (!name) continue;
+
+          const rawDoc = row[1] ? String(row[1]).trim() : "";
+          const rawPhone = row[2] ? String(row[2]).trim() : "";
+
+          const docDigits = rawDoc.replace(/\D/g, "");
+          let formattedDoc = "";
+          if (docDigits.length >= 11) {
+            formattedDoc = formatDocument(rawDoc);
+          } else if (docDigits) {
+            formattedDoc = docDigits;
+          }
+
+          const phoneDigits = rawPhone.replace(/\D/g, "").slice(0, 11);
+          const formattedPhone = phoneDigits ? formatPhone(phoneDigits) : "";
+
+          items.push({
+            tempId: crypto.randomUUID(),
+            person_name: name,
+            document: formattedDoc,
+            whatsapp: phoneDigits ? `+55${phoneDigits}` : "",
+            fichaFile: null,
+            identidadeFile: null,
+          });
+        }
+
+        resolve(items);
+      } catch {
+        reject(new Error("Erro ao processar planilha"));
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}

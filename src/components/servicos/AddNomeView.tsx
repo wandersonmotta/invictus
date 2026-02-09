@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ArrowLeft, User, FileText, Upload, ShoppingCart, CreditCard, X, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, User, FileText, Upload, ShoppingCart, CreditCard, X, Loader2, CheckCircle2, XCircle, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { formatCPF, isValidCPF } from "@/lib/cpf";
 import { formatCNPJ, isValidCNPJ } from "@/lib/cnpj";
 import { validateCpfFromBrowser, validateCnpjFromBrowser } from "@/lib/validateCpfClient";
 import { PixPaymentView } from "./PixPaymentView";
+import { downloadTemplate, parseExcelFile } from "./excelHelpers";
 
 interface AddNomeViewProps {
   onBack: () => void;
@@ -80,6 +81,7 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const fichaRef = useRef<HTMLInputElement>(null);
   const identidadeRef = useRef<HTMLInputElement>(null);
+  const excelRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Debounced document validation
@@ -264,8 +266,51 @@ export function AddNomeView({ onBack }: AddNomeViewProps) {
         <span className="text-sm font-medium">Voltar</span>
       </button>
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
         <h2 className="text-lg font-semibold text-foreground">Cadastre no campo abaixo</h2>
+        <div className="flex items-center gap-2">
+          <input
+            type="file"
+            ref={excelRef}
+            className="hidden"
+            accept=".xlsx,.xls"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              try {
+                const items = await parseExcelFile(file);
+                if (items.length === 0) {
+                  toast.error("Nenhum nome encontrado na planilha");
+                  return;
+                }
+                setAddedNames((prev) => [...prev, ...items]);
+                toast.success(`${items.length} nome(s) importado(s) com sucesso!`);
+              } catch (err: any) {
+                toast.error(err.message || "Erro ao importar planilha");
+              } finally {
+                e.target.value = "";
+              }
+            }}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs"
+            onClick={() => excelRef.current?.click()}
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Upload lista
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs"
+            onClick={downloadTemplate}
+          >
+            <Download className="h-3.5 w-3.5" />
+            Baixar modelo
+          </Button>
+        </div>
       </div>
 
       {/* Form Card */}

@@ -88,25 +88,25 @@ serve(async (req) => {
       })
       .join("\n");
 
-    // Call Lovable AI
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "AI not configured" }), {
+    // Call Google Gemini API directly (OpenAI compatible endpoint)
+    const GOOGLE_AI_STUDIO_API_KEY = Deno.env.get("GOOGLE_AI_STUDIO_API_KEY");
+    if (!GOOGLE_AI_STUDIO_API_KEY) {
+      return new Response(JSON.stringify({ error: "AI configuration missing: GOOGLE_AI_STUDIO_API_KEY" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const aiResp = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${GOOGLE_AI_STUDIO_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "gemini-3.0-flash-preview",
           messages: [
             { role: "system", content: SUMMARY_PROMPT },
             { role: "user", content: conversationText },

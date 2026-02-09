@@ -6,8 +6,11 @@ on:
       - main
       - develop
     paths:
-      - 'supabase/**'
+      - "supabase/**"
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
@@ -15,10 +18,10 @@ jobs:
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v1.6.0
         with:
           version: latest
 

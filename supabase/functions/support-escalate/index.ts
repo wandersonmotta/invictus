@@ -67,21 +67,20 @@ serve(async (req) => {
     // 1. Classify priority via AI
     let priority = "baixo";
     try {
-      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-      if (LOVABLE_API_KEY) {
+      const GOOGLE_AI_STUDIO_API_KEY = Deno.env.get("GOOGLE_AI_STUDIO_API_KEY");
+      if (GOOGLE_AI_STUDIO_API_KEY) {
         const conversationText = (messages as Message[])
           .map((m) => `${m.role === "user" ? "Membro" : "IA"}: ${m.content}`)
           .join("\n");
 
-
-        const classifyResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const classifyResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            Authorization: `Bearer ${GOOGLE_AI_STUDIO_API_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash-lite",
+            model: "gemini-3.0-flash-preview",
             messages: [
               {
                 role: "system",

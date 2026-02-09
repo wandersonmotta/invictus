@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
-import { formatCPF, isValidCPF } from "@/lib/cpf";
-import { formatCNPJ, isValidCNPJ } from "@/lib/cnpj";
+import { formatCPF } from "@/lib/cpf";
+import { formatCNPJ } from "@/lib/cnpj";
 
 interface ImportedNomeItem {
   tempId: string;
@@ -25,17 +25,10 @@ function formatDocument(value: string): string {
 }
 
 export function downloadTemplate() {
-  const header = ["Nome | Nome Fantasia", "CPF | CNPJ", "WhatsApp"];
-  const example = ["João da Silva", "123.456.789-00", "(11) 99999-9999"];
-
-  const ws = XLSX.utils.aoa_to_sheet([header, example]);
-
-  // Column widths
-  ws["!cols"] = [{ wch: 30 }, { wch: 20 }, { wch: 18 }];
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Limpa Nome");
-  XLSX.writeFile(wb, "modelo-limpa-nome.xlsx");
+  const link = document.createElement("a");
+  link.href = "/modelo-limpa-nome.xlsx";
+  link.download = "modelo-limpa-nome.xlsx";
+  link.click();
 }
 
 export function parseExcelFile(file: File): Promise<ImportedNomeItem[]> {

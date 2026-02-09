@@ -63,6 +63,15 @@ export function TestimonialsSection() {
     disableClasses: true,
   });
 
+  // Delay counter activation so it only starts after the 4th card's stagger animation finishes
+  const [counterActive, setCounterActive] = React.useState(false);
+  React.useEffect(() => {
+    if (!counterReveal.visible) return;
+    // stagger index 3 × ~200ms delay + ~500ms animation ≈ 1100ms
+    const t = window.setTimeout(() => setCounterActive(true), 1100);
+    return () => window.clearTimeout(t);
+  }, [counterReveal.visible]);
+
   return (
     <SectionShell id="depoimentos" title="Quem Vive a Invictus">
       <div ref={counterReveal.ref} className="invictus-stagger--lr grid gap-3 sm:gap-4 lg:gap-5 md:auto-rows-fr md:grid-cols-2 xl:grid-cols-4">
@@ -85,7 +94,7 @@ export function TestimonialsSection() {
               ) : (
                 <>
                   "Dentro da Invictus encontrei o que mudou minha vida. Em 1 mês, ganhei mais de R${" "}
-                  <AnimatedNumber value={10000} active={counterReveal.visible} prefix="" suffix="" />
+                  <AnimatedNumber value={10000} active={counterActive} prefix="" suffix="" />
                   . Disciplina e execução. Aqui o resultado é questão de tempo."
                 </>
               )}

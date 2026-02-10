@@ -58,6 +58,7 @@ const SuporteEquipe = React.lazy(() => import("@/pages/suporte-backoffice/Suport
 const SuporteAvaliacoes = React.lazy(() => import("@/pages/suporte-backoffice/SuporteAvaliacoes"));
 const SuporteIATreinamento = React.lazy(() => import("@/pages/suporte-backoffice/SuporteIATreinamento"));
 const SuporteLayoutLazy = React.lazy(() => import("@/components/suporte-backoffice/SuporteLayout").then(m => ({ default: m.SuporteLayout })));
+const Diagnostic = React.lazy(() => import("@/pages/Diagnostic"));
 
 export function HostRouter() {
   const hostname = window.location.hostname;
@@ -757,18 +758,30 @@ export function HostRouter() {
             </RequireAuth>
           }
         />
-       <Route
-         path="/admin"
-        element={
-          <RequireAuth>
-            <RequireAdmin>
-              <AppLayout>
-                <Admin />
-              </AppLayout>
-            </RequireAdmin>
-          </RequireAuth>
-        }
-      />
+        <Route
+          path="/admin"
+          element={
+            <RequireAuth>
+              <RequireAdmin>
+                <AppLayout>
+                  <Admin />
+                </AppLayout>
+              </RequireAdmin>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/diagnostic"
+          element={
+            <RequireAuth>
+              <RequireAdmin>
+                <AppLayout>
+                  <Diagnostic />
+                </AppLayout>
+              </RequireAdmin>
+            </RequireAuth>
+          }
+        />
 
       {/* Suporte user routes */}
       <Route path="/suporte" element={<RequireAuth><AppLayout><Suporte /></AppLayout></RequireAuth>} />

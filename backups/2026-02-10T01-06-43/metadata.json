@@ -1,0 +1,95 @@
+{
+  "timestamp": "2026-02-10T01:06:50.580Z",
+  "tables_count": 22,
+  "total_records": 11,
+  "tables": [
+    {
+      "name": "profiles",
+      "count": 1
+    },
+    {
+      "name": "user_roles",
+      "count": 1
+    },
+    {
+      "name": "trainings",
+      "count": 0
+    },
+    {
+      "name": "training_categories",
+      "count": 0
+    },
+    {
+      "name": "feed_posts",
+      "count": 0
+    },
+    {
+      "name": "feed_post_media",
+      "count": 0
+    },
+    {
+      "name": "feed_post_likes",
+      "count": 0
+    },
+    {
+      "name": "feed_post_comments",
+      "count": 0
+    },
+    {
+      "name": "messages",
+      "count": 0
+    },
+    {
+      "name": "conversations",
+      "count": 0
+    },
+    {
+      "name": "conversation_members",
+      "count": 0
+    },
+    {
+      "name": "follows",
+      "count": 0
+    },
+    {
+      "name": "member_status",
+      "count": 0
+    },
+    {
+      "name": "notifications",
+      "count": 0
+    },
+    {
+      "name": "community_posts",
+      "count": 0
+    },
+    {
+      "name": "support_tickets",
+      "count": 0
+    },
+    {
+      "name": "support_messages",
+      "count": 0
+    },
+    {
+      "name": "support_agent_presence",
+      "count": 0
+    },
+    {
+      "name": "waitlist_leads",
+      "count": 0
+    },
+    {
+      "name": "service_categories",
+      "count": 3
+    },
+    {
+      "name": "service_items",
+      "count": 6
+    },
+    {
+      "name": "service_payments",
+      "count": 0
+    }
+  ]
+}

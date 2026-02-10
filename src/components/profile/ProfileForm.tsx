@@ -157,19 +157,37 @@ export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () 
     setLiveCep((prev) => ({ ...prev, loading: true, error: null }));
 
     const controller = new AbortController();
-    fetch(`https://viacep.com.br/ws/${digits}/json/`, { signal: controller.signal })
-      .then((r) => r.json())
-      .then((data) => {
+
+    async function fetchCep() {
+      try {
+        // Tenta ViaCEP primeiro
+        const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`, { signal: controller.signal });
+        if (!res.ok) throw new Error("ViaCEP error");
+        const data = await res.json();
         if (data.erro) {
-          setLiveCep({ city: "", state: "", loading: false, error: "CEP não encontrado" });
-        } else {
-          setLiveCep({ city: data.localidade ?? "", state: data.uf ?? "", loading: false, error: null });
+          throw new Error("CEP não encontrado");
         }
-      })
-      .catch((err) => {
+
+        setLiveCep({ city: data.localidade ?? "", state: data.uf ?? "", loading: false, error: null });
+      } catch (err: any) {
         if (err.name === "AbortError") return;
-        setLiveCep({ city: "", state: "", loading: false, error: "Erro ao buscar CEP" });
-      });
+
+        // Tenta BrasilAPI como fallback
+        try {
+          console.log("ViaCEP falhou, tentando BrasilAPI...");
+          const resBackup = await fetch(`https://brasilapi.com.br/api/cep/v1/${digits}`, { signal: controller.signal });
+          if (!resBackup.ok) throw new Error("BrasilAPI error");
+          const dataBackup = await resBackup.json();
+
+          setLiveCep({ city: dataBackup.city ?? "", state: dataBackup.state ?? "", loading: false, error: null });
+        } catch (backupErr: any) {
+          if (backupErr.name === "AbortError") return;
+          setLiveCep({ city: "", state: "", loading: false, error: "CEP não encontrado ou serviço indisponível" });
+        }
+      }
+    }
+
+    fetchCep();
 
     return () => controller.abort();
   }, [watchedCep]);

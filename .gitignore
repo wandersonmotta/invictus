@@ -25,3 +25,6 @@ dist-ssr
 .vercel
 .env
 .env*.local
+supabase_secrets_production.env
+LEIA_ME_SUPABASE_SECRETS.txt
+.env.legacy_reference

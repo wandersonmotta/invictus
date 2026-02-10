@@ -1,0 +1,27 @@
+[
+  {
+    "id": "02d729a4-5db4-4232-ace5-81717914839a",
+    "user_id": "342370f6-80fb-4049-a309-f4e2a7379f86",
+    "display_name": "Wanderson Mota",
+    "avatar_url": null,
+    "created_at": "2026-02-09T16:58:41.837848+00:00",
+    "updated_at": "2026-02-09T17:08:24.47018+00:00",
+    "access_status": "approved",
+    "approved_at": null,
+    "approved_by": null,
+    "bio": null,
+    "region": null,
+    "expertises": [],
+    "postal_code": null,
+    "city": null,
+    "state": null,
+    "location_lat": null,
+    "location_lng": null,
+    "location_updated_at": null,
+    "username": "@wanderson",
+    "first_name": "Wanderson",
+    "last_name": "Mota",
+    "profile_visibility": "members",
+    "pix_key": null
+  }
+]

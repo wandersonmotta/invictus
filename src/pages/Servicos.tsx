@@ -141,7 +141,7 @@ export default function Servicos() {
               Nenhuma categoria disponível no momento.
             </p>
           ) : (
-            <div className="grid gap-3">
+            <div className={isMobile ? "flex flex-col gap-3" : "grid gap-6 grid-cols-2 lg:grid-cols-3"}>
               {categories.map((cat) => (
                 <ServiceCategoryCard
                   key={cat.id}
@@ -149,6 +149,7 @@ export default function Servicos() {
                   description={cat.description}
                   iconName={cat.icon_name}
                   onClick={() => setSelectedCategoryId(cat.id)}
+                  variant={isMobile ? "list" : "grid"}
                 />
               ))}
             </div>

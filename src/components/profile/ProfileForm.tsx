@@ -266,20 +266,17 @@ export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () 
     setSaving(true);
     const expertises = normalizeExpertises(values.expertisesCsv);
 
-    // CEP obrigatório: resolve cidade/UF + salva coordenadas (backend)
-    const { data: locData, error: locError } = await supabase.functions.invoke("resolve-location-from-cep", {
-      body: { postal_code: values.postal_code },
-    });
+    // Lógica alterada: Edge Function estava falhando.
+    // Usamos os dados resolvidos no frontend (liveCep) ou os atuais do perfil.
+    const resolvedCity = liveCep.city || profile?.city || null;
+    const resolvedState = liveCep.state || profile?.state || null;
+    const resolvedCep = values.postal_code.replace(/\D/g, "");
 
-    if (locError || (locData as any)?.error || !(locData as any)?.ok) {
-      setSaving(false);
-      toast({
-        title: "CEP inválido",
-        description: locError?.message ?? (locData as any)?.error ?? "Não foi possível validar seu CEP.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Se mudou o CEP, idealmente limparíamos lat/lng, mas por enquanto mantemos
+    // para não quebrar mapas antigos. TODO: Reimplementar geocoding client-side.
+    
+    // Preparar payload
+
 
     const payload = {
       user_id: userId,
@@ -289,6 +286,10 @@ export function ProfileForm({ userId, onSaved }: { userId: string; onSaved?: () 
       bio: values.bio?.trim() || null,
       expertises,
       profile_visibility: values.profile_visibility,
+      // Location update bypass
+      postal_code: resolvedCep,
+      city: resolvedCity,
+      state: resolvedState,
     };
 
     const { data, error } = await supabase

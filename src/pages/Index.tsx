@@ -8,10 +8,13 @@ import { useDeviceLocation } from "@/components/map/useDeviceLocation";
 import { MemberQuickProfileDialog } from "@/components/map/MemberQuickProfileDialog";
 import { MAPBOX_PREMIUM } from "@/config/invictusMap";
 import { useNearbyLivePins } from "@/components/map/useNearbyLivePins";
+import { useAuth } from "@/auth/AuthProvider";
+import { useMyProfile } from "@/hooks/useMyProfile";
 
 // Update this page (the content is just a fallback if you fail to update the page)
 
 const Index = () => {
+  const { user } = useAuth();
   const {
     loading: pinsLoading,
     pins,
@@ -23,6 +26,7 @@ const Index = () => {
   const deviceLocation = useDeviceLocation({
     approxDecimals: 2
   });
+  const { data: profile } = useMyProfile(user?.id);
   const [me, setMe] = React.useState<{
     access_status: string | null;
     city: string | null;
@@ -131,12 +135,28 @@ const Index = () => {
     return list;
   }, [mode, gpsReady, nearbyPinsLive]);
   const pinsForMap = React.useMemo(() => {
-    if (mode !== "nearby") return pins;
-    // Enquanto o GPS ainda não retornou uma coordenada, evite “mapa vazio”:
-    // mantém o mapa global visível e só filtra quando o GPS estiver pronto.
-    if (!gpsReady) return pins;
-    return (nearby ?? []).map(x => x.pin);
-  }, [mode, pins, nearby, gpsReady]);
+    let basePins = mode !== "nearby" ? pins : (gpsReady ? (nearby ?? []).map(x => x.pin) : pins);
+    
+    // Injeta o próprio usuário se ele tiver localização e não estiver na lista
+    if (appearsOnMap && me && user?.id) {
+      const myId = user.id;
+      const alreadyThere = basePins.some(p => p.user_id === myId);
+      if (!alreadyThere) {
+        const myPin = {
+          user_id: myId,
+          city: me.city,
+          state: me.state,
+          lat: me.location_lat!,
+          lng: me.location_lng!,
+          avatar_url: profile?.avatar_url || "",
+          display_name: profile?.display_name || "Você"
+        };
+        basePins = [myPin, ...basePins];
+      }
+    }
+    
+    return basePins;
+  }, [mode, pins, nearby, gpsReady, appearsOnMap, me, profile, user?.id]);
   const mapCenter = React.useMemo(() => {
     if (mode === "nearby" && deviceLocation.exact) return deviceLocation.exact;
     return typeof me?.location_lat === "number" && typeof me?.location_lng === "number" ? {
@@ -160,7 +180,7 @@ const Index = () => {
         <aside className="space-y-4">
           <Card className="invictus-surface invictus-frame border-border/70">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Proximidade</CardTitle>
+              <CardTitle className="text-base">Mapa</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               {!canUseProximity ? <p className="text-muted-foreground">

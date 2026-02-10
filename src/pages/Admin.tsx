@@ -614,14 +614,14 @@ export default function Admin() {
             <p>Se você deveria ser admin, peça para um administrador validar sua conta e permissões.</p>
           </CardContent>
         </Card> : <Tabs defaultValue="approvals" className="w-full">
-          <TabsList className="grid h-11 w-full grid-cols-7">
-            <TabsTrigger value="approvals">Aprovações</TabsTrigger>
-            <TabsTrigger value="members">Membros</TabsTrigger>
-            <TabsTrigger value="invites">Convites</TabsTrigger>
-            <TabsTrigger value="categories">Categorias</TabsTrigger>
-            <TabsTrigger value="trainings">Treinamentos</TabsTrigger>
-            <TabsTrigger value="leads">Leads</TabsTrigger>
-            <TabsTrigger value="redemptions">Resgates</TabsTrigger>
+          <TabsList className="flex h-auto w-full justify-start overflow-x-auto p-1 scrollbar-hide">
+            <TabsTrigger value="approvals" className="min-w-[100px] flex-1">Aprovações</TabsTrigger>
+            <TabsTrigger value="members" className="min-w-[100px] flex-1">Membros</TabsTrigger>
+            <TabsTrigger value="invites" className="min-w-[100px] flex-1">Convites</TabsTrigger>
+            <TabsTrigger value="categories" className="min-w-[100px] flex-1">Categorias</TabsTrigger>
+            <TabsTrigger value="trainings" className="min-w-[100px] flex-1">Treinamentos</TabsTrigger>
+            <TabsTrigger value="leads" className="min-w-[100px] flex-1">Leads</TabsTrigger>
+            <TabsTrigger value="redemptions" className="min-w-[100px] flex-1">Resgates</TabsTrigger>
           </TabsList>
 
           <TabsContent value="approvals" className="mt-4 space-y-4">
@@ -716,42 +716,44 @@ export default function Admin() {
                 ) : (members ?? []).length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nenhum membro encontrado.</p>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Username</TableHead>
-                        <TableHead>Local</TableHead>
-                        <TableHead>Aprovado em</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(members ?? []).map((m) => {
-                        const usernameNoAt = (m.username ?? "").replace(/^@/, "");
-                        return (
-                          <TableRow key={m.profile_id}>
-                            <TableCell className="font-medium">{m.display_name}</TableCell>
-                            <TableCell className="text-muted-foreground">{m.username ?? "—"}</TableCell>
-                            <TableCell className="text-muted-foreground">{[m.city, m.state].filter(Boolean).join(" · ") || "—"}</TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {m.approved_at ? new Date(m.approved_at).toLocaleString("pt-BR") : "—"}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                asChild
-                                size="sm"
-                                variant="outline"
-                                disabled={!usernameNoAt}
-                              >
-                                <a href={`/membro/${encodeURIComponent(usernameNoAt)}`}>Ver perfil</a>
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                  <div className="rounded-md border border-border/60 overflow-hidden overflow-x-auto">
+                    <Table className="min-w-[600px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Username</TableHead>
+                          <TableHead>Local</TableHead>
+                          <TableHead>Aprovado em</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(members ?? []).map((m) => {
+                          const usernameNoAt = (m.username ?? "").replace(/^@/, "");
+                          return (
+                            <TableRow key={m.profile_id}>
+                              <TableCell className="font-medium">{m.display_name}</TableCell>
+                              <TableCell className="text-muted-foreground">{m.username ?? "—"}</TableCell>
+                              <TableCell className="text-muted-foreground">{[m.city, m.state].filter(Boolean).join(" · ") || "—"}</TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {m.approved_at ? new Date(m.approved_at).toLocaleString("pt-BR") : "—"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  asChild
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={!usernameNoAt}
+                                >
+                                  <a href={`/membro/${encodeURIComponent(usernameNoAt)}`}>Ver perfil</a>
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -818,87 +820,89 @@ export default function Admin() {
                 {visibleInvites.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nenhum convite para exibir.</p>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[44px]">
-                          <Checkbox
-                            checked={allArchivableSelected}
-                            onCheckedChange={() => toggleSelectAllArchivable()}
-                            aria-label="Selecionar todos os arquiváveis"
-                          />
-                        </TableHead>
-                        <TableHead>Código</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Usos</TableHead>
-                        <TableHead>Expira</TableHead>
-                        <TableHead>Nota</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                  <div className="rounded-md border border-border/60 overflow-hidden overflow-x-auto">
+                    <Table className="min-w-[700px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[44px]">
+                            <Checkbox
+                              checked={allArchivableSelected}
+                              onCheckedChange={() => toggleSelectAllArchivable()}
+                              aria-label="Selecionar todos os arquiváveis"
+                            />
+                          </TableHead>
+                          <TableHead>Código</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Usos</TableHead>
+                          <TableHead>Expira</TableHead>
+                          <TableHead>Nota</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
 
-                    <TableBody>
-                      {visibleInvites.map((inv) => {
-                        const isArchived = inv.archived_at != null;
-                        const isUsed = inv.uses_count > 0;
-                        const canArchive = !isArchived && !isUsed;
-                        const selected = selectedInviteIds.has(inv.id);
+                      <TableBody>
+                        {visibleInvites.map((inv) => {
+                          const isArchived = inv.archived_at != null;
+                          const isUsed = inv.uses_count > 0;
+                          const canArchive = !isArchived && !isUsed;
+                          const selected = selectedInviteIds.has(inv.id);
 
-                        const status = isArchived
-                          ? "Arquivado"
-                          : inv.active
-                            ? "Ativo"
-                            : "Inativo";
+                          const status = isArchived
+                            ? "Arquivado"
+                            : inv.active
+                              ? "Ativo"
+                              : "Inativo";
 
-                        return (
-                          <TableRow key={inv.id}>
-                            <TableCell className="w-[44px]">
-                              <Checkbox
-                                checked={selected}
-                                disabled={!canArchive}
-                                onCheckedChange={(v) => toggleRowSelected(inv.id, v === true)}
-                                aria-label={`Selecionar convite ${inv.code}`}
-                              />
-                            </TableCell>
-                            <TableCell className="font-medium">{inv.code}</TableCell>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span className="text-sm">{status}</span>
-                                {isUsed && <span className="text-xs text-muted-foreground">Já usado</span>}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {inv.uses_count}/{inv.max_uses}
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {inv.expires_at ? new Date(inv.expires_at).toLocaleString() : "—"}
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{inv.note ?? "—"}</TableCell>
-                            <TableCell className="text-right">
-                              <div className="inline-flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  disabled={isArchived}
-                                  onClick={() => void setInviteActive(inv.id, !inv.active)}
-                                >
-                                  {inv.active ? "Desativar" : "Ativar"}
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
+                          return (
+                            <TableRow key={inv.id}>
+                              <TableCell className="w-[44px]">
+                                <Checkbox
+                                  checked={selected}
                                   disabled={!canArchive}
-                                  onClick={() => setArchiveDialog({ open: true, mode: "single", ids: [inv.id] })}
-                                >
-                                  Arquivar
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                                  onCheckedChange={(v) => toggleRowSelected(inv.id, v === true)}
+                                  aria-label={`Selecionar convite ${inv.code}`}
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium">{inv.code}</TableCell>
+                              <TableCell>
+                                <div className="flex flex-col">
+                                  <span className="text-sm">{status}</span>
+                                  {isUsed && <span className="text-xs text-muted-foreground">Já usado</span>}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {inv.uses_count}/{inv.max_uses}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {inv.expires_at ? new Date(inv.expires_at).toLocaleString() : "—"}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{inv.note ?? "—"}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="inline-flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={isArchived}
+                                    onClick={() => void setInviteActive(inv.id, !inv.active)}
+                                  >
+                                    {inv.active ? "Desativar" : "Ativar"}
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={!canArchive}
+                                    onClick={() => setArchiveDialog({ open: true, mode: "single", ids: [inv.id] })}
+                                  >
+                                    Arquivar
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -1083,36 +1087,38 @@ export default function Admin() {
                     {leadsSearch.trim() ? "Nenhum lead encontrado com esse filtro." : "Nenhum lead cadastrado ainda."}
                   </p>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>WhatsApp</TableHead>
-                        <TableHead>E-mail</TableHead>
-                        <TableHead>Origem</TableHead>
-                        <TableHead>Data</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredLeads.map((lead) => (
-                        <TableRow key={lead.id}>
-                          <TableCell className="font-medium">{lead.full_name || "—"}</TableCell>
-                          <TableCell className="text-muted-foreground">{formatPhone(lead.phone)}</TableCell>
-                          <TableCell className="text-muted-foreground">{lead.email}</TableCell>
-                          <TableCell className="text-muted-foreground">{lead.source || "—"}</TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {new Date(lead.created_at).toLocaleString("pt-BR", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit"
-                            })}
-                          </TableCell>
+                  <div className="rounded-md border border-border/60 overflow-hidden overflow-x-auto">
+                    <Table className="min-w-[800px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>WhatsApp</TableHead>
+                          <TableHead>E-mail</TableHead>
+                          <TableHead>Origem</TableHead>
+                          <TableHead>Data</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredLeads.map((lead) => (
+                          <TableRow key={lead.id}>
+                            <TableCell className="font-medium">{lead.full_name || "—"}</TableCell>
+                            <TableCell className="text-muted-foreground">{formatPhone(lead.phone)}</TableCell>
+                            <TableCell className="text-muted-foreground">{lead.email}</TableCell>
+                            <TableCell className="text-muted-foreground">{lead.source || "—"}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {new Date(lead.created_at).toLocaleString("pt-BR", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit"
+                              })}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
 
                 <p className="text-xs text-muted-foreground">

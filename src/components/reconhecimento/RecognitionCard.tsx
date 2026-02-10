@@ -49,6 +49,11 @@ export function RecognitionCard({
             alt={`Placa ${level.name}`}
             className="w-full h-full object-cover"
             loading="lazy"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+              // Mostra o fallback (Trophy icon) se a imagem falhar
+              e.currentTarget.parentElement?.classList.add("fallback-active");
+            }}
           />
         ) : (
           <>
@@ -59,6 +64,15 @@ export function RecognitionCard({
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-white/10 pointer-events-none" />
           </>
         )}
+        {/* Fallback visual via CSS se a classe for adicionada pelo onError */}
+        <div className="hidden fallback-element absolute inset-0 flex items-center justify-center">
+            <Trophy className="h-16 w-16 text-white/80 drop-shadow-lg" strokeWidth={1.5} />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-white/10 pointer-events-none" />
+        </div>
+        <style>{`
+          .fallback-active img { display: none; }
+          .fallback-active .fallback-element { display: flex !important; }
+        `}</style>
 
         {/* Achieved checkmark */}
         {isAchieved && (

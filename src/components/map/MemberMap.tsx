@@ -48,26 +48,48 @@ export function MemberMap({
   const radiusCircleRef = React.useRef<L.Circle | null>(null);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
 
-  const onGeolocate = React.useCallback(() => {
-    const map = mapRef.current;
-    if (!map) return;
+  /* 
+    Lógica de Mapa:
+    1. Global (Padrão): Mostra todos os pinos baseados no cadastro (CEP).
+    2. Perto de Mim: Centraliza no usuário (GPS) e foca na região.
+  */
+  const [userLocation, setUserLocation] = React.useState<LatLng | null>(null);
+  const [isLocating, setIsLocating] = React.useState(false);
 
-    // Prefer the profile “approximate” location when available
+  // Se centerMe vier de fora (ex: perfil do usuário logado), usamos como fallback inicial
+  React.useEffect(() => {
+    if (centerMe && !userLocation) {
+      setUserLocation(centerMe);
+    }
+  }, [centerMe]);
+
+  const onCenterOnMe = React.useCallback(() => {
+    // Se temos uma localização definida (seja GPS ou CEP), focamos nela
     if (centerMe) {
-      map.setView([centerMe.lat, centerMe.lng], 11, { animate: true });
+      mapRef.current?.setView([centerMe.lat, centerMe.lng], 12, { animate: true });
       return;
     }
 
-    // Fallback: browser geolocation
-    if (!navigator.geolocation) return;
+    // Fallback para geolocalização se não houver centro definido
+    if (!navigator.geolocation) {
+       alert("Seu navegador não suporta geolocalização.");
+       return;
+    }
+
+    setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        map.setView([pos.coords.latitude, pos.coords.longitude], 13, { animate: true });
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setUserLocation(coords);
+        setIsLocating(false);
+        mapRef.current?.setView([coords.lat, coords.lng], 12, { animate: true });
       },
-      () => {
-        // silent fail
+      (err) => {
+        console.error(err);
+        setIsLocating(false);
+        alert("Não foi possível obter sua localização. Verifique as permissões.");
       },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60_000 },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   }, [centerMe]);
 
@@ -137,8 +159,14 @@ export function MemberMap({
     if (!map || !markers) return;
 
     markers.clearLayers();
+    if (!pins || pins.length === 0) return;
 
     for (const p of pins) {
+      if (typeof p.lat !== 'number' || typeof p.lng !== 'number' || isNaN(p.lat) || isNaN(p.lng)) {
+        console.warn(`Invalid coordinates for pin: ${p.user_id}`, p);
+        continue;
+      }
+
       const label =
         p.display_name?.trim()
           ? `${p.display_name}${p.city && p.state ? ` — ${p.city}/${p.state}` : ""}`
@@ -146,17 +174,21 @@ export function MemberMap({
             ? `${p.city}/${p.state}`
             : "Invictus";
 
-      const marker = L.marker([p.lat, p.lng], { icon: getAvatarIcon(p.avatar_url) }).addTo(markers);
-      if (onSelectPin) {
-        marker.on("click", () => onSelectPin(p.user_id));
-      }
+      try {
+        const marker = L.marker([p.lat, p.lng], { icon: getAvatarIcon(p.avatar_url) }).addTo(markers);
+        if (onSelectPin) {
+          marker.on("click", () => onSelectPin(p.user_id));
+        }
 
-      marker.bindTooltip(label, {
-          direction: "top",
-          opacity: 1,
-          sticky: true,
-          className: "invictus-map-tooltip",
-        });
+        marker.bindTooltip(label, {
+            direction: "top",
+            opacity: 1,
+            sticky: true,
+            className: "invictus-map-tooltip",
+          });
+      } catch (err) {
+        console.error("Error adding marker to map:", err);
+      }
     }
   }, [pins, getAvatarIcon, onSelectPin]);
 
@@ -165,7 +197,9 @@ export function MemberMap({
     const map = mapRef.current;
     if (!map) return;
 
-    const shouldShow = !!showRadius && !!radiusCenter && typeof radiusKm === "number";
+    const shouldShow = !!showRadius && !!radiusCenter && typeof radiusKm === "number" && 
+                       typeof radiusCenter.lat === 'number' && typeof radiusCenter.lng === 'number' &&
+                       !isNaN(radiusCenter.lat) && !isNaN(radiusCenter.lng);
 
     if (!shouldShow) {
       if (radiusCircleRef.current) {
@@ -178,34 +212,39 @@ export function MemberMap({
     const center: [number, number] = [radiusCenter!.lat, radiusCenter!.lng];
     const meters = Math.max(1, radiusKm!) * 1000;
 
-    if (!radiusCircleRef.current) {
-      radiusCircleRef.current = L.circle(center, {
-        radius: meters,
-        // keep visuals subtle and on-theme
-        color: "hsl(var(--primary))" as any,
-        fillColor: "hsl(var(--primary))" as any,
-        fillOpacity: 0.08,
-        weight: 1,
-        opacity: 0.65,
-      }).addTo(map);
-    } else {
-      radiusCircleRef.current.setLatLng(center);
-      radiusCircleRef.current.setRadius(meters);
+    try {
+      if (!radiusCircleRef.current) {
+        radiusCircleRef.current = L.circle(center, {
+          radius: meters,
+          // keep visuals subtle and on-theme
+          color: "hsl(var(--primary))" as any,
+          fillColor: "hsl(var(--primary))" as any,
+          fillOpacity: 0.08,
+          weight: 1,
+          opacity: 0.65,
+        }).addTo(map);
+      } else {
+        radiusCircleRef.current.setLatLng(center);
+        radiusCircleRef.current.setRadius(meters);
+      }
+    } catch (err) {
+      console.error("Error updating radius circle:", err);
     }
   }, [showRadius, radiusCenter, radiusKm]);
 
   return (
     <div className="invictus-surface invictus-frame invictus-map invictus-map-overlay relative w-full overflow-hidden rounded-lg border border-border/70">
       <div className="invictus-map-sweep" aria-hidden="true" />
-      <div className="absolute right-3 top-3 z-[600] flex flex-col items-center gap-2">
+      <div className="absolute right-3 top-16 z-[600] flex flex-col items-center gap-2">
         <button
           type="button"
-          onClick={onGeolocate}
-          disabled={!centerMe && !canGeolocate}
-          aria-label="Localizar"
-          className="invictus-map-control inline-flex h-11 w-11 items-center justify-center rounded-md"
+          onClick={onCenterOnMe}
+          disabled={isLocating}
+          className="bg-white dark:bg-zinc-900 shadow-md border border-border/50 flex items-center justify-center h-10 w-10 rounded-md transition-all hover:bg-muted active:scale-95 group"
+          title="Minha Posição"
         >
-          <LocateFixed className="h-4 w-4" />
+          <LocateFixed className={`h-5 w-5 ${isLocating ? 'animate-spin text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
+          <span className="sr-only">Minha Posição</span>
         </button>
       </div>
 

@@ -33,8 +33,9 @@ const preloaders = [
 
 function scheduleIdle(cb: () => void) {
   const w = window as any;
-  if (typeof w.requestIdleCallback === "function") return w.requestIdleCallback(cb, { timeout: 2500 });
-  return window.setTimeout(cb, 700);
+  // Aumentar o delay inicial para garantir que a hidratação e assets críticos tenham prioridade
+  if (typeof w.requestIdleCallback === "function") return w.requestIdleCallback(cb, { timeout: 4000 });
+  return window.setTimeout(cb, 2000);
 }
 
 function ThemeScopeProvider({ children }: { children: React.ReactNode }) {

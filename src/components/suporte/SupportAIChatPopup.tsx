@@ -171,12 +171,17 @@ export function SupportAIChatPopup({ open, onOpenChange }: Props) {
       }
     } catch (e) {
       console.error(e);
-      toast.error("Erro ao enviar mensagem");
+      toast.error("Erro de conexão. Tente novamente.");
+      // Remove a mensagem do usuário se falhou para não ficar inconsistente
+      setMessages((prev) => prev.filter(m => m !== userMsg));
     } finally {
       setSending(false);
-      textareaRef.current?.focus();
+      // Força foco apenas se ainda estiver aberto
+      if (open) {
+          setTimeout(() => textareaRef.current?.focus(), 100);
+      }
     }
-  }, [input, sending, messages, handleEscalate]);
+  }, [input, sending, messages, handleEscalate, open]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {

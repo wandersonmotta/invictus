@@ -70,75 +70,77 @@ export function AdminRedemptionsTab() {
         ) : (redemptions ?? []).length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhum resgate solicitado.</p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Membro</TableHead>
-                <TableHead>Prêmio</TableHead>
-                <TableHead>Pontos</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(redemptions ?? []).map((r) => {
-                const initials = (r.display_name ?? "?")
-                  .split(" ")
-                  .map((w) => w[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase();
-                const cfg = statusConfig[r.status] ?? statusConfig.pending;
-                const isBusy = updating === r.id;
+          <div className="rounded-md border border-border/60 overflow-hidden overflow-x-auto">
+            <Table className="min-w-[700px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Membro</TableHead>
+                  <TableHead>Prêmio</TableHead>
+                  <TableHead>Pontos</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(redemptions ?? []).map((r) => {
+                  const initials = (r.display_name ?? "?")
+                    .split(" ")
+                    .map((w) => w[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase();
+                  const cfg = statusConfig[r.status] ?? statusConfig.pending;
+                  const isBusy = updating === r.id;
 
-                return (
-                  <TableRow key={r.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={r.avatar_url ?? undefined} alt={r.display_name ?? ""} />
-                          <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm font-medium">{r.display_name ?? "—"}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm">{r.reward_name}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {r.points_spent.toLocaleString("pt-BR")}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {new Date(r.requested_at).toLocaleDateString("pt-BR")}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={cfg.className}>
-                        {cfg.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="inline-flex gap-1">
-                        {r.status === "pending" && (
-                          <>
-                            <Button size="sm" variant="outline" disabled={isBusy} onClick={() => void updateStatus(r.id, "approved")}>
-                              Aprovar
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={r.avatar_url ?? undefined} alt={r.display_name ?? ""} />
+                            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">{r.display_name ?? "—"}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm">{r.reward_name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {r.points_spent.toLocaleString("pt-BR")}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {new Date(r.requested_at).toLocaleDateString("pt-BR")}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={cfg.className}>
+                          {cfg.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="inline-flex gap-1">
+                          {r.status === "pending" && (
+                            <>
+                              <Button size="sm" variant="outline" disabled={isBusy} onClick={() => void updateStatus(r.id, "approved")}>
+                                Aprovar
+                              </Button>
+                              <Button size="sm" variant="destructive" disabled={isBusy} onClick={() => void updateStatus(r.id, "rejected")}>
+                                Rejeitar
+                              </Button>
+                            </>
+                          )}
+                          {r.status === "approved" && (
+                            <Button size="sm" variant="outline" disabled={isBusy} onClick={() => void updateStatus(r.id, "delivered")}>
+                              Entregue
                             </Button>
-                            <Button size="sm" variant="destructive" disabled={isBusy} onClick={() => void updateStatus(r.id, "rejected")}>
-                              Rejeitar
-                            </Button>
-                          </>
-                        )}
-                        {r.status === "approved" && (
-                          <Button size="sm" variant="outline" disabled={isBusy} onClick={() => void updateStatus(r.id, "delivered")}>
-                            Entregue
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>

@@ -12,7 +12,9 @@ export function isLovableHost(hostname: string) {
   return (
     hostname.endsWith(".lovable.app") ||
     hostname.endsWith(".lovableproject.com") ||
-    hostname.endsWith(".vercel.app")
+    hostname.endsWith(".vercel.app") ||
+    hostname === "localhost" ||
+    hostname === "127.0.0.1"
   );
 }
 

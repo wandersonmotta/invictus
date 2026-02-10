@@ -87,16 +87,16 @@ const menuSections: MenuSection[] = [
     label: "Saldo e Pontuações",
     items: [
       { title: "Carteira", url: "/carteira", icon: Wallet },
-      { title: "Pontos", url: "/pontos", icon: Gift, placeholder: true },
+      { title: "Pontos", url: "/pontos", icon: Gift },
       { title: "Reconhecimento", url: "/reconhecimento", icon: Trophy },
     ],
   },
   {
     label: "Conta",
     items: [
-      { title: "Minhas Faturas", url: "/faturas", icon: Receipt, placeholder: true },
+      { title: "Minhas Faturas", url: "/faturas", icon: Receipt },
       { title: "Perfil", url: "/perfil", icon: User },
-      { title: "Suporte", url: "/suporte", icon: HelpCircle, placeholder: true },
+      { title: "Suporte", url: "/suporte", icon: HelpCircle },
     ],
   },
 ];

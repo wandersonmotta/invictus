@@ -24,16 +24,24 @@ export function RewardCard({ reward, balance, onRedeem, redeeming }: RewardCardP
         "border border-border/40"
       )}
     >
-      {reward.image_url && (
-        <div className="aspect-[3/4] w-full overflow-hidden rounded-xl bg-muted/30">
+      <div className="aspect-[3/4] w-full overflow-hidden rounded-xl bg-muted/30 relative group">
+        {reward.image_url ? (
           <img
             src={reward.image_url}
             alt={reward.name}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover transition-opacity duration-300"
             loading="lazy"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+              e.currentTarget.parentElement?.classList.add("show-fallback");
+            }}
           />
+        ) : null}
+        
+        <div className={`absolute inset-0 flex items-center justify-center bg-muted/50 ${reward.image_url ? "hidden group-[.show-fallback]:flex" : "flex"}`}>
+           <span className="text-4xl">🎁</span>
         </div>
-      )}
+      </div>
 
       <div className="space-y-1">
         <h3 className="text-sm font-semibold text-foreground">{reward.name}</h3>

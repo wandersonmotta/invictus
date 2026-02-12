@@ -7,9 +7,10 @@ type SectionShellProps = {
   id?: string;
   title: string;
   children: React.ReactNode;
+  level?: "h1" | "h2";
 };
 
-export function SectionShell({ id, title, children }: SectionShellProps) {
+export function SectionShell({ id, title, children, level = "h2" }: SectionShellProps) {
   const reveal = useRevealOnScroll<HTMLElement>({
     rootMargin: "0px 0px -28% 0px",
     threshold: 0.3,
@@ -20,6 +21,9 @@ export function SectionShell({ id, title, children }: SectionShellProps) {
 
   const glowRef = useCursorGlow<HTMLDivElement>();
 
+  const TitleTag = level;
+  const titleClass = level === "h1" ? "invictus-editorial-h1" : "invictus-editorial-h2";
+
   return (
     <section
       id={id}
@@ -29,14 +33,14 @@ export function SectionShell({ id, title, children }: SectionShellProps) {
         (reveal.visible ? " invictus-revealed" : "")
       }
     >
-      <div className="mx-auto w-full max-w-6xl">
-        <header className="invictus-section-head mb-6 flex items-end justify-between gap-4">
-          <div className="min-w-0">
-            <p className="invictus-section-eyebrow">INVICTUS</p>
-            <h2 className="invictus-landing-title invictus-gradient-wipe text-balance text-2xl font-semibold sm:text-3xl">{title}</h2>
+      <div className="mx-auto w-full max-w-6xl invictus-section-draw">
+        <header className="invictus-section-head mb-12 flex items-end justify-between gap-4">
+          <div className="min-w-0 space-y-2">
+            <p className="invictus-section-eyebrow !text-primary/60 tracking-[0.6em]">EST. 2024</p>
+            <TitleTag className={`${titleClass} invictus-gradient-wipe text-balance invictus-mask-text`}>{title}</TitleTag>
           </div>
           <div
-            className={`invictus-section-separator hidden sm:block ${reveal.visible ? "invictus-separator-animate" : ""}`}
+            className={`invictus-section-separator hidden sm:block h-px bg-primary/20 flex-1 ml-12 mb-4 ${reveal.visible ? "invictus-separator-animate" : ""}`}
             aria-hidden="true"
           />
         </header>

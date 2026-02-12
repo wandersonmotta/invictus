@@ -13,6 +13,7 @@ import {
 } from "@/components/landing/ManifestoSections";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingBackground } from "@/components/landing/LandingBackground";
+import { HeroSection } from "@/components/landing/HeroSection";
 import { HeroIntro } from "@/components/landing/HeroIntro";
 import { ScrollProgress } from "@/components/landing/ScrollProgress";
 import { useForceDark } from "@/hooks/useForceDark";
@@ -21,7 +22,8 @@ import { useCopyProtection } from "@/hooks/useCopyProtection";
 export default function Landing() {
   useForceDark();
   useCopyProtection();
-  const [introComplete, setIntroComplete] = React.useState(false);
+  
+  const [introComplete, setIntroComplete] = React.useState(false); // Start false to show intro
 
   React.useEffect(() => {
     document.body.classList.add("invictus-landing-body");
@@ -30,17 +32,21 @@ export default function Landing() {
 
   return (
     <>
-      <HeroIntro onComplete={() => setIntroComplete(true)} />
-      {introComplete && <ScrollProgress />}
-      <main
-        className="invictus-landing-page min-h-svh"
-        style={{
-          opacity: introComplete ? 1 : 0,
-          transition: "opacity 600ms cubic-bezier(0.2,0.8,0.2,1)",
-        }}
+      {!introComplete && (
+        <HeroIntro onComplete={() => setIntroComplete(true)} />
+      )}
+      
+      {/* 
+        Main content starts hidden and fades in 
+        Wait for intro to complete before removing 'hidden' or standard opacity fade 
+      */}
+      <main 
+        className={`invictus-landing-page min-h-svh w-full overflow-x-hidden transition-opacity duration-1000 ${introComplete ? 'opacity-100' : 'opacity-0'}`}
       >
+
         <LandingBackground />
         <LandingTopbar />
+        <HeroSection />
         <Manifesto />
         <Pillars />
         <WhatYouFindHere />

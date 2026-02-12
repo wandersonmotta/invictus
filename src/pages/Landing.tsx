@@ -22,7 +22,7 @@ import { useCopyProtection } from "@/hooks/useCopyProtection";
 export default function Landing() {
   useForceDark();
   useCopyProtection();
-  
+
   const [introComplete, setIntroComplete] = React.useState(false); // Start false to show intro
 
   React.useEffect(() => {

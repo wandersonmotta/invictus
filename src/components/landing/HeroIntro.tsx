@@ -4,7 +4,7 @@ import logo from "@/assets/invictus-logo.png";
 
 /**
  * CINEMATIC INTRO - THE GATE
- * 
+ *
  * Concept: A heavy, slow, and impactful reveal.
  * - Starts absolute black.
  * - Deep bass impact (visualized via shake/blur).

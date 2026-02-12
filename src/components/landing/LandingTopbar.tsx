@@ -26,7 +26,7 @@ export function LandingTopbar() {
     <>
         <header
         className={`fixed top-0 z-50 w-full transition-all duration-500 border-b ${
-            scrolled 
+            scrolled
             ? "translate-y-0 bg-background/40 backdrop-blur-xl border-white/10" 
             : "translate-y-0 bg-transparent border-transparent"
         }`}

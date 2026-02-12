@@ -1,7 +1,7 @@
 import * as React from "react";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { LocateFixed } from "lucide-react";
+import { LocateFixed, Plus, Minus } from "lucide-react";
 
 import type { ApprovedMemberPin } from "./useApprovedMemberPins";
 import { getMapboxTileConfig } from "@/config/mapbox";
@@ -42,7 +42,6 @@ export function MemberMap({
   radiusKm?: number | null;
   onSelectPin?: (userId: string) => void;
 }) {
-  const canGeolocate = typeof window !== "undefined" && !!window.navigator?.geolocation;
   const mapRef = React.useRef<L.Map | null>(null);
   const markersRef = React.useRef<L.LayerGroup | null>(null);
   const radiusCircleRef = React.useRef<L.Circle | null>(null);
@@ -66,7 +65,8 @@ export function MemberMap({
   const onCenterOnMe = React.useCallback(() => {
     // Se temos uma localização definida (seja GPS ou CEP), focamos nela
     if (centerMe) {
-      mapRef.current?.setView([centerMe.lat, centerMe.lng], 12, { animate: true });
+        // High zoom for precision focus
+      mapRef.current?.setView([centerMe.lat, centerMe.lng], 14, { animate: true, duration: 1.5 });
       return;
     }
 
@@ -82,7 +82,7 @@ export function MemberMap({
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setUserLocation(coords);
         setIsLocating(false);
-        mapRef.current?.setView([coords.lat, coords.lng], 12, { animate: true });
+        mapRef.current?.setView([coords.lat, coords.lng], 14, { animate: true, duration: 1.5 });
       },
       (err) => {
         console.error(err);
@@ -93,15 +93,23 @@ export function MemberMap({
     );
   }, [centerMe]);
 
+  const handleZoomIn = () => mapRef.current?.zoomIn();
+  const handleZoomOut = () => mapRef.current?.zoomOut();
+
   const iconCacheRef = React.useRef<Map<string, L.DivIcon>>(new Map());
 
   const getAvatarIcon = React.useCallback((avatarUrl: string) => {
     const cache = iconCacheRef.current;
-    const cached = cache.get(avatarUrl);
+    
+    // Ensure we have a valid URL or fallback
+    const validUrl = avatarUrl && avatarUrl.length > 5 ? avatarUrl : "https://ui-avatars.com/api/?name=Invictus&background=0D0D0D&color=D4AF37&bold=true"; // Gold on Dark
+
+    const cached = cache.get(validUrl);
     if (cached) return cached;
 
     // Avoid broken HTML attributes from unexpected characters
-    const safeUrl = encodeURI(avatarUrl).replace(/"/g, "%22");
+    const safeUrl = encodeURI(validUrl).replace(/"/g, "%22");
+    
     const icon = L.divIcon({
       className: "invictus-avatar-pin-wrap",
       html: `
@@ -114,7 +122,9 @@ export function MemberMap({
       iconAnchor: [21, 21],
       tooltipAnchor: [0, -18],
     });
-    cache.set(avatarUrl, icon);
+    
+    // Cache strictly by the url we used
+    cache.set(validUrl, icon);
     return icon;
   }, []);
 
@@ -123,24 +133,31 @@ export function MemberMap({
     if (!containerRef.current || mapRef.current) return;
 
     const map = L.map(containerRef.current, {
-      zoomControl: false,
+      zoomControl: false, // We use custom controls
       attributionControl: true,
+      scrollWheelZoom: "center", // Cinematic zooming
+      zoomAnimation: true,
+      fadeAnimation: true,
+      markerZoomAnimation: true,
     });
+
+    // Default to a wider, more establishing shot
+    map.fitBounds(BRAZIL_BOUNDS);
 
     const mb = mapbox ? getMapboxTileConfig(mapbox) : null;
     const tileUrl = mb?.tileUrl ?? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
     const attribution =
       mb?.attribution ??
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+      '&copy; OpenStreetMap';
 
     L.tileLayer(tileUrl, {
       attribution,
-      opacity: 0.46,
+      // Subtle: we might start higher to ensure data loading
+      minZoom: 3, 
+      maxZoom: 19,
     }).addTo(map);
 
     const markers = L.layerGroup().addTo(map);
-
-    map.fitBounds(BRAZIL_BOUNDS);
 
     mapRef.current = map;
     markersRef.current = markers;
@@ -163,7 +180,6 @@ export function MemberMap({
 
     for (const p of pins) {
       if (typeof p.lat !== 'number' || typeof p.lng !== 'number' || isNaN(p.lat) || isNaN(p.lng)) {
-        console.warn(`Invalid coordinates for pin: ${p.user_id}`, p);
         continue;
       }
 
@@ -172,7 +188,7 @@ export function MemberMap({
           ? `${p.display_name}${p.city && p.state ? ` — ${p.city}/${p.state}` : ""}`
           : p.city && p.state
             ? `${p.city}/${p.state}`
-            : "Invictus";
+            : "Membro Invictus";
 
       try {
         const marker = L.marker([p.lat, p.lng], { icon: getAvatarIcon(p.avatar_url) }).addTo(markers);
@@ -192,7 +208,7 @@ export function MemberMap({
     }
   }, [pins, getAvatarIcon, onSelectPin]);
 
-  // radius circle overlay (privacy: only show approx center)
+  // radius circle overlay
   React.useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -216,12 +232,12 @@ export function MemberMap({
       if (!radiusCircleRef.current) {
         radiusCircleRef.current = L.circle(center, {
           radius: meters,
-          // keep visuals subtle and on-theme
-          color: "hsl(var(--primary))" as any,
-          fillColor: "hsl(var(--primary))" as any,
-          fillOpacity: 0.08,
+          color: "hsl(var(--gold-hot))",
+          fillColor: "hsl(var(--gold-soft))",
+          fillOpacity: 0.15,
           weight: 1,
-          opacity: 0.65,
+          opacity: 0.8,
+          interactive: false,
         }).addTo(map);
       } else {
         radiusCircleRef.current.setLatLng(center);
@@ -233,23 +249,45 @@ export function MemberMap({
   }, [showRadius, radiusCenter, radiusKm]);
 
   return (
-    <div className="invictus-surface invictus-frame invictus-map invictus-map-overlay relative w-full overflow-hidden rounded-lg border border-border/70">
-      <div className="invictus-map-sweep" aria-hidden="true" />
-      <div className="absolute right-3 top-16 z-[600] flex flex-col items-center gap-2">
+    <div className="invictus-surface invictus-frame invictus-map invictus-map-overlay relative w-full overflow-hidden rounded-lg border border-border/70 group">
+      
+      {/* Cinematic Controls Container */}
+      <div className="absolute right-4 top-4 z-[900] flex flex-col items-center gap-3">
+        {/* Custom Zoom Controls */}
+        <div className="flex flex-col bg-card/90 backdrop-blur-md rounded-lg border border-white/10 shadow-2xl overflow-hidden">
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            className="p-2.5 hover:bg-white/5 active:bg-white/10 transition-colors border-b border-white/5 text-foreground/80 hover:text-primary"
+            title="Zoom In"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            className="p-2.5 hover:bg-white/5 active:bg-white/10 transition-colors text-foreground/80 hover:text-primary"
+            title="Zoom Out"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Locate Me */}
         <button
           type="button"
           onClick={onCenterOnMe}
           disabled={isLocating}
-          className="bg-white dark:bg-zinc-900 shadow-md border border-border/50 flex items-center justify-center h-10 w-10 rounded-md transition-all hover:bg-muted active:scale-95 group"
+          className="bg-card/90 backdrop-blur-md p-2.5 rounded-lg border border-white/10 shadow-2xl hover:bg-white/5 active:scale-95 transition-all group-locate disabled:opacity-50"
           title="Minha Posição"
         >
-          <LocateFixed className={`h-5 w-5 ${isLocating ? 'animate-spin text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
+          <LocateFixed className={`h-4 w-4 ${isLocating ? 'animate-spin text-primary' : 'text-foreground/80 group-hover:text-primary'}`} />
           <span className="sr-only">Minha Posição</span>
         </button>
       </div>
 
       <div className="h-[360px] w-full sm:h-[420px] lg:h-[520px]">
-        <div ref={containerRef} className="h-full w-full" />
+        <div ref={containerRef} className="h-full w-full bg-background" />
       </div>
     </div>
   );

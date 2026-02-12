@@ -81,6 +81,7 @@ export function WaitlistHero() {
             <img 
                 src={waitlistMediaPrimary} 
                 alt="Atmosphere" 
+                loading="lazy"
                 className="w-full h-full object-cover opacity-20 scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/90 to-transparent" />

@@ -1,7 +1,7 @@
 import { GoldHoverText } from "@/components/GoldHoverText";
 import { GoldSweepText } from "@/components/landing/GoldSweepText";
 import { Card } from "@/components/ui/card";
-import { EditorialMedia } from "@/components/landing/EditorialMedia";
+
 import { SectionShell } from "@/components/landing/SectionShell";
 import { BulletList } from "@/components/landing/BulletList";
 import { RevealText } from "@/components/landing/RevealText";
@@ -11,7 +11,7 @@ import React, { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Eye, Shield, Target, Zap, Layers, Cpu, Briefcase } from "lucide-react";
 
-import manifestoMedia from "@/assets/invictus-landing-manifesto-media-color.jpg";
+
 
 const bullets = {
   pillars: [
@@ -251,6 +251,7 @@ export function WhatYouFindHere() {
             <img 
                 src="/images/invictus-network-crowd.png" 
                 alt="Networking Event" 
+                loading="lazy"
                 className="w-full h-full object-cover object-center opacity-40 mobile-hero-adjust"
             />
             {/* Elegant Gradient Fade - Bottom Only */}

@@ -1,6 +1,5 @@
 import { GoldHoverText } from "@/components/GoldHoverText";
 import { useRevealOnScroll } from "@/hooks/useRevealOnScroll";
-import { getAppOrigin, getFinanceiroOrigin, getSuporteOrigin } from "@/lib/appOrigin";
 
 export function LandingFooter() {
   const reveal = useRevealOnScroll<HTMLElement>({
@@ -39,18 +38,6 @@ export function LandingFooter() {
           <div>
             <GoldHoverText className="text-xs font-semibold tracking-[0.35em]">INVICTUS • FRATERNIDADE</GoldHoverText>
             <p className="mt-1 text-xs text-muted-foreground">Disciplina em liberdade. Resultado em identidade.</p>
-          </div>
-
-          <div className="flex gap-6 mt-4 sm:mt-0">
-             <a href={getFinanceiroOrigin()} className="text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
-                Financeiro
-             </a>
-             <a href={getSuporteOrigin()} className="text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
-                Suporte
-             </a>
-             <a href={`${getAppOrigin()}/auth`} className="text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
-                Admin
-             </a>
           </div>
         </div>
       </div>

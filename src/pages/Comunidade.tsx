@@ -1,108 +1,138 @@
 import * as React from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Button } from "@/components/ui/button";
 
 import { ChannelList } from "@/components/community/ChannelList";
+import { CommunityThreadList } from "@/components/community/CommunityThreadList";
 import { CommunityThreadView } from "@/components/community/CommunityThreadView";
+import { NewThreadDialog } from "@/components/community/NewThreadDialog";
+
 import type { CommunityChannel } from "@/components/community/types";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Comunidade() {
   const { threadId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useIsMobile();
 
-  const [channelId, setChannelId] = React.useState<string | null>(null);
+  // Se tem threadId na URL, ele tem prioridade sobre a navegação local
+  const currentThreadId = threadId ?? null;
 
-  const ensureChannelThread = React.useCallback(
-    async (channel: CommunityChannel) => {
-      setChannelId(channel.id);
-
-      // 1) tenta reaproveitar o primeiro thread (salinha) do canal
-      const { data: threads, error: listErr } = await supabase.rpc("list_community_threads", {
-        p_channel_id: channel.id,
-        p_search: null,
-        p_limit: 1,
-        p_offset: 0,
-      });
-      if (listErr) throw listErr;
-
-      const existing = threads?.[0]?.thread_id;
-      if (existing) {
-        navigate(`/comunidade/${existing}`);
-        return;
-      }
-
-      // 2) se não existir ainda, cria automaticamente um thread único para o canal
-      const { data: createdId, error: createErr } = await supabase.rpc("create_community_thread", {
-        p_channel_id: channel.id,
-        p_title: `Canal: ${channel.name}`,
-        p_body: null,
-      });
-      if (createErr) throw createErr;
-      navigate(`/comunidade/${createdId}`);
-    },
-    [navigate],
+  // Estado local para controle do canal selecionado (navegação nível 1)
+  // Tentamos recuperar do location.state (se voltarmos de um thread)
+  const [selectedChannelId, setSelectedChannelId] = React.useState<string | null>(
+    () => location.state?.channelId ?? null
   );
+  const [channelData, setChannelData] = React.useState<CommunityChannel | null>(null);
 
-  // Se a pessoa entrar direto em /comunidade/:threadId, marcamos o canal correto
+  // Se entrar direto em um thread (link externo ou refresh), descobrimos o canal
   React.useEffect(() => {
-    if (!threadId) return;
+    if (!currentThreadId) return;
+
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase.rpc("get_community_thread", { p_thread_id: threadId });
-      if (error) return;
+      const { data, error } = await supabase.rpc("get_community_thread", { p_thread_id: currentThreadId });
+      if (error || cancelled) return;
       const row = data?.[0];
-      if (!cancelled && row?.channel_id) setChannelId(row.channel_id);
+      if (row?.channel_id) {
+        setSelectedChannelId(row.channel_id);
+        // Opcional: buscar dados do canal se precisarmos do nome no header
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [threadId]);
+  }, [currentThreadId]);
 
-  const selectedThreadId = threadId ?? null;
-  // Novo UX: ao entrar num canal, a conversa ocupa a tela toda (volta para a lista via botão Voltar)
-  const showListPane = !selectedThreadId;
-  const showThreadPane = !!selectedThreadId;
+  // View States
+  // 1. Channel List (Root) -> !selectedChannelId && !currentThreadId
+  // 2. Thread List (Channel) -> selectedChannelId && !currentThreadId
+  // 3. Thread View (Chat) -> currentThreadId
+
+  // Mobile vs Desktop
+  // Mobile: mostra UM de cada vez.
+  // Desktop: sidebar (Canais) sempre visível?
+  // O layout atual sugere um painel principal. Vamos manter simples:
+  // Mobile e Desktop com comportamento similar por enquanto, ou split view se houver espaço.
+  // O código original usava `showListPane` e `showThreadPane`. Vamos adaptar.
+
+  const isThreadView = !!currentThreadId;
+  const isThreadList = !!selectedChannelId && !isThreadView;
+  const isChannelList = !selectedChannelId && !isThreadView;
+
+  // Render helpers
+  const handleBackToChannels = () => {
+    setSelectedChannelId(null);
+    setChannelData(null);
+    navigate("/comunidade");
+  };
+
+  const handleBackToThreads = () => {
+    // Ao voltar do thread, mantemos o canal selecionado via state
+    navigate("/comunidade", { state: { channelId: selectedChannelId } });
+  };
 
   return (
-    <main className="invictus-page">
-      <header className="invictus-page-header">
+    <main className="invictus-page h-[calc(100vh-4rem)] flex flex-col">
+      <header className="invictus-page-header shrink-0">
         <h1 className="invictus-h1">Comunidade</h1>
-        <p className="invictus-lead">Canais fixos com conversas entre membros aprovados.</p>
+        <p className="invictus-lead">Conecte-se com membros, compartilhe ideias e evolua.</p>
       </header>
 
-      <section className="grid gap-4">
-        {showListPane ? (
-          <div className="invictus-surface invictus-frame border-border/70 rounded-xl overflow-hidden">
+      <section className="flex-1 min-h-0 grid gap-4">
+        {/* Container principal com borda/fundo */}
+        <div className="invictus-surface invictus-frame border-border/70 rounded-xl overflow-hidden h-full flex flex-col">
+          
+          {/* VIEW 1: Lista de Canais */}
+          {isChannelList && (
             <ChannelList
-              value={channelId}
+              value={null}
               onChange={(channel) => {
-                // mobile: ao selecionar canal, já abre a conversa
-                void ensureChannelThread(channel);
+                setChannelData(channel);
+                setSelectedChannelId(channel.id);
               }}
             />
-          </div>
-        ) : null}
+          )}
 
-        {showThreadPane ? (
-          <div className="invictus-surface invictus-frame border-border/70 rounded-xl overflow-hidden">
-            {selectedThreadId ? (
-              <CommunityThreadView
-                threadId={selectedThreadId}
-                onBack={() => navigate("/comunidade")}
-              />
-            ) : (
-              <div className="p-5 sm:p-6">
-                <div className="text-sm font-medium">Selecione um canal</div>
-                <div className="mt-1 text-sm text-muted-foreground">
-                  Escolha um canal para ver e participar da conversa.
+          {/* VIEW 2: Lista de Tópicos (Dentro de um canal) */}
+          {isThreadList && (
+            <div className="h-full flex flex-col">
+              <div className="p-3 sm:p-4 border-b border-border/60 flex items-center gap-3">
+                <Button variant="ghost" size="sm" onClick={handleBackToChannels}>
+                  ← Canais
+                </Button>
+                <div className="font-medium">
+                   {channelData ? channelData.name : "Tópicos"}
                 </div>
               </div>
-            )}
-          </div>
-        ) : null}
+
+              <div className="flex-1 min-h-0">
+                <CommunityThreadList
+                  channelId={selectedChannelId}
+                  selectedThreadId={null}
+                  onSelectThread={(tId) => navigate(`/comunidade/${tId}`)}
+                  rightSlot={
+                    <NewThreadDialog
+                      channelId={selectedChannelId}
+                      onCreated={(newId) => navigate(`/comunidade/${newId}`)}
+                    />
+                  }
+                />
+              </div>
+            </div>
+          )}
+
+          {/* VIEW 3: Chat do Tópico */}
+          {isThreadView && (
+            <CommunityThreadView
+              threadId={currentThreadId}
+              onBack={handleBackToThreads}
+            />
+          )}
+        </div>
       </section>
     </main>
   );

@@ -24,18 +24,31 @@ export function NewThreadDialog({ channelId, onCreated }: Props) {
   const createMutation = useMutation({
     mutationFn: async () => {
       if (!channelId) throw new Error("Selecione um canal");
+      const cleanTitle = title.trim();
+      if (!cleanTitle) throw new Error("O título é obrigatório");
+
       const { data, error } = await supabase.rpc("create_community_thread", {
         p_channel_id: channelId,
-        p_title: title,
+        p_title: cleanTitle,
         p_body: body || null,
       });
       if (error) throw error;
       return data as string;
     },
     onError: (err: any) => {
-      const msg = err?.message?.includes("inadequad")
-        ? "O título ou mensagem contém palavras não permitidas."
-        : "Não foi possível criar o tema.";
+      let msg = "Não foi possível criar o tema.";
+      
+      const errMsg = err?.message || "";
+
+      if (errMsg.includes("inadequado") || errMsg.includes("palavras inadequadas")) {
+        msg = "O título ou mensagem contém palavras não permitidas.";
+      } else if (errMsg.includes("unaccent")) {
+        msg = "O sistema de filtro de palavras precisa de uma atualização no banco de dados. Contate o suporte técnico.";
+        console.error("ERRO CRÍTICO: Extensão 'unaccent' faltando. Execute: npx supabase migration up");
+      } else if (errMsg) {
+        msg = errMsg;
+      }
+      
       toast({ title: "Erro", description: msg, variant: "destructive" });
     },
     onSuccess: async (threadId) => {
